@@ -22,7 +22,7 @@ class Z80
     end
 
     def pair h, l
-        l = @MAX7 - (l - 1) if l < 0
+        l = @MAX7 - (l + 1) if l.negative?
         h * @MAX8 + l
     end
 
