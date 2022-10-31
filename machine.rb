@@ -2,7 +2,7 @@
 
 class Z80
     def initialize
-        @MAX5 = 0x10
+        @MAX4 = 0x10
         @MAX7 = 0x80
         @MAX8 = 0x100
         @FLAG_C = 0x1
@@ -22,7 +22,7 @@ class Z80
     end
 
     def pair h, l
-        #todo: how to read sign bit from l and / or c ?
+        l = @MAX7 - (l - 1) if l < 0
         h * @MAX8 + l
     end
 
@@ -48,12 +48,34 @@ class Z80
         when 0x04
             @b += 1
             @f ^= @FLAG_N
-            if (@b == @MAX7)
+            if @b == @MAX7
                 @b = -1
                 @f |= @FLAG_PV | @FLAG_S
             else
                 @f ^= @FLAG_PV | @FLAG_S
-                if @b = @MAX5
+                if @b == @MAX4
+                    @f |= @FLAG_HC
+                else
+                    @f ^= @FLAG_HC
+                    if (@b.zero?)
+                        @f |= @FLAG_Z
+                    else
+                        @f ^= @FLAG_Z
+                    end
+                end
+            end
+            t_states = 4
+        when 0x05
+            @b -= 1
+            @f |= @FLAG_N
+            if @b - 1 == -@MAX7
+                @b = 0
+                @f |= @FLAG_PV
+                @f ^= @FLAG_S
+            else
+                @f ^= @FLAG_PV
+                @f |= @FLAG_S
+                if @b - 1 == -@MAX4
                     @f |= @FLAG_HC
                 else
                     @f ^= @FLAG_HC
