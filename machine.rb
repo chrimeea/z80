@@ -33,7 +33,7 @@ class Z80
         when 0x00
             t_states = 4
         when 0x01
-            @b, @c = @memory[@pc + 1], @memory[@pc]
+            @b, @c = @memory[@pc + 2], @memory[@pc + 1]
             t_states = 10
             op_size = 3
         when 0x02
@@ -87,6 +87,10 @@ class Z80
                 end
             end
             t_states = 4
+        when 0x06
+            @b = @memory[@pc + 1]
+            t_states = 7
+            op_size = 2
         else
             fail
         end
