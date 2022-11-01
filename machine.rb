@@ -99,6 +99,37 @@ class Z80
             end
         when 0x08 #EX AF,AF’
             @a, @f, @a’, @f’ = @a’, @f’, @a, @f
+        when 0x09 #ADD HL,BC
+            old_negative = @h.negative?
+            value = pair(@h, @l) + pair(@b, @c)
+            @h, @l = value.divmod @MAX8
+            if old_negative
+                if @h - 1 <= -@MAX7
+                    @h = @MAX7 + @h - 1
+                    @f |= @FLAG_C
+                else
+                    if @h - 1 <= -@MAX4
+                        @f |= @FLAG_HC
+                    else
+                        @f ^= @FLAG_HC
+                    end
+                    @f ^= @FLAG_C
+                end
+            else
+                if @h >= @MAX7
+                    @h = @MAX7 - @h - 1
+                    @f |= @FLAG_C
+                else
+                    if @h >= @MAX4
+                        @f |= @FLAG_HC
+                    else
+                        @f ^= @FLAG_HC
+                    end
+                    @f ^= @FLAG_C
+                end
+            end
+            @f ^= @FLAG_N
+            t_states = 11
         else
             fail
         end
