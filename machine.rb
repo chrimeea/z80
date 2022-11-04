@@ -226,6 +226,7 @@ module Z80
                 if @b.nonzero?
                     @pc += @memory[@pc + 1]
                 end
+                t_states = 13 + 8
                 op_size = 2
             else
                 fail
