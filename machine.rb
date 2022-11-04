@@ -228,6 +228,16 @@ module Z80
                 end
                 t_states = 13 + 8
                 op_size = 2
+            when 0x11 #LD DE,HHLL
+                @de.store(@memory[@pc + 2], @memory[@pc + 1])
+                t_states = 10
+                op_size = 3
+            when 0x12 #LD (DE),A
+                @memory[@de.value] = @a.value
+                t_states = 7
+            when 0x13 #INC DE
+                @de.store(@de.value + 1)
+                t_states = 6
             else
                 fail
             end
