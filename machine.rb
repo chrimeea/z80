@@ -221,6 +221,12 @@ module Z80
                     @f |= @FLAG_C
                 end
                 @a.shift_right
+            when 0x10 #DJNZ NN
+                @b.store(@b.value - 1)
+                if @b.nonzero?
+                    @pc += @memory[@pc + 1]
+                end
+                op_size = 2
             else
                 fail
             end
