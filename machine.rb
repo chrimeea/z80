@@ -174,6 +174,18 @@ module Z80
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
                 t_states = 6
+            when 0x0C #INC C
+                @c.store(@c.value + 1)
+                @f ^= @FLAG_N
+                @b.flags(@f)
+            when 0x0D #DEC C
+                @c.store(@c.value - 1)
+                @f ^= @FLAG_N
+                @b.flags(@f)
+            when 0x0E #LD C,NN
+                @c.value = @memory[@pc + 1]
+                t_states = 7
+                op_size = 2
             else
                 fail
             end
