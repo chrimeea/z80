@@ -16,6 +16,34 @@ module Z80
             @overflow, @hc = false
         end
 
+        def as_unsigned
+            if @value.negative?
+                MAX8 - @value
+            else
+                @value
+            end
+        end
+
+        def shift_left
+            if @value.negative?
+                v = self.as_unsigned * 2
+            else
+                v = @value * 2
+            end
+            if v >= MAX7
+                v = MAX8 - v
+            end
+            @value = v
+        end
+
+        def shift_right
+            if @value.negative?
+                @value = self.as_unsigned / 2
+            else
+                @value /= 2
+            end
+        end
+
         def flags(f)
             if @overflow
                 f |= @FLAG_PV
@@ -144,14 +172,13 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
-                #TODO: fix
-                @a *= 2
                 @f ^= @FLAG_N | @FLAG_HC
                 if @a.negative?
                     @f |= @FLAG_C
                 else
                     @f ^= @FLAG_C
                 end
+                @a.shift_left
             when 0x08 #EX AF,AF’
                 @a, @f, @a’, @f’ = @a’, @f’, @a, @f
             when 0x09 #ADD HL,BC
@@ -186,6 +213,14 @@ module Z80
                 @c.value = @memory[@pc + 1]
                 t_states = 7
                 op_size = 2
+            when 0x0F #RRCA
+                @f ^= @FLAG_N | @FLAG_HC
+                if @a.even?
+                    @f ^= @FLAG_C
+                else
+                    @f |= @FLAG_C
+                end
+                @a.shift_right
             else
                 fail
             end
