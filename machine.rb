@@ -36,11 +36,33 @@ module Z80
             @value = v
         end
 
+        def rotate_left
+            if @value.negative?
+                v = 1
+            else
+                v = 0
+            end
+            self.shift_left
+            @value += v
+        end
+
         def shift_right
             if @value.negative?
                 @value = self.as_unsigned / 2
             else
                 @value /= 2
+            end
+        end
+
+        def rotate_right
+            if @value.even?
+                v = 0
+            else
+                v = 1
+            end
+            self.shift_right
+            if v == 1
+                @value -= MAX7
             end
         end
 
@@ -178,7 +200,7 @@ module Z80
                 else
                     @f ^= @FLAG_C
                 end
-                @a.shift_left
+                @a.rotate_left
             when 0x08 #EX AF,AF’
                 @a, @f, @a’, @f’ = @a’, @f’, @a, @f
             when 0x09 #ADD HL,BC
@@ -220,7 +242,7 @@ module Z80
                 else
                     @f |= @FLAG_C
                 end
-                @a.shift_right
+                @a.rotate_right
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
                 if @b.nonzero?
@@ -238,6 +260,18 @@ module Z80
             when 0x13 #INC DE
                 @de.store(@de.value + 1)
                 t_states = 6
+            when 0x14 #INC D
+                @d.store(@d.value + 1)
+                @f ^= @FLAG_N
+                @d.flags(@f)
+            when 0x15 #DEC D
+                @d.store(@d.value - 1)
+                @f |= @FLAG_N
+                @d.flags(@f)
+            when 0x16 #LD D,NN
+                @d.value = @memory[@pc + 1]
+                t_states = 7
+                op_size = 2
             else
                 fail
             end
