@@ -298,6 +298,12 @@ module Z80
                 @f ^= @FLAG_N
                 @f = @hl.flags(@f)
                 t_states = 11
+            when 0x1A #LD A,(DE)
+                @a.value = @memory[@de.value]
+                t_states = 7
+            when 0x1B #DEC DE
+                @de.store(@de.value - 1)
+                t_states = 6
             else
                 fail
             end
