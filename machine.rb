@@ -283,6 +283,11 @@ module Z80
                 else
                     @f |= @FLAG_C
                 end
+            when 0x18 #JR NN
+                # TODO: overflow pc !
+                @pc += @memory[@pc + 1]
+                t_states = 12
+                op_size = 2
             else
                 fail
             end
