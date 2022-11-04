@@ -69,7 +69,7 @@ module Z80
             @value -= MAX7 if v
         end
 
-        def flags(f)
+        def flags f
             if @overflow
                 f |= @FLAG_PV
             else
@@ -90,6 +90,7 @@ module Z80
             else
                 f ^= @FLAG_HC
             end
+            f
         end
 
         def store(num)
@@ -147,6 +148,20 @@ module Z80
                 @hc = false
             end
         end
+
+        def flags f
+            if @hc
+                f |= @FLAG_HC
+            else
+                f ^= @FLAG_HC
+            end
+            if @overflow
+                f |= @FLAG_C
+            else
+                f ^= @FLAG_C
+            end
+            f
+        end
     end
 
     class Z80
@@ -187,11 +202,11 @@ module Z80
             when 0x04 #INC B
                 @b.store(@b.value + 1)
                 @f ^= @FLAG_N
-                @b.flags(@f)
+                @f = @b.flags(@f)
             when 0x05 #DEC B
                 @b.store(@b.value - 1)
                 @f |= @FLAG_N
-                @b.flags(@f)
+                @f = @b.flags(@f)
             when 0x06 #LD B,NN
                 @b.value = @memory[@pc + 1]
                 t_states = 7
@@ -209,16 +224,7 @@ module Z80
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
                 @f ^= @FLAG_N
-                if @hl.hc
-                    @f |= @FLAG_HC
-                else
-                    @f ^= @FLAG_HC
-                end
-                if @hl.overflow
-                    @f |= @FLAG_C
-                else
-                    @f ^= @FLAG_C
-                end
+                @f = @hl.flags(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
                 @a.value = @memory[@bc.value]
@@ -229,11 +235,11 @@ module Z80
             when 0x0C #INC C
                 @c.store(@c.value + 1)
                 @f ^= @FLAG_N
-                @b.flags(@f)
+                @f = @b.flags(@f)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
                 @f ^= @FLAG_N
-                @b.flags(@f)
+                @f = @b.flags(@f)
             when 0x0E #LD C,NN
                 @c.value = @memory[@pc + 1]
                 t_states = 7
@@ -266,11 +272,11 @@ module Z80
             when 0x14 #INC D
                 @d.store(@d.value + 1)
                 @f ^= @FLAG_N
-                @d.flags(@f)
+                @f = @d.flags(@f)
             when 0x15 #DEC D
                 @d.store(@d.value - 1)
                 @f |= @FLAG_N
-                @d.flags(@f)
+                @f = @d.flags(@f)
             when 0x16 #LD D,NN
                 @d.value = @memory[@pc + 1]
                 t_states = 7
@@ -284,10 +290,14 @@ module Z80
                     @f |= @FLAG_C
                 end
             when 0x18 #JR NN
-                # TODO: overflow pc !
                 @pc += @memory[@pc + 1]
                 t_states = 12
                 op_size = 2
+            when 0x19 #ADD HL,DE
+                @hl.store(@hl.value + @bc.value)
+                @f ^= @FLAG_N
+                @f = @hl.flags(@f)
+                t_states = 11
             else
                 fail
             end
