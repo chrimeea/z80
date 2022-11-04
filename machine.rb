@@ -8,12 +8,12 @@ module Z80
     MAX15 = 0x8000
 
     class Register8
-        attr_reader :value, :overflow, :hc
+        attr_reader :value, :overflow, :hc, :carry
         attr_writer :value
 
         def initialize
             @value = 0
-            @overflow, @hc = false
+            @overflow, @hc, @carry = false
         end
 
         def as_unsigned
@@ -26,8 +26,10 @@ module Z80
 
         def shift_left
             if @value.negative?
+                @carry = true
                 v = self.as_unsigned * 2
             else
+                @carry = false
                 v = @value * 2
             end
             if v >= MAX7
@@ -37,16 +39,18 @@ module Z80
         end
 
         def rotate_left
-            if @value.negative?
-                v = 1
-            else
-                v = 0
-            end
             self.shift_left
-            @value += v
+            @value += 1 if @carry
+        end
+
+        def rotate_left_trough_carry c
+            v, @carry = c
+            self.shift_left
+            @value += 1 if v
         end
 
         def shift_right
+            @carry = @value.odd?
             if @value.negative?
                 @value = self.as_unsigned / 2
             else
@@ -55,15 +59,14 @@ module Z80
         end
 
         def rotate_right
-            if @value.even?
-                v = 0
-            else
-                v = 1
-            end
             self.shift_right
-            if v == 1
-                @value -= MAX7
-            end
+            @value -= MAX7 if @carry
+        end
+
+        def rotate_right_trough_carry c
+            v, @carry = c
+            self.shift_right
+            @value -= MAX7 if v
         end
 
         def flags(f)
@@ -194,13 +197,13 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
+                @a.rotate_left
                 @f ^= @FLAG_N | @FLAG_HC
-                if @a.negative?
+                if @a.carry
                     @f |= @FLAG_C
                 else
                     @f ^= @FLAG_C
                 end
-                @a.rotate_left
             when 0x08 #EX AF,AF’
                 @a, @f, @a’, @f’ = @a’, @f’, @a, @f
             when 0x09 #ADD HL,BC
@@ -236,13 +239,13 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x0F #RRCA
+                @a.rotate_right
                 @f ^= @FLAG_N | @FLAG_HC
-                if @a.even?
+                if @a.carry
                     @f ^= @FLAG_C
                 else
                     @f |= @FLAG_C
                 end
-                @a.rotate_right
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
                 if @b.nonzero?
@@ -272,6 +275,14 @@ module Z80
                 @d.value = @memory[@pc + 1]
                 t_states = 7
                 op_size = 2
+            when 0x17 #RLA
+                @a.rotate_left_trough_carry (@f & @FLAG_C).nonzero?
+                @f ^= @FLAG_N | @FLAG_HC
+                if @a.carry
+                    @f ^= @FLAG_C
+                else
+                    @f |= @FLAG_C
+                end
             else
                 fail
             end
