@@ -326,6 +326,7 @@ module Z80
                 end
             when 0x20 #JR NZ,NN
                 @pc += @memory[@pc + 1] if (@f & @FLAG_Z).zero?
+                t_states = 12 + 7
                 op_size = 2
             else
                 fail
