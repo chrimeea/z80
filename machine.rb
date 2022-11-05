@@ -420,6 +420,11 @@ module Z80
                 @f &= ~@FLAG_N
                 @f = @hl.flags(@f)
                 t_states = 11
+            when 0x2A #LD HL,(HHLL)
+                v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
+                @hl.store(@memory[v + 1], @memory[v])
+                t_states = 16
+                op_size = 3
             else
                 fail
             end
