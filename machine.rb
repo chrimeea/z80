@@ -337,6 +337,21 @@ module Z80
                 @memory[v + 1], @memory[v] = @h, @l
                 t_states = 16
                 op_size = 3
+            when 0x23 #INC HL
+                @hl.store(@hl.value + 1)
+                t_states = 6
+            when 0x24 #INC H
+                @h.store(@h.value + 1)
+                @f ^= @FLAG_N
+                @f = @h.flags(@f)
+            when 0x25 #DEC H
+                @h.store(@h.value - 1)
+                @f |= @FLAG_N
+                @f = @h.flags(@f)
+            when 0x26 #LD H,NN
+                @h.value = @memory[@pc + 1]
+                t_states = 7
+                op_size = 2
             else
                 fail
             end
