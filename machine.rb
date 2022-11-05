@@ -73,22 +73,22 @@ module Z80
             if @overflow
                 f |= @FLAG_PV
             else
-                f ^= @FLAG_PV
+                f &= ~@FLAG_PV
             end
             if (@value.negative?)
                 f |= @FLAG_S
             else
-                f ^= @FLAG_S
+                f = ~@FLAG_S
             end
             if (@value.zero?)
                 f |= @FLAG_Z
             else
-                f ^= @FLAG_Z
+                f &= ~@FLAG_Z
             end
             if @hc
                 f |= @FLAG_HC
             else
-                f ^= @FLAG_HC
+                f = ~@FLAG_HC
             end
             f
         end
@@ -153,12 +153,12 @@ module Z80
             if @hc
                 f |= @FLAG_HC
             else
-                f ^= @FLAG_HC
+                f &= ~@FLAG_HC
             end
             if @overflow
                 f |= @FLAG_C
             else
-                f ^= @FLAG_C
+                f &= ~@FLAG_C
             end
             f
         end
@@ -201,7 +201,7 @@ module Z80
                 t_states = 6
             when 0x04 #INC B
                 @b.store(@b.value + 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @b.flags(@f)
             when 0x05 #DEC B
                 @b.store(@b.value - 1)
@@ -213,17 +213,17 @@ module Z80
                 op_size = 2
             when 0x07 #RLCA
                 @a.rotate_left
-                @f ^= @FLAG_N | @FLAG_HC
+                @f &= ~(@FLAG_N | @FLAG_HC)
                 if @a.carry
                     @f |= @FLAG_C
                 else
-                    @f ^= @FLAG_C
+                    @f &= ~@FLAG_C
                 end
             when 0x08 #EX AF,AF’
                 @a, @f, @a’, @f’ = @a’, @f’, @a, @f
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @hl.flags(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
@@ -234,11 +234,11 @@ module Z80
                 t_states = 6
             when 0x0C #INC C
                 @c.store(@c.value + 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @b.flags(@f)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @b.flags(@f)
             when 0x0E #LD C,NN
                 @c.value = @memory[@pc + 1]
@@ -246,9 +246,9 @@ module Z80
                 op_size = 2
             when 0x0F #RRCA
                 @a.rotate_right
-                @f ^= @FLAG_N | @FLAG_HC
+                @f &= ~@FLAG_N | @FLAG_HC
                 if @a.carry
-                    @f ^= @FLAG_C
+                    @f &= ~@FLAG_C
                 else
                     @f |= @FLAG_C
                 end
@@ -271,7 +271,7 @@ module Z80
                 t_states = 6
             when 0x14 #INC D
                 @d.store(@d.value + 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @d.flags(@f)
             when 0x15 #DEC D
                 @d.store(@d.value - 1)
@@ -283,9 +283,9 @@ module Z80
                 op_size = 2
             when 0x17 #RLA
                 @a.rotate_left_trough_carry (@f & @FLAG_C).nonzero?
-                @f ^= @FLAG_N | @FLAG_HC
+                @f &= ~(@FLAG_N | @FLAG_HC)
                 if @a.carry
-                    @f ^= @FLAG_C
+                    @f &= ~@FLAG_C
                 else
                     @f |= @FLAG_C
                 end
@@ -295,7 +295,7 @@ module Z80
                 op_size = 2
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @hl.flags(@f)
                 t_states = 11
             when 0x1A #LD A,(DE)
@@ -306,7 +306,7 @@ module Z80
                 t_states = 6
             when 0x1C #INC E
                 @e.store(@e.value + 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @e.flags(@f)
             when 0x1D #DEC E
                 @e.store(@e.value - 1)
@@ -318,9 +318,9 @@ module Z80
                 op_size = 2
             when 0x1F #RRA
                 @a.rotate_right_trough_carry (@f & @FLAG_C).nonzero?
-                @f ^= @FLAG_N | @FLAG_HC
+                @f &= ~(@FLAG_N | @FLAG_HC)
                 if @a.carry
-                    @f ^= @FLAG_C
+                    @f &= ~@FLAG_C
                 else
                     @f |= @FLAG_C
                 end
@@ -342,7 +342,7 @@ module Z80
                 t_states = 6
             when 0x24 #INC H
                 @h.store(@h.value + 1)
-                @f ^= @FLAG_N
+                @f &= ~@FLAG_N
                 @f = @h.flags(@f)
             when 0x25 #DEC H
                 @h.store(@h.value - 1)
@@ -352,6 +352,65 @@ module Z80
                 @h.value = @memory[@pc + 1]
                 t_states = 7
                 op_size = 2
+            when 0x27 #DAA
+                q, r = @a.value.as_unsigned.divmod MAX4
+                c = (@f & @FLAG_C).nonzero?
+                h = (@f & @FLAG_HC).nonzero?
+                if c == false && h == false && q == 0x90 && r == 0x09
+                    v = 0x00
+                    @f &= ~@FLAG_C
+                elsif c == false && h == false && q ==0x08 && r == 0xAF
+                    v = 0x06
+                    @f &= ~@FLAG_C
+                elsif c == false && h == true && q == 0x09 && r == 0x03
+                    v = 0x06
+                    @f &= ~@FLAG_C
+                elsif c == false && h == false && q == 0xAF && r == 0x09
+                    v = 0x60
+                    @f |= @FLAG_C
+                elsif c == false && h == false && q == 0x9F && r == 0xAF
+                    v = 0x66
+                    @f |= @FLAG_C
+                elsif c == false && h == true && q == 0xAF && r == 0x03
+                    v = 0x66
+                    @f |= @FLAG_C
+                elsif c == true && h == false && q == 0x02 && r == 0x09
+                    v = 0x60
+                    @f |= @FLAG_C
+                elsif c == true && h == false && q == 0x02 && r == 0xAF
+                    v = 0x66
+                    @f |= @FLAG_C
+                elsif c == false && h == true && q == 0x03 && r == 0x03
+                    v = 0x66
+                    @f |= @FLAG_C
+                elsif c == false && h == false && q == 0x09 && r == 0x09
+                    v = 0x00
+                    @f &= ~@FLAG_C
+                elsif c == false && h == true && q == 0x08 && r == 0x6F
+                    v = 0xFA
+                    @f &= ~@FLAG_C
+                elsif c == true && h == false && q == 0x7F && r == 0x09
+                    v = 0xA0
+                    @f |= @FLAG_C
+                elsif c == true && h == true && q == 0x67 && r == 0x6F
+                    v = 0x9A
+                    @f |= @FLAG_C
+                end
+                if @a.value.even?
+                    @f |= @FLAG_PV
+                else
+                    @f &= ~@FLAG_PV
+                end
+                if @a.value == 1
+                    @f |= @FLAG_Z
+                else
+                    @f &= ~@FLAG_Z
+                end
+                if @a.value.negative?
+                    @f |= @FLAG_S
+                else
+                    @f &= ~@FLAG_S
+                end
             else
                 fail
             end
