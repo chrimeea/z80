@@ -304,6 +304,29 @@ module Z80
             when 0x1B #DEC DE
                 @de.store(@de.value - 1)
                 t_states = 6
+            when 0x1C #INC E
+                @e.store(@e.value + 1)
+                @f ^= @FLAG_N
+                @f = @e.flags(@f)
+            when 0x1D #DEC E
+                @e.store(@e.value - 1)
+                @f |= @FLAG_N
+                @f = @e.flags(@f)
+            when 0x1E #LD E,NN
+                @e.value = @memory[@pc + 1]
+                t_states = 7
+                op_size = 2
+            when 0x1F #RRA
+                @a.rotate_right_trough_carry (@f & @FLAG_C).nonzero?
+                @f ^= @FLAG_N | @FLAG_HC
+                if @a.carry
+                    @f ^= @FLAG_C
+                else
+                    @f |= @FLAG_C
+                end
+            when 0x20 #JR NZ,NN
+                @pc += @memory[@pc + 1] if (@f & @FLAG_Z).zero?
+                op_size = 2
             else
                 fail
             end
