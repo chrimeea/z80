@@ -411,6 +411,15 @@ module Z80
                 else
                     @f &= ~@FLAG_S
                 end
+            when 0x28 #JR Z,NN
+                @pc += @memory[@pc + 1] if (@f & @FLAG_Z).nonzero?
+                t_states = 12 + 7
+                op_size = 2
+            when 0x29 #ADD HL,HL
+                @hl.store(@hl.value + @hl.value)
+                @f &= ~@FLAG_N
+                @f = @hl.flags(@f)
+                t_states = 11
             else
                 fail
             end
