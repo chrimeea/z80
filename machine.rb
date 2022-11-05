@@ -328,6 +328,15 @@ module Z80
                 @pc += @memory[@pc + 1] if (@f & @FLAG_Z).zero?
                 t_states = 12 + 7
                 op_size = 2
+            when 0x21 #LD HL,HHLL
+                @hl.store(@memory[@pc + 2], @memory[@pc + 1])
+                t_states = 10
+                op_size = 3
+            when 0x22 #LD (HHLL),HL
+                v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
+                @memory[v + 1], @memory[v] = @h, @l
+                t_states = 16
+                op_size = 3
             else
                 fail
             end
