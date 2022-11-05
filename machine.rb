@@ -27,10 +27,10 @@ module Z80
         def shift_left
             if @value.negative?
                 @carry = true
-                v = self.as_unsigned * 2
+                v = self.as_unsigned << 1
             else
                 @carry = false
-                v = @value * 2
+                v = @value << 1
             end
             if v >= MAX7
                 v = MAX8 - v
@@ -52,10 +52,11 @@ module Z80
         def shift_right
             @carry = @value.odd?
             if @value.negative?
-                @value = self.as_unsigned / 2
+                v = self.as_unsigned >> 1
             else
-                @value /= 2
+                v = @value >> 1
             end
+            @value = v
         end
 
         def rotate_right
@@ -353,7 +354,7 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x27 #DAA
-                q, r = @a.value.as_unsigned.divmod MAX4
+                q, r = @a.as_unsigned.divmod MAX4
                 c = (@f & @FLAG_C).nonzero?
                 h = (@f & @FLAG_HC).nonzero?
                 if c == false && h == false && q == 0x90 && r == 0x09
@@ -436,6 +437,13 @@ module Z80
                 @l.store(@l.value - 1)
                 @f |= @FLAG_N
                 @f = @l.flags(@f)
+            when 0x2E #LD L,NN
+                @l.value = @memory[@pc + 1]
+                t_states = 7
+                op_size = 2
+            when 0x2F #CPL
+                @a.store(~@a.as_unsigned)
+                @f |= @FLAG_HC | @FLAG_N
             else
                 fail
             end
