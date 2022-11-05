@@ -425,6 +425,17 @@ module Z80
                 @hl.store(@memory[v + 1], @memory[v])
                 t_states = 16
                 op_size = 3
+            when 0x2B #DEC HL
+                @hl.store(@hl.value - 1)
+                t_states = 6
+            when 0x2C #INC L
+                @l.store(@l.value + 1)
+                @f &= ~@FLAG_N
+                @f = @l.flags(@f)
+            when 0x2D #DEC L
+                @l.store(@l.value - 1)
+                @f |= @FLAG_N
+                @f = @l.flags(@f)
             else
                 fail
             end
