@@ -117,7 +117,7 @@ module Z80
     class Register16
         attr_reader :high, :low, :overflow, :hc
 
-        def initialize h, l
+        def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
             @overflow, @hc = false
         end
@@ -176,7 +176,7 @@ module Z80
             @a, @b, @c, @d, @e, @f, @h, @l = [Register8.new] * 8
             @a’, @b’, @c’, @d’, @e’, @f’, @h’, @l’ = [Register8.new] * 8
             @bc, @de, @hl = Register16.new(@b, @c), Register16.new(@d, @e), Register16.new(@h, @l)
-            @sp = 0
+            @sp = Register16.new
             @pc = 0
             @i = 0
             @x = @y = 0
@@ -444,6 +444,18 @@ module Z80
             when 0x2F #CPL
                 @a.store(~@a.as_unsigned)
                 @f |= @FLAG_HC | @FLAG_N
+            when 0x30 #JR NC,NN
+                @pc += @memory[@pc + 1] if (@f & @FLAG_C).zero?
+                t_states = 12 + 7
+                op_size = 2
+            when 0x31 #LD SP,HHLL
+                @sp.store(@memory[@pc + 2], @memory[@pc + 1])
+                t_states = 10
+                op_size = 3
+            when 0x32 #LD (HHLL),A
+                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value] = @a
+                t_states = 16
+                op_size = 3
             else
                 fail
             end
@@ -454,5 +466,8 @@ module Z80
 
 end
 
+# TODO: negative reg8 ?
+# TODO: negative reg16 ?
+# TODO: (HHLL) should be unsigned ?
 z80 = Z80::Z80.new
 z80.run
