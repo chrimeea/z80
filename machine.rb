@@ -475,6 +475,13 @@ module Z80
                 @f |= @FLAG_N
                 @f = r.flags(@f)
                 t_states = 11
+            when 0x36 #LD (HL),NN
+                @memory[@hl.value] = @memory[@pc + 1]
+                t_states = 10
+                op_size = 2
+            when 0x37 #SCF
+                @f |= @FLAG_C
+                @f &= ~(@FLAG_N | @FLAG_HC)
             else
                 fail
             end
