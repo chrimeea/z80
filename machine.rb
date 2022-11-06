@@ -180,7 +180,7 @@ module Z80
             @pc = 0
             @i = 0
             @x = @y = 0
-            @memory = Array.new(49152, 0)
+            @memory = Array.new(49152) { Register8.new }
             @state_duration = 1
         end
 
@@ -188,14 +188,14 @@ module Z80
             t = Time.now
             t_states = 4
             op_size = 1
-            case @memory[@pc]
+            case @memory[@pc].value
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
-                @bc.store(@memory[@pc + 2], @memory[@pc + 1])
+                @bc.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x02 #LD (BC),A
-                @memory[@bc.value] = @a.value
+                @memory[@bc.value].value = @a.value
                 t_states = 7
             when 0x03 #INC BC
                 @bc.store(@bc.value + 1)
@@ -209,7 +209,7 @@ module Z80
                 @f |= @FLAG_N
                 @f = @b.flags(@f)
             when 0x06 #LD B,NN
-                @b.value = @memory[@pc + 1]
+                @b.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
@@ -228,7 +228,7 @@ module Z80
                 @f = @hl.flags_math(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
-                @a.value = @memory[@bc.value]
+                @a.value = @memory[@bc.value].value
                 t_states = 7
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
@@ -242,7 +242,7 @@ module Z80
                 @f &= ~@FLAG_N
                 @f = @c.flags(@f)
             when 0x0E #LD C,NN
-                @c.value = @memory[@pc + 1]
+                @c.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x0F #RRCA
@@ -256,16 +256,16 @@ module Z80
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
                 if @b.nonzero?
-                    @pc += @memory[@pc + 1]
+                    @pc += @memory[@pc + 1].value
                 end
                 t_states = 13 + 8
                 op_size = 2
             when 0x11 #LD DE,HHLL
-                @de.store(@memory[@pc + 2], @memory[@pc + 1])
+                @de.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x12 #LD (DE),A
-                @memory[@de.value] = @a.value
+                @memory[@de.value].value = @a.value
                 t_states = 7
             when 0x13 #INC DE
                 @de.store(@de.value + 1)
@@ -279,7 +279,7 @@ module Z80
                 @f |= @FLAG_N
                 @f = @d.flags(@f)
             when 0x16 #LD D,NN
-                @d.value = @memory[@pc + 1]
+                @d.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x17 #RLA
@@ -291,7 +291,7 @@ module Z80
                     @f |= @FLAG_C
                 end
             when 0x18 #JR NN
-                @pc += @memory[@pc + 1]
+                @pc += @memory[@pc + 1].value
                 t_states = 12
                 op_size = 2
             when 0x19 #ADD HL,DE
@@ -300,7 +300,7 @@ module Z80
                 @f = @hl.flags_math(@f)
                 t_states = 11
             when 0x1A #LD A,(DE)
-                @a.value = @memory[@de.value]
+                @a.value = @memory[@de.value].value
                 t_states = 7
             when 0x1B #DEC DE
                 @de.store(@de.value - 1)
@@ -314,7 +314,7 @@ module Z80
                 @f |= @FLAG_N
                 @f = @e.flags(@f)
             when 0x1E #LD E,NN
-                @e.value = @memory[@pc + 1]
+                @e.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x1F #RRA
@@ -326,16 +326,16 @@ module Z80
                     @f |= @FLAG_C
                 end
             when 0x20 #JR NZ,NN
-                @pc += @memory[@pc + 1] if (@f & @FLAG_Z).zero?
+                @pc += @memory[@pc + 1].value if (@f & @FLAG_Z).zero?
                 t_states = 12 + 7
                 op_size = 2
             when 0x21 #LD HL,HHLL
-                @hl.store(@memory[@pc + 2], @memory[@pc + 1])
+                @hl.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x22 #LD (HHLL),HL
                 v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
-                @memory[v + 1], @memory[v] = @h, @l
+                @memory[v + 1].value, @memory[v].value = @h, @l
                 t_states = 16
                 op_size = 3
             when 0x23 #INC HL
@@ -350,7 +350,7 @@ module Z80
                 @f |= @FLAG_N
                 @f = @h.flags(@f)
             when 0x26 #LD H,NN
-                @h.value = @memory[@pc + 1]
+                @h.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x27 #DAA
@@ -413,7 +413,7 @@ module Z80
                     @f &= ~@FLAG_S
                 end
             when 0x28 #JR Z,NN
-                @pc += @memory[@pc + 1] if (@f & @FLAG_Z).nonzero?
+                @pc += @memory[@pc + 1].value if (@f & @FLAG_Z).nonzero?
                 t_states = 12 + 7
                 op_size = 2
             when 0x29 #ADD HL,HL
@@ -423,7 +423,7 @@ module Z80
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
                 v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
-                @hl.store(@memory[v + 1], @memory[v])
+                @hl.store(@memory[v + 1].value, @memory[v].value)
                 t_states = 16
                 op_size = 3
             when 0x2B #DEC HL
@@ -438,45 +438,41 @@ module Z80
                 @f |= @FLAG_N
                 @f = @l.flags(@f)
             when 0x2E #LD L,NN
-                @l.value = @memory[@pc + 1]
+                @l.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x2F #CPL
                 @a.store(~@a.as_unsigned)
                 @f |= @FLAG_HC | @FLAG_N
             when 0x30 #JR NC,NN
-                @pc += @memory[@pc + 1] if (@f & @FLAG_C).zero?
+                @pc += @memory[@pc + 1].value if (@f & @FLAG_C).zero?
                 t_states = 12 + 7
                 op_size = 2
             when 0x31 #LD SP,HHLL
-                @sp.store(@memory[@pc + 2], @memory[@pc + 1])
+                @sp.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x32 #LD (HHLL),A
-                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value] = @a.value
+                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].value = @a.value
                 t_states = 16
                 op_size = 3
             when 0x33 #INC SP
                 @sp.store(@sp.value + 1)
                 t_states = 6
             when 0x34 #INC (HL)
-                v = @hl.value
-                r = Register8.new
-                r.store(@memory[v] + 1)
-                @memory[v] = r.value
+                m = @memory[@hl.value]
+                m.store(m.value + 1)
                 @f |= @FLAG_N
-                @f = r.flags(@f)
+                @f = m.flags(@f)
                 t_states = 11
             when 0x35 #DEC (HL)
-                v = @hl.value
-                r = Register8.new
-                r.store(@memory[v] - 1)
-                @memory[v] = r.value
+                m = @memory[@hl.value]
+                m.store(m.value - 1)
                 @f |= @FLAG_N
-                @f = r.flags(@f)
+                @f = m.flags(@f)
                 t_states = 11
             when 0x36 #LD (HL),NN
-                @memory[@hl.value] = @memory[@pc + 1]
+                @memory[@hl.value].value = @memory[@pc + 1].value
                 t_states = 10
                 op_size = 2
             when 0x37 #SCF
