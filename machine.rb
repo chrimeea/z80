@@ -478,6 +478,10 @@ module Z80
             when 0x37 #SCF
                 @f |= @FLAG_C
                 @f &= ~(@FLAG_N | @FLAG_HC)
+            when 0x38 #JR C,NN
+                @pc += @memory[@pc + 1].value if (@f & @FLAG_C).nonzero?
+                t_states = 12 + 7
+                op_size = 2
             else
                 fail
             end
