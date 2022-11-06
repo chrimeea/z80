@@ -150,7 +150,7 @@ module Z80
             end
         end
 
-        def flags f
+        def flags_math f
             if @hc
                 f |= @FLAG_HC
             else
@@ -160,6 +160,31 @@ module Z80
                 f |= @FLAG_C
             else
                 f &= ~@FLAG_C
+            end
+            f
+        end
+
+        def flags f
+            v = self.value
+            if @overflow
+                f |= @FLAG_PV
+            else
+                f &= ~@FLAG_PV
+            end
+            if (v.negative?)
+                f |= @FLAG_S
+            else
+                f = ~@FLAG_S
+            end
+            if (v.zero?)
+                f |= @FLAG_Z
+            else
+                f &= ~@FLAG_Z
+            end
+            if @hc
+                f |= @FLAG_HC
+            else
+                f = ~@FLAG_HC
             end
             f
         end
@@ -225,7 +250,7 @@ module Z80
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
                 @f &= ~@FLAG_N
-                @f = @hl.flags(@f)
+                @f = @hl.flags_math(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
                 @a.value = @memory[@bc.value]
@@ -236,11 +261,11 @@ module Z80
             when 0x0C #INC C
                 @c.store(@c.value + 1)
                 @f &= ~@FLAG_N
-                @f = @b.flags(@f)
+                @f = @c.flags(@f)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
                 @f &= ~@FLAG_N
-                @f = @b.flags(@f)
+                @f = @c.flags(@f)
             when 0x0E #LD C,NN
                 @c.value = @memory[@pc + 1]
                 t_states = 7
@@ -297,7 +322,7 @@ module Z80
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
                 @f &= ~@FLAG_N
-                @f = @hl.flags(@f)
+                @f = @hl.flags_math(@f)
                 t_states = 11
             when 0x1A #LD A,(DE)
                 @a.value = @memory[@de.value]
@@ -419,7 +444,7 @@ module Z80
             when 0x29 #ADD HL,HL
                 @hl.store(@hl.value + @hl.value)
                 @f &= ~@FLAG_N
-                @f = @hl.flags(@f)
+                @f = @hl.flags_math(@f)
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
                 v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
@@ -456,6 +481,20 @@ module Z80
                 @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value] = @a
                 t_states = 16
                 op_size = 3
+            when 0x33 #INC SP
+                @sp.store(@sp.value + 1)
+                t_states = 6
+            when 0x34 #INC (HL)
+                v = @hl.value
+                h, l = Register8.new, Register8.new
+                h.store(@memory[v + 1])
+                l.store(@memory[v])
+                r = Register16(h, l)
+                r.store(r.value + 1)
+                @memory[v + 1], @memory[v] = h.value, l.value
+                @f |= @FLAG_N
+                @f = r.flags(@f)
+                t_states = 11
             else
                 fail
             end
