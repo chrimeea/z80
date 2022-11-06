@@ -491,6 +491,29 @@ module Z80
                 @a.value = @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].value
                 t_states = 13
                 op_size = 3
+            when 0x3B #DEC SP
+                @sp.store(@sp.value - 1)
+                t_states = 6
+            when 0x3C #INC A
+                @a.store(@a.value + 1)
+                @f &= ~@FLAG_N
+                @f = @l.flags(@f)
+            when  0x3D #DEC A
+                @a.store(@a.value - 1)
+                @f &= ~@FLAG_N
+                @f = @l.flags(@f)
+            when 0x3E #LD A,NN
+                @a.value = @memory[@pc + 1].value
+                t_states = 7
+                op_size = 2
+            when 0x3F #CCF
+                if (@f & @FLAG_C).nonzero?
+                    @f |= @FLAG_HC
+                else
+                    @f &= ~@FLAG_HC
+                end
+                @f ^= @FLAG_C
+                @f &= ~@FLAG_N
             else
                 fail
             end
