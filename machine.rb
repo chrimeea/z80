@@ -482,6 +482,15 @@ module Z80
                 @pc += @memory[@pc + 1].value if (@f & @FLAG_C).nonzero?
                 t_states = 12 + 7
                 op_size = 2
+            when 0x39 #ADD HL,SP
+                @hl.store(@hl.value + @sp.value)
+                @f &= ~@FLAG_N
+                @f = @hl.flags_math(@f)
+                t_states = 11
+            when 0x3A #LD A,(HHLL)
+                @a.value = @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].value
+                t_states = 13
+                op_size = 3
             else
                 fail
             end
