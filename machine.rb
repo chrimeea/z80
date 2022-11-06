@@ -163,31 +163,6 @@ module Z80
             end
             f
         end
-
-        def flags f
-            v = self.value
-            if @overflow
-                f |= @FLAG_PV
-            else
-                f &= ~@FLAG_PV
-            end
-            if (v.negative?)
-                f |= @FLAG_S
-            else
-                f = ~@FLAG_S
-            end
-            if (v.zero?)
-                f |= @FLAG_Z
-            else
-                f &= ~@FLAG_Z
-            end
-            if @hc
-                f |= @FLAG_HC
-            else
-                f = ~@FLAG_HC
-            end
-            f
-        end
     end
 
     class Z80
@@ -478,7 +453,7 @@ module Z80
                 t_states = 10
                 op_size = 3
             when 0x32 #LD (HHLL),A
-                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value] = @a
+                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value] = @a.value
                 t_states = 16
                 op_size = 3
             when 0x33 #INC SP
@@ -486,12 +461,17 @@ module Z80
                 t_states = 6
             when 0x34 #INC (HL)
                 v = @hl.value
-                h, l = Register8.new, Register8.new
-                h.store(@memory[v + 1])
-                l.store(@memory[v])
-                r = Register16(h, l)
-                r.store(r.value + 1)
-                @memory[v + 1], @memory[v] = h.value, l.value
+                r = Register8.new
+                r.store(@memory[v] + 1)
+                @memory[v] = r.value
+                @f |= @FLAG_N
+                @f = r.flags(@f)
+                t_states = 11
+            when 0x35 #DEC (HL)
+                v = @hl.value
+                r = Register8.new
+                r.store(@memory[v] - 1)
+                @memory[v] = r.value
                 @f |= @FLAG_N
                 @f = r.flags(@f)
                 t_states = 11
