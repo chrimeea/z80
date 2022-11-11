@@ -2,7 +2,11 @@
 
 module Z80
 
+    MAX0 = 0x1
+    MAX1 = 0x2
+    MAX2 = 0x4
     MAX4 = 0x10
+    MAX6 = 0x40
     MAX7 = 0x80
     MAX8 = 0x100
     MAX15 = 0x8000
@@ -71,27 +75,10 @@ module Z80
         end
 
         def flags f
-            if @overflow
-                f |= @FLAG_PV
-            else
-                f &= ~@FLAG_PV
-            end
-            if (@value.negative?)
-                f |= @FLAG_S
-            else
-                f = ~@FLAG_S
-            end
-            if (@value.zero?)
-                f |= @FLAG_Z
-            else
-                f &= ~@FLAG_Z
-            end
-            if @hc
-                f |= @FLAG_HC
-            else
-                f = ~@FLAG_HC
-            end
-            f
+            f.flag_pv = @overflow
+            f.flag_s = @value.negative?
+            f.flag_z = @value.zero?
+            f.flag_hc = @hc
         end
 
         def store(num)
@@ -106,11 +93,25 @@ module Z80
                 @value = num
                 @overflow = false
             end
-            if (prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4)
-                @hc = true
-            else
-                @hc = false
-            end
+            @hc = (prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4)
+        end
+    end
+
+    class Flag8 < Register8
+        attr_accessor :flag_c, :flag_n, :flag_pv, :flag_hc, :flag_z, :flag_s
+
+        def initialize
+            @flag_c, @flag_n, @flag_pv, @flag_hc, @flag_z, @flag_s = false
+        end
+
+        def value
+            v = 0
+            v += MAX0 if @flag_c
+            v += MAX1 if @flag_n
+            v += MAX2 if @flag_pv
+            v += MAX4 if @flag_hc
+            v += MAX6 if @flag_z
+            v -= MAX8 if @flag_s
         end
     end
 
@@ -151,30 +152,16 @@ module Z80
         end
 
         def flags_math f
-            if @hc
-                f |= @FLAG_HC
-            else
-                f &= ~@FLAG_HC
-            end
-            if @overflow
-                f |= @FLAG_C
-            else
-                f &= ~@FLAG_C
-            end
-            f
+            f.flag_hc = @hc
+            f.flag_c = @overflow
         end
     end
 
     class Z80
         def initialize
-            @FLAG_C = 0x1
-            @FLAG_N = 0x2
-            @FLAG_PV = 0x4
-            @FLAG_HC = 0x10
-            @FLAG_Z = 0x40
-            @FLAG_S = 0x80
-            @a, @b, @c, @d, @e, @f, @h, @l = [Register8.new] * 8
-            @a’, @b’, @c’, @d’, @e’, @f’, @h’, @l’ = [Register8.new] * 8
+            @a, @b, @c, @d, @e, @h, @l = [Register8.new] * 8
+            @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 8
+            @f, @f’ = [Flag8.new] * 2
             @bc = Register16.new(@b, @c)
             @de = Register16.new(@d, @e)
             @hl = Register16.new(@h, @l)
@@ -205,30 +192,27 @@ module Z80
                 t_states = 6
             when 0x04 #INC B
                 @b.store(@b.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @b.flags(@f.value)
+                @f.flag_n = false
+                @b.flags(@f)
             when 0x05 #DEC B
                 @b.store(@b.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = @b.flags(@f.value)
+                @f.flag_n = true
+                @b.flags(@f)
             when 0x06 #LD B,NN
                 @b.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
                 @a.rotate_left
-                @f.value &= ~(@FLAG_N | @FLAG_HC)
-                if @a.carry
-                    @f.value |= @FLAG_C
-                else
-                    @f.value &= ~@FLAG_C
-                end
+                @f.flag_n, @f.flag_hc = false
+                @f.flag_c = @a.carry
             when 0x08 #EX AF,AF’
-                @a.value, @f.value, @a’.value, @f’.value = @a’.value, @f’.value, @a.value, @f.value
+                @a.value, @f.value, @a’.value= @a’.value, @f’.value, @a.value
+                @f, @f’ = @f’, @f
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
-                @f.value &= ~@FLAG_N
-                @f.value = @hl.flags_math(@f.value)
+                @f.flag_n = false
+                @hl.flags_math(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
                 @a.value = @memory[@bc.value].value
@@ -238,24 +222,20 @@ module Z80
                 t_states = 6
             when 0x0C #INC C
                 @c.store(@c.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @c.flags(@f.value)
+                @f.flag_n = false
+                @c.flags(@f)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @c.flags(@f.value)
+                @f.flag_n = false
+                @c.flags(@f)
             when 0x0E #LD C,NN
                 @c.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x0F #RRCA
                 @a.rotate_right
-                @f.value &= ~@FLAG_N | @FLAG_HC
-                if @a.carry
-                    @f.value &= ~@FLAG_C
-                else
-                    @f.value |= @FLAG_C
-                end
+                @f.flag_n, @f.flag_hc = false
+                @f.flag_c = !@a.carry
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
                 if @b.nonzero?
@@ -275,32 +255,28 @@ module Z80
                 t_states = 6
             when 0x14 #INC D
                 @d.store(@d.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @d.flags(@f.value)
+                @f.flag_n = false
+                @d.flags(@f)
             when 0x15 #DEC D
                 @d.store(@d.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = @d.flags(@f.value)
+                @f.flag_n = true
+                @d.flags(@f)
             when 0x16 #LD D,NN
                 @d.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x17 #RLA
                 @a.rotate_left_trough_carry (@f.value & @FLAG_C).nonzero?
-                @f.value &= ~(@FLAG_N | @FLAG_HC)
-                if @a.carry
-                    @f.value &= ~@FLAG_C
-                else
-                    @f.value |= @FLAG_C
-                end
+                @f.flag_n, @f.flag_hc = false
+                @f.flag_c = !@a.carry
             when 0x18 #JR NN
                 @pc += @memory[@pc + 1].value
                 t_states = 12
                 op_size = 2
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
-                @f.value &= ~@FLAG_N
-                @f.value = @hl.flags_math(@f.value)
+                @f.flag_n = false
+                @hl.flags_math(@f)
                 t_states = 11
             when 0x1A #LD A,(DE)
                 @a.value = @memory[@de.value].value
@@ -310,24 +286,20 @@ module Z80
                 t_states = 6
             when 0x1C #INC E
                 @e.store(@e.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @e.flags(@f.value)
+                @f.flag_n = false
+                @e.flags(@f)
             when 0x1D #DEC E
                 @e.store(@e.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = @e.flags(@f.value)
+                @f.flag_n = true
+                @e.flags(@f)
             when 0x1E #LD E,NN
                 @e.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x1F #RRA
                 @a.rotate_right_trough_carry (@f & @FLAG_C).nonzero?
-                @f.value &= ~(@FLAG_N | @FLAG_HC)
-                if @a.carry
-                    @f.value &= ~@FLAG_C
-                else
-                    @f.value |= @FLAG_C
-                end
+                @f.flag_n, @f.flag_hc = false
+                @f.flag_c = ~@a.carry
             when 0x20 #JR NZ,NN
                 @pc += @memory[@pc + 1].value if (@f.value & @FLAG_Z).zero?
                 t_states = 12 + 7
@@ -346,12 +318,12 @@ module Z80
                 t_states = 6
             when 0x24 #INC H
                 @h.store(@h.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @h.flags(@f.value)
+                @f.flag_n = false
+                @h.flags(@f)
             when 0x25 #DEC H
                 @h.store(@h.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = @h.flags(@f.value)
+                @f.flag_n = true
+                @h.flags(@f)
             when 0x26 #LD H,NN
                 @h.value = @memory[@pc + 1].value
                 t_states = 7
@@ -362,67 +334,55 @@ module Z80
                 h = (@f.value & @FLAG_HC).nonzero?
                 if c == false && h == false && q == 0x90 && r == 0x09
                     v = 0x00
-                    @f.value &= ~@FLAG_C
+                    @f.flag_c = false
                 elsif c == false && h == false && q ==0x08 && r == 0xAF
                     v = 0x06
-                    @f.value &= ~@FLAG_C
+                    @f.flag_c = false
                 elsif c == false && h == true && q == 0x09 && r == 0x03
                     v = 0x06
-                    @f.value &= ~@FLAG_C
+                    @f.flag_c = false
                 elsif c == false && h == false && q == 0xAF && r == 0x09
                     v = 0x60
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == false && h == false && q == 0x9F && r == 0xAF
                     v = 0x66
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == false && h == true && q == 0xAF && r == 0x03
                     v = 0x66
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == true && h == false && q == 0x02 && r == 0x09
                     v = 0x60
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == true && h == false && q == 0x02 && r == 0xAF
                     v = 0x66
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == false && h == true && q == 0x03 && r == 0x03
                     v = 0x66
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == false && h == false && q == 0x09 && r == 0x09
                     v = 0x00
-                    @f.value &= ~@FLAG_C
+                    @f.flag_c = false
                 elsif c == false && h == true && q == 0x08 && r == 0x6F
                     v = 0xFA
-                    @f.value &= ~@FLAG_C
+                    @f.flag_c = false
                 elsif c == true && h == false && q == 0x7F && r == 0x09
                     v = 0xA0
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 elsif c == true && h == true && q == 0x67 && r == 0x6F
                     v = 0x9A
-                    @f.value |= @FLAG_C
+                    @f.flag_c = true
                 end
-                if @a.value.even?
-                    @f.value |= @FLAG_PV
-                else
-                    @f.value &= ~@FLAG_PV
-                end
-                if @a.value == 1
-                    @f.value |= @FLAG_Z
-                else
-                    @f.value &= ~@FLAG_Z
-                end
-                if @a.value.negative?
-                    @f.value |= @FLAG_S
-                else
-                    @f.value &= ~@FLAG_S
-                end
+                @f.flag_pv = @a.value.even?
+                @f.flag_z = (@a.value == 1)
+                @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
                 @pc += @memory[@pc + 1].value if (@f.value & @FLAG_Z).nonzero?
                 t_states = 12 + 7
                 op_size = 2
             when 0x29 #ADD HL,HL
                 @hl.store(@hl.value + @hl.value)
-                @f.value &= ~@FLAG_N
-                @f.value = @hl.flags_math(@f.value)
+                @f.flag_n = false
+                @hl.flags_math(@f)
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
                 v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
@@ -434,19 +394,19 @@ module Z80
                 t_states = 6
             when 0x2C #INC L
                 @l.store(@l.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @l.flags(@f.value)
+                @f.flag_n = false
+                @l.flags(@f)
             when 0x2D #DEC L
                 @l.store(@l.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = @l.flags(@f.value)
+                @f.flag_n = true
+                @l.flags(@f)
             when 0x2E #LD L,NN
                 @l.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x2F #CPL
                 @a.store(~@a.as_unsigned)
-                @f |= @FLAG_HC | @FLAG_N
+                @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
                 @pc += @memory[@pc + 1].value if (@f.value & @FLAG_C).zero?
                 t_states = 12 + 7
@@ -465,30 +425,30 @@ module Z80
             when 0x34 #INC (HL)
                 m = @memory[@hl.value]
                 m.store(m.value + 1)
-                @f.value |= @FLAG_N
-                @f.value = m.flags(@f.value)
+                @f.flag_n = true
+                m.flags(@f)
                 t_states = 11
             when 0x35 #DEC (HL)
                 m = @memory[@hl.value]
                 m.store(m.value - 1)
-                @f.value |= @FLAG_N
-                @f.value = m.flags(@f.value)
+                @f.flag_n = true
+                m.flags(@f)
                 t_states = 11
             when 0x36 #LD (HL),NN
                 @memory[@hl.value].value = @memory[@pc + 1].value
                 t_states = 10
                 op_size = 2
             when 0x37 #SCF
-                @f.value |= @FLAG_C
-                @f.value &= ~(@FLAG_N | @FLAG_HC)
+                @f.flag_c = true
+                @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
                 @pc += @memory[@pc + 1].value if (@f.value & @FLAG_C).nonzero?
                 t_states = 12 + 7
                 op_size = 2
             when 0x39 #ADD HL,SP
                 @hl.store(@hl.value + @sp.value)
-                @f.value &= ~@FLAG_N
-                @f.value = @hl.flags_math(@f.value)
+                @f.flag_n = false
+                @hl.flags_math(@f)
                 t_states = 11
             when 0x3A #LD A,(HHLL)
                 @a.value = @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].value
@@ -499,24 +459,20 @@ module Z80
                 t_states = 6
             when 0x3C #INC A
                 @a.store(@a.value + 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @l.flags(@f.value)
+                @f.flag_n = false
+                @a.flags(@f)
             when  0x3D #DEC A
                 @a.store(@a.value - 1)
-                @f.value &= ~@FLAG_N
-                @f.value = @l.flags(@f.value)
+                @f.flag_n = false
+                @a.flags(@f)
             when 0x3E #LD A,NN
                 @a.value = @memory[@pc + 1].value
                 t_states = 7
                 op_size = 2
             when 0x3F #CCF
-                if (@f.value & @FLAG_C).nonzero?
-                    @f.value |= @FLAG_HC
-                else
-                    @f.value &= ~@FLAG_HC
-                end
-                @f.value ^= @FLAG_C
-                @f.value &= ~@FLAG_N
+                @f.flag_hc = @f.flag_c
+                @f.flag_c = !@f.flag_c
+                @f.flag_n = false
             else
                 fail
             end
@@ -527,8 +483,5 @@ module Z80
 
 end
 
-# TODO: negative reg8 ?
-# TODO: negative reg16 ?
-# TODO: (HHLL) should be unsigned ?
 z80 = Z80::Z80.new
 z80.run
