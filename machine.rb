@@ -175,10 +175,22 @@ module Z80
         end
 
         def run
+            loop do
+                interrupt while execute(@memory[@pc].value)
+                execute(0x00) while !interrupt
+                execute(@memory[@pc].value)
+            end
+        end
+
+        def interrupt
+            return false
+        end
+
+        def execute opcode
             t = Time.now
             t_states = 4
             op_size = 1
-            case @memory[@pc].value
+            case opcode
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
                 @bc.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
@@ -586,16 +598,17 @@ module Z80
                 @memory[@hl.value].value = @l.value
                 t_states = 7
             when 0x76 #HALT
-                #TODO: sleep until receive interrupt
+                return true
             else
                 fail
             end
             @pc += op_size
             sleep (t + t_states * @state_duration - Time.now) / 1000.0
+            return true
         end
     end
 
 end
 
 z80 = Z80::Z80.new
-z80.run
+#z80.run
