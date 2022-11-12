@@ -599,6 +599,25 @@ module Z80
                 t_states = 7
             when 0x76 #HALT
                 return true
+            when 0x77 #LD (HL),A
+                @memory[@hl.value].value = @a.value
+                t_states = 7
+            when 0x78 #LD A,B
+                @a.store(@b.value)
+            when 0x79 #LD A,C
+                @a.store(@c.value)
+            when 0x7A #LD A,D
+                @a.store(@d.value)
+            when 0x7B #LD A,E
+                @a.store(@e.value)
+            when 0x7C #LD A,H
+                @a.store(@h.value)
+            when 0x7D #LD A,L
+                @a.store(@l.value)
+            when 0x7E #LD A,(HL)
+                @a.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x7F #LD A,A
             else
                 fail
             end
