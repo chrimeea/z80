@@ -207,7 +207,7 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = @a.carry
             when 0x08 #EX AF,AF’
-                @a.value, @f.value, @a’.value= @a’.value, @f’.value, @a.value
+                @a.value, @a’.value= @a’.value, @a.value
                 @f, @f’ = @f’, @f
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
@@ -238,9 +238,7 @@ module Z80
                 @f.flag_c = !@a.carry
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
-                if @b.nonzero?
-                    @pc += @memory[@pc + 1].value
-                end
+                @pc += @memory[@pc + 1].value if @b.nonzero?
                 t_states = 13 + 8
                 op_size = 2
             when 0x11 #LD DE,HHLL
@@ -473,6 +471,122 @@ module Z80
                 @f.flag_hc = @f.flag_c
                 @f.flag_c = !@f.flag_c
                 @f.flag_n = false
+            when 0x40 #LD B,B
+            when 0x41 #LD B,C
+                @b.store(@c.value)
+            when 0x42 #LD B,D
+                @b.store(@d.value)
+            when 0x43 #LD B,E
+                @b.store(@e.value)
+            when 0x44 #LD B,H
+                @b.store(@h.value)
+            when 0x45 #LD B,L
+                @b.store(@l.value)
+            when 0x46 #LD B,(HL)
+                @b.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x47 #LD B,A
+                @b.store(@a.value)
+            when 0x48 #LD C,B
+                @c.store(@b.value)
+            when 0x49 #LD C,C
+            when 0x4A #LD C,D
+                @c.store(@d.value)
+            when 0x4B #LD C,E
+                @c.store(@e.value)
+            when 0x4C #LD C,H
+                @c.store(@h.value)
+            when 0x4D #LD C,L
+                @c.store(@l.value)
+            when 0x4E #LD C,(HL)
+                @c.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x4F #LD C,A
+                @c.store(@a.value)
+            when 0x50 #LD D,B
+                @d.store(@b.value)
+            when 0x51 #LD D,C
+                @d.store(@c.value)
+            when 0x52 #LD D,D
+            when 0x53 #LD D,E
+                @d.store(@e.value)
+            when 0x54 #LD D,H
+                @d.store(@h.value)
+            when 0x55 #LD D,L
+                @d.store(@l.value)
+            when 0x56 #LD D,(HL)
+                @d.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x57 #LD D,A
+                @d.store(@a.value)
+            when 0x58 #LD E,B
+                @e.store(@b.value)
+            when 0x59 #LD E,C
+                @e.store(@c.value)
+            when 0x5A #LD E,D
+                @e.store(@d.value)
+            when 0x5B #LD E,E
+            when 0x5C #LD E,H
+                @e.store(@h.value)
+            when 0x5D #LD E,L
+                @e.store(@l.value)
+            when 0x5E #LD E,(HL)
+                @e.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x5F #LD E,A
+                @e.store(@a.value)
+            when 0x60 #LD H,B
+                @h.store(@b.value)
+            when 0x61 #LD H,C
+                @h.store(@c.value)
+            when 0x62 #LD H,D
+                @h.store(@d.value)
+            when 0x63 #LD H,E
+                @h.store(@e.value)
+            when 0x64 #LD H,H
+            when 0x65 #LD H,L
+                @h.store(@l.value)
+            when 0x66 #LD H,(HL)
+                @h.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x67 #LD H,A
+                @h.store(@a.value)
+            when 0x68 #LD L,B
+                @l.store(@b.value)
+            when 0x69 #LD L,C
+                @l.store(@c.value)
+            when 0x6A #LD L,D
+                @l.store(@d.value)
+            when 0x6B #LD L,E
+                @l.store(@e.value)
+            when 0x6C #LD L,H
+                @l.store(@h.value)
+            when 0x6D #LD L,L
+            when 0x6E #LD L,(HL)
+                @l.value = @memory[@hl.value].value
+                t_states = 7
+            when 0x6F #LD L,A
+                @l.store(@a.value)
+            when 0x70 #LD (HL),B
+                @memory[@hl.value].value = @b.value
+                t_states = 7
+            when 0x71 #LD (HL),C
+                @memory[@hl.value].value = @c.value
+                t_states = 7
+            when 0x72 #LD (HL),D
+                @memory[@hl.value].value = @d.value
+                t_states = 7
+            when 0x73 #LD (HL),E
+                @memory[@hl.value].value = @e.value
+                t_states = 7
+            when 0x74 #LD (HL),H
+                @memory[@hl.value].value = @h.value
+                t_states = 7
+            when 0x75 #LD (HL),L
+                @memory[@hl.value].value = @l.value
+                t_states = 7
+            when 0x76 #HALT
+                #TODO: sleep until receive interrupt
             else
                 fail
             end
