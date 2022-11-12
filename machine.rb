@@ -93,7 +93,7 @@ module Z80
                 @value = num
                 @overflow = false
             end
-            @hc = (prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4)
+            @hc = ((prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4))
         end
     end
 
@@ -144,11 +144,7 @@ module Z80
             end
             q, r = num.divmod MAX8
             @high.value, @low.value = q, r
-            if (prev_high.abs < MAX4 && @high.abs >= MAX4) || (prev_high.abs > MAX4 && @high.abs <= MAX4)
-                @hc = true
-            else
-                @hc = false
-            end
+            @hc = ((prev_high.abs < MAX4 && @high.abs >= MAX4) || (prev_high.abs > MAX4 && @high.abs <= MAX4))
         end
 
         def flags_math f
@@ -618,6 +614,46 @@ module Z80
                 @a.value = @memory[@hl.value].value
                 t_states = 7
             when 0x7F #LD A,A
+            when 0x80 #ADD A,B
+                @a.store(@a.value + @b.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x81 #ADD A,C
+                @a.store(@a.value + @c.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x82 #ADD A,D
+                @a.store(@a.value + @d.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x83 #ADD A,E
+                @a.store(@a.value + @e.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x84 #ADD A,H
+                @a.store(@a.value + @h.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x85 #ADD A,L
+                @a.store(@a.value + @l.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x86 #ADD A,(HL)
+                @a.store(@a.value + @memory[@hl.value].value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
+            when 0x87 #ADD A,A
+                @a.store(@a.value + @a.value)
+                @f.flag_n = false
+                @f.flag_c = @a.carry
+                @a.flags(@f)
             else
                 fail
             end
@@ -629,5 +665,6 @@ module Z80
 
 end
 
+#TODO: how to set carry (for example on ADD A,A) ??
 z80 = Z80::Z80.new
 #z80.run
