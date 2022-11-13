@@ -615,7 +615,7 @@ module Z80
                 @memory[@hl.value].store(@l.value)
                 t_states = 7
             when 0x76 #HALT
-                return true
+                return false
             when 0x77 #LD (HL),A
                 @memory[@hl.value].value = @a.value
                 t_states = 7
