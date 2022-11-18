@@ -165,7 +165,7 @@ module Z80
     class Register16
         attr_reader :high, :low, :overflow, :hc
 
-        def initialize h = Register8.new, l = Register8.new
+        def initialize h, l
             @high, @low = h, l
             @overflow, @hc = false
         end
