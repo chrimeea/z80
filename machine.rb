@@ -126,6 +126,12 @@ module Z80
             f.flag_pv = @value.even?
             f.flag_hc, f.flag_n, f.flag_c = false
         end
+
+        def or(num, f)
+            self.store(@value | num)
+            self.flags_s_z(f)
+            f.flag_pv, f.flag_hc, f.flag_n, f.flag_c = false
+        end
     end
 
     class Flag8 < Register8
@@ -749,19 +755,36 @@ module Z80
                 @a.xor(@b.value, @f)
             when 0xA9 #XOR A,C
                 @a.xor(@c.value, @f)
-            when 0xAA #XOR D
+            when 0xAA #XOR A,D
                 @a.xor(@d.value, @f)
-            when 0xAB #XOR E
+            when 0xAB #XOR A,E
                 @a.xor(@e.value, @f)
-            when 0xAC #XOR H
+            when 0xAC #XOR A,H
                 @a.xor(@h.value, @f)
-            when 0xAD #XOR L
+            when 0xAD #XOR A,L
                 @a.xor(@l.value, @f)
-            when 0xAE #XOR (HL)
+            when 0xAE #XOR A,(HL)
                 @a.xor(@memory[@hl.value].value, @f)
                 t_states = 7
-            when 0xAF #XOR A
+            when 0xAF #XOR A,A
                 @a.xor(@a.value, @f)
+            when 0xB0 #OR A,B
+                @a.or(@b.value, @f)
+            when 0xB1 #OR A,C
+                @a.or(@c.value, @f)
+            when 0xB2 #OR A,D
+                @a.or(@d.value, @f)
+            when 0xB3 #OR A,E
+                @a.or(@e.value, @f)
+            when 0xB4 #OR A,H
+                @a.or(@h.value, @f)
+            when 0xB5 #OR A,L
+                @a.or(@l.value, @f)
+            when 0xB6 #OR A,(HL)
+                @a.or(@memory[@hl.value].value, @f)
+                t_states = 7
+            when 0xB7 #OR A,A
+                @a.or(@a.value, @f)
             else
                 fail
             end
