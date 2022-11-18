@@ -785,6 +785,22 @@ module Z80
                 t_states = 7
             when 0xB7 #OR A,A
                 @a.or(@a.value, @f)
+            when 0xB8 #CP A,B
+                @f.flag_z = (@a.value == @b.value)
+            when 0xB9 #CP A,C
+                @f.flag_z = (@a.value == @c.value)
+            when 0xBA #CP A,D
+                @f.flag_z = (@a.value == @d.value)
+            when 0xBB #CP A,E
+                @f.flag_z = (@a.value == @e.value)
+            when 0xBC #CP A,H
+                @f.flag_z = (@a.value == @h.value)
+            when 0xBD #CP A,L
+                @f.flag_z = (@a.value == @l.value)
+            when 0xBE #CP A,(HL)
+                @f.flag_z = (@a.value == @memory[@hl.value].value)
+            when 0xBF #CP A,A
+                @f.flag_z = true
             else
                 fail
             end
