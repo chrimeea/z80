@@ -73,11 +73,15 @@ module Z80
             @value -= MAX7 if v
         end
 
-        def flags f
-            f.flag_pv = @overflow
+        def flags_s_z f
             f.flag_s = @value.negative?
             f.flag_z = @value.zero?
+        end
+
+        def flags f
+            f.flag_pv = @overflow
             f.flag_hc = @hc
+            flags_s_z(f)
         end
 
         def store(num)
@@ -107,6 +111,13 @@ module Z80
             f.flag_n = true
             f.flag_c = @carry
             self.flags(f)
+        end
+
+        def and(num, f)
+            self.store(@value & num)
+            self.flags_s_z(f)
+            f.flag_hc = true
+            f.flag_pv, f.flag_n, f.flag_c = false
         end
     end
 
@@ -710,6 +721,23 @@ module Z80
                 t_states = 7
             when 0x9F #SBC A,A
                 @a.sub(@a.value + (@f.carry ? 1 : 0), @f)
+            when 0xA0 #AND A,B
+                @a.and(@b.value, @f)
+            when 0xA1 #AND A,C
+                @a.and(@c.value, @f)
+            when 0xA2 #AND A,D
+                @a.and(@d.value, @f)
+            when 0xA3 #AND A,E
+                @a.and(@e.value, @f)
+            when 0xA4 #AND A,H
+                @a.and(@h.value, @f)
+            when 0xA5 #AND L
+                @a.and(@l.value, @f)
+            when 0xA6 #AND (HL)
+                @a.and(@memory[@hl.value].value, @f)
+                t_states = 7
+            when 0xA7 #AND A
+                @a.and(@a.value, @f)
             else
                 fail
             end
