@@ -119,6 +119,13 @@ module Z80
             f.flag_hc = true
             f.flag_pv, f.flag_n, f.flag_c = false
         end
+
+        def xor(num, f)
+            self.store(@value ^ num)
+            self.flags_s_z(f)
+            f.flag_pv = @value.even?
+            f.flag_hc, f.flag_n, f.flag_c = false
+        end
     end
 
     class Flag8 < Register8
@@ -738,6 +745,23 @@ module Z80
                 t_states = 7
             when 0xA7 #AND A
                 @a.and(@a.value, @f)
+            when 0xA8 #XOR A,B
+                @a.xor(@b.value, @f)
+            when 0xA9 #XOR A,C
+                @a.xor(@c.value, @f)
+            when 0xAA #XOR D
+                @a.xor(@d.value, @f)
+            when 0xAB #XOR E
+                @a.xor(@e.value, @f)
+            when 0xAC #XOR H
+                @a.xor(@h.value, @f)
+            when 0xAD #XOR L
+                @a.xor(@l.value, @f)
+            when 0xAE #XOR (HL)
+                @a.xor(@memory[@hl.value].value, @f)
+                t_states = 7
+            when 0xAF #XOR A
+                @a.xor(@a.value, @f)
             else
                 fail
             end
