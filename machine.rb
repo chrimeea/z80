@@ -323,7 +323,7 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x17 #RLA
-                @a.rotate_left_trough_carry (@f.value & @FLAG_C).nonzero?
+                @a.rotate_left_trough_carry @f.flag_c
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x18 #JR NN
@@ -354,12 +354,16 @@ module Z80
                 t_states = 7
                 op_size = 2
             when 0x1F #RRA
-                @a.rotate_right_trough_carry (@f & @FLAG_C).nonzero?
+                @a.rotate_right_trough_carry @f.flag_c
                 @f.flag_n, @f.flag_hc = false
-                @f.flag_c = ~@a.carry
+                @f.flag_c = !@a.carry
             when 0x20 #JR NZ,NN
-                @pc += @memory[@pc + 1].value if (@f.value & @FLAG_Z).zero?
-                t_states = 12 + 7
+                if @f.flag_z
+                    t_states = 7
+                else
+                    @pc += @memory[@pc + 1].value
+                    t_states = 12
+                end
                 op_size = 2
             when 0x21 #LD HL,HHLL
                 @hl.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
@@ -388,8 +392,8 @@ module Z80
                 op_size = 2
             when 0x27 #DAA
                 q, r = @a.as_unsigned.divmod MAX4
-                c = (@f.value & @FLAG_C).nonzero?
-                h = (@f.value & @FLAG_HC).nonzero?
+                c = @f.flag_c
+                h = @f.flag_hc
                 if c == false && h == false && q == 0x90 && r == 0x09
                     v = 0x00
                     @f.flag_c = false
@@ -434,8 +438,12 @@ module Z80
                 @f.flag_z = (@a.value == 1)
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
-                @pc += @memory[@pc + 1].value if (@f.value & @FLAG_Z).nonzero?
-                t_states = 12 + 7
+                if @f.flag_z
+                    @pc += @memory[@pc + 1].value
+                    t_states = 12
+                else
+                    t_states = 7
+                end
                 op_size = 2
             when 0x29 #ADD HL,HL
                 @hl.store(@hl.value + @hl.value)
@@ -466,8 +474,12 @@ module Z80
                 @a.store(~@a.as_unsigned)
                 @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
-                @pc += @memory[@pc + 1].value if (@f.value & @FLAG_C).zero?
-                t_states = 12 + 7
+                if @f.flag_c
+                    t_states = 7
+                else
+                    @pc += @memory[@pc + 1].value
+                    t_states = 12
+                end
                 op_size = 2
             when 0x31 #LD SP,HHLL
                 @sp.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
@@ -500,8 +512,12 @@ module Z80
                 @f.flag_c = true
                 @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
-                @pc += @memory[@pc + 1].value if (@f.value & @FLAG_C).nonzero?
-                t_states = 12 + 7
+                if @f.flag_c
+                    @pc += @memory[@pc + 1].value
+                    t_states = 12
+                else
+                    t_states = 7
+                end
                 op_size = 2
             when 0x39 #ADD HL,SP
                 @hl.store(@hl.value + @sp.value)
@@ -801,6 +817,14 @@ module Z80
                 @f.flag_z = (@a.value == @memory[@hl.value].value)
             when 0xBF #CP A,A
                 @f.flag_z = true
+            when 0xC0 #RET NZ
+                if @f.flag_z
+                    t_states = 5
+                else
+                    @pc = Register16.new(@memory[@sp.value + 1], @memory[@sp.value]).value
+                    @sp.store(@sp.value + 2)
+                    t_states = 11
+                end
             else
                 fail
             end
