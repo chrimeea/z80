@@ -95,8 +95,8 @@ module Z80
             @hc = ((prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4))
         end
 
-        def add(other, f)
-            self.store(@value + other.value)
+        def add(num, f)
+            self.store(@value + num)
             f.flag_n = false
             f.flag_c = @carry
             self.flags(f)
@@ -636,21 +636,39 @@ module Z80
                 t_states = 7
             when 0x7F #LD A,A
             when 0x80 #ADD A,B
-                @a.add(@b, @f)
+                @a.add(@b.value, @f)
             when 0x81 #ADD A,C
-                @a.add(@c, @f)
+                @a.add(@c.value, @f)
             when 0x82 #ADD A,D
-                @a.add(@d, @f)
+                @a.add(@d.value, @f)
             when 0x83 #ADD A,E
-                @a.add(@e, @f)
+                @a.add(@e.value, @f)
             when 0x84 #ADD A,H
-                @a.add(@h, @f)
+                @a.add(@h.value, @f)
             when 0x85 #ADD A,L
-                @a.add(@l, @f)
+                @a.add(@l.value, @f)
             when 0x86 #ADD A,(HL)
-                @a.add(@memory[@hl.value], @f)
+                @a.add(@memory[@hl.value].value, @f)
+                t_states = 7
             when 0x87 #ADD A,A
-                @a.add(@a, @f)
+                @a.add(@a.value, @f)
+            when 0x88 #ADC A,B
+                @a.add(@b.value + (@f.carry ? 1 : 0), @f)
+            when 0x89 #ADC A,C
+                @a.add(@c.value + (@f.carry ? 1 : 0), @f)
+            when 0x8A #ADC A,D
+                @a.add(@d.value + (@f.carry ? 1 : 0), @f)
+            when 0x8B #ADC A,E
+                @a.add(@e.value + (@f.carry ? 1 : 0), @f)
+            when 0x8C #ADC A,H
+                @a.add(@h.value + (@f.carry ? 1 : 0), @f)
+            when 0x8D #ADC A,L
+                @a.add(@l.value + (@f.carry ? 1 : 0), @f)
+            when 0x8E #ADC A,(HL)
+                @a.add(@memory[@hl.value].value + (@f.carry ? 1 : 0), @f)
+                t_states = 7
+            when 0x8F #ADC A,A
+                @a.add(@a.value + (@f.carry ? 1 : 0), @f)
             else
                 fail
             end
