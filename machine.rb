@@ -101,6 +101,13 @@ module Z80
             f.flag_c = @carry
             self.flags(f)
         end
+
+        def sub(num, f)
+            self.store(@value + num)
+            f.flag_n = true
+            f.flag_c = @carry
+            self.flags(f)
+        end
     end
 
     class Flag8 < Register8
@@ -669,6 +676,40 @@ module Z80
                 t_states = 7
             when 0x8F #ADC A,A
                 @a.add(@a.value + (@f.carry ? 1 : 0), @f)
+            when 0x90 #SUB A,B
+                @a.sub(@b.value, @f)
+            when 0x91 #SUB A,C
+                @a.sub(@c.value, @f)
+            when 0x92 #SUB A,D
+                @a.sub(@d.value, @f)
+            when 0x93 #SUB A,E
+                @a.sub(@e.value, @f)
+            when 0x94 #SUB A,H
+                @a.sub(@h.value, @f)
+            when 0x95 #SUB A,L
+                @a.sub(@l.value, @f)
+            when 0x96 #SUB A,(HL)
+                @a.sub(@memory[@hl.value].value, @f)
+                t_states = 7
+            when 0x97 #SUB A,A
+                @a.sub(@a.value, @f)
+            when 0x98 #SBC A,B
+                @a.sub(@a.value + (@f.carry ? 1 : 0), @f)
+            when 0x99 #SBC A,C
+                @a.sub(@c.value + (@f.carry ? 1 : 0), @f)
+            when 0x9A #SBC A,D
+                @a.sub(@d.value + (@f.carry ? 1 : 0), @f)
+            when 0x9B #SBC A,E
+                @a.sub(@e.value + (@f.carry ? 1 : 0), @f)
+            when 0x9C #SBC A,H
+                @a.sub(@h.value + (@f.carry ? 1 : 0), @f)
+            when 0x9D #SBC A,L
+                @a.sub(@l.value + (@f.carry ? 1 : 0), @f)
+            when 0x9E #SBC A,(HL)
+                @a.sub(@memory[@hl.value].value + (@f.carry ? 1 : 0), @f)
+                t_states = 7
+            when 0x9F #SBC A,A
+                @a.sub(@a.value + (@f.carry ? 1 : 0), @f)
             else
                 fail
             end
