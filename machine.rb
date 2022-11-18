@@ -190,13 +190,29 @@ module Z80
                 @overflow = false
             end
             q, r = num.divmod MAX8
-            @high.value, @low.value = q, r
+            self.store q, r
             @hc = ((prev_high.abs < MAX4 && @high.abs >= MAX4) || (prev_high.abs > MAX4 && @high.abs <= MAX4))
         end
 
         def flags_math f
             f.flag_hc = @hc
             f.flag_c = @overflow
+        end
+    end
+
+    class Register16U
+        attr_reader :value, :overflow
+
+        def initialize
+            @value, @overflow = 0, false
+        end
+
+        def store(num)
+            if num >= MAX16
+                @value, @overflow = num - MAX16, true
+            else
+                @value, @overflow = num, false
+            end
         end
     end
 
@@ -209,8 +225,7 @@ module Z80
             @de = Register16.new(@d, @e)
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
-            @sp = Register16.new
-            @pc = 0
+            @pc, @sp = [Register16U.new] * 2
             @i = 0
             @x = @y = 0
             @memory = Array.new(49152) { Register8.new }
@@ -219,9 +234,9 @@ module Z80
 
         def run
             loop do
-                interrupt while execute(@memory[@pc].value)
+                interrupt while execute(@memory[@pc.value].value)
                 execute(0x00) while !interrupt
-                execute(@memory[@pc].value)
+                execute(@memory[@pc.value].value)
             end
         end
 
@@ -236,7 +251,7 @@ module Z80
             case opcode
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
-                @bc.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
+                @bc.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x02 #LD (BC),A
@@ -254,7 +269,7 @@ module Z80
                 @f.flag_n = true
                 @b.flags(@f)
             when 0x06 #LD B,NN
-                @b.store(@memory[@pc + 1].value)
+                @b.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
@@ -288,7 +303,7 @@ module Z80
                 @f.flag_n = false
                 @c.flags(@f)
             when 0x0E #LD C,NN
-                @c.store(@memory[@pc + 1].value)
+                @c.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x0F #RRCA
@@ -297,11 +312,11 @@ module Z80
                 @f.flag_c = !@a.carry
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
-                @pc += @memory[@pc + 1].value if @b.nonzero?
+                @pc += @memory[@pc.value + 1].value if @b.nonzero?
                 t_states = 13 + 8
                 op_size = 2
             when 0x11 #LD DE,HHLL
-                @de.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
+                @de.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x12 #LD (DE),A
@@ -319,7 +334,7 @@ module Z80
                 @f.flag_n = true
                 @d.flags(@f)
             when 0x16 #LD D,NN
-                @d.store(@memory[@pc + 1].value)
+                @d.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x17 #RLA
@@ -327,7 +342,7 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x18 #JR NN
-                @pc += @memory[@pc + 1].value
+                @pc += @memory[@pc.value + 1].value
                 t_states = 12
                 op_size = 2
             when 0x19 #ADD HL,DE
@@ -350,7 +365,7 @@ module Z80
                 @f.flag_n = true
                 @e.flags(@f)
             when 0x1E #LD E,NN
-                @e.store(@memory[@pc + 1].value)
+                @e.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x1F #RRA
@@ -361,16 +376,16 @@ module Z80
                 if @f.flag_z
                     t_states = 7
                 else
-                    @pc += @memory[@pc + 1].value
+                    @pc += @memory[@pc.value + 1].value
                     t_states = 12
                 end
                 op_size = 2
             when 0x21 #LD HL,HHLL
-                @hl.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
+                @hl.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x22 #LD (HHLL),HL
-                v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
+                v = Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value
                 @memory[v + 1].store(@h.value)
                 @memory[v].store(@l.value)
                 t_states = 16
@@ -387,7 +402,7 @@ module Z80
                 @f.flag_n = true
                 @h.flags(@f)
             when 0x26 #LD H,NN
-                @h.store(@memory[@pc + 1].value)
+                @h.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x27 #DAA
@@ -439,7 +454,7 @@ module Z80
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
                 if @f.flag_z
-                    @pc += @memory[@pc + 1].value
+                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
                     t_states = 12
                 else
                     t_states = 7
@@ -451,7 +466,7 @@ module Z80
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
-                v = Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value
+                v = Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value
                 @hl.store(@memory[v + 1].value, @memory[v].value)
                 t_states = 16
                 op_size = 3
@@ -467,7 +482,7 @@ module Z80
                 @f.flag_n = true
                 @l.flags(@f)
             when 0x2E #LD L,NN
-                @l.store(@memory[@pc + 1].value)
+                @l.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x2F #CPL
@@ -477,16 +492,16 @@ module Z80
                 if @f.flag_c
                     t_states = 7
                 else
-                    @pc += @memory[@pc + 1].value
+                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
                     t_states = 12
                 end
                 op_size = 2
             when 0x31 #LD SP,HHLL
-                @sp.store(@memory[@pc + 2].value, @memory[@pc + 1].value)
+                @sp.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
                 t_states = 10
                 op_size = 3
             when 0x32 #LD (HHLL),A
-                @memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].store(@a.value)
+                @memory[Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value].store(@a.value)
                 t_states = 16
                 op_size = 3
             when 0x33 #INC SP
@@ -505,7 +520,7 @@ module Z80
                 m.flags(@f)
                 t_states = 11
             when 0x36 #LD (HL),NN
-                @memory[@hl.value].store(@memory[@pc + 1].value)
+                @memory[@hl.value].store(@memory[@pc.value + 1].value)
                 t_states = 10
                 op_size = 2
             when 0x37 #SCF
@@ -513,7 +528,7 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
                 if @f.flag_c
-                    @pc += @memory[@pc + 1].value
+                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
                     t_states = 12
                 else
                     t_states = 7
@@ -525,7 +540,7 @@ module Z80
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x3A #LD A,(HHLL)
-                @a.store(@memory[Register16.new(@memory[@pc + 2], @memory[@pc + 1]).value].value)
+                @a.store(@memory[Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value].value)
                 t_states = 13
                 op_size = 3
             when 0x3B #DEC SP
@@ -540,7 +555,7 @@ module Z80
                 @f.flag_n = false
                 @a.flags(@f)
             when 0x3E #LD A,NN
-                @a.store(@memory[@pc + 1].value)
+                @a.store(@memory[@pc.value + 1].value)
                 t_states = 7
                 op_size = 2
             when 0x3F #CCF
@@ -821,14 +836,14 @@ module Z80
                 if @f.flag_z
                     t_states = 5
                 else
-                    @pc = Register16.new(@memory[@sp.value + 1], @memory[@sp.value]).value
+                    @pc.store(Register16.new(@memory[@sp.value + 1], @memory[@sp.value]).value)
                     @sp.store(@sp.value + 2)
                     t_states = 11
                 end
             else
                 fail
             end
-            @pc += op_size
+            @pc.store(@pc.value + op_size)
             sleep (t + t_states * @state_duration - Time.now) / 1000.0
             return true
         end
