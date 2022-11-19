@@ -84,6 +84,14 @@ module Z80
             flags_s_z(f)
         end
 
+        def exchange reg8
+            @value, reg8.value = reg8.value, @value
+        end
+
+        def copy reg8
+            @value = reg8.value
+        end
+
         def store(num)
             prev_value = @value
             if num >= MAX7
@@ -174,8 +182,8 @@ module Z80
             @high.value * MAX8 + @low.value
         end
 
-        def store(h, l)
-            @high.value, @low.value = h, l
+        def copy reg16
+            @high.value, @low.value = reg16.high.value, reg16.low.value
         end
 
         def store(num)
@@ -214,6 +222,18 @@ module Z80
                 @value, @overflow = num, false
             end
         end
+
+        def read8 mem
+            val = mem[@value]
+            self.store(@value + 1)
+            val
+        end
+
+        def read16 mem
+            val = Register16.new(mem[@value + 1], mem[@value])
+            self.store(@value + 2)
+            val
+        end
     end
 
     class Z80
@@ -234,9 +254,9 @@ module Z80
 
         def run
             loop do
-                interrupt while execute(@memory[@pc.value].value)
+                interrupt while execute(@pc.read8(@memory).value)
                 execute(0x00) while !interrupt
-                execute(@memory[@pc.value].value)
+                execute(@pc.read8(@memory).value)
             end
         end
 
@@ -247,15 +267,14 @@ module Z80
         def execute opcode
             t = Time.now
             t_states = 4
-            op_size = 1
             case opcode
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
-                @bc.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
+                @bc.copy(@pc.read16(@memory))
                 t_states = 10
                 op_size = 3
             when 0x02 #LD (BC),A
-                @memory[@bc.value].store(@a.value)
+                @memory[@bc.value].copy(@a)
                 t_states = 7
             when 0x03 #INC BC
                 @bc.store(@bc.value + 1)
@@ -269,7 +288,7 @@ module Z80
                 @f.flag_n = true
                 @b.flags(@f)
             when 0x06 #LD B,NN
-                @b.store(@memory[@pc.value + 1].value)
+                @b.copy(@pc.read8(@memory))
                 t_states = 7
                 op_size = 2
             when 0x07 #RLCA
@@ -277,19 +296,15 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = @a.carry
             when 0x08 #EX AF,AF’
-                v = @a.value
-                @a.store(@a’.value)
-                @a’.store(v)
-                v = @f.value
-                @f.store(@f’.value)
-                @f’.store(v)
+                @a.exchange(@a’)
+                @f.exchange(@f’)
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
                 @f.flag_n = false
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x0A #LD A,(BC)
-                @a.store(@memory[@bc.value].value)
+                @a.copy(@memory[@bc.value])
                 t_states = 7
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
@@ -303,24 +318,25 @@ module Z80
                 @f.flag_n = false
                 @c.flags(@f)
             when 0x0E #LD C,NN
-                @c.store(@memory[@pc.value + 1].value)
+                @c.copy(@pc.read8(@memory))
                 t_states = 7
-                op_size = 2
             when 0x0F #RRCA
                 @a.rotate_right
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x10 #DJNZ NN
                 @b.store(@b.value - 1)
-                @pc += @memory[@pc.value + 1].value if @b.nonzero?
-                t_states = 13 + 8
-                op_size = 2
+                if @b.nonzero?
+                    @pc.store(@pc.value + @pc.read8(@memory).value)
+                    t_states = 13
+                else
+                    t_states = 8
+                end
             when 0x11 #LD DE,HHLL
-                @de.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
+                @de.copy(@pc.read16(@memory))
                 t_states = 10
-                op_size = 3
             when 0x12 #LD (DE),A
-                @memory[@de.value].store(@a.value)
+                @memory[@de.value].copy(@a)
                 t_states = 7
             when 0x13 #INC DE
                 @de.store(@de.value + 1)
@@ -334,24 +350,22 @@ module Z80
                 @f.flag_n = true
                 @d.flags(@f)
             when 0x16 #LD D,NN
-                @d.store(@memory[@pc.value + 1].value)
+                @d.store(@pc.read8(@memor))
                 t_states = 7
-                op_size = 2
             when 0x17 #RLA
                 @a.rotate_left_trough_carry @f.flag_c
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x18 #JR NN
-                @pc += @memory[@pc.value + 1].value
+                @pc.store(@pc.value + @pc.read8(@memory))
                 t_states = 12
-                op_size = 2
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
                 @f.flag_n = false
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x1A #LD A,(DE)
-                @a.value = @memory[@de.value].value
+                @a.copy(@memory[@de.value])
                 t_states = 7
             when 0x1B #DEC DE
                 @de.store(@de.value - 1)
@@ -365,9 +379,8 @@ module Z80
                 @f.flag_n = true
                 @e.flags(@f)
             when 0x1E #LD E,NN
-                @e.store(@memory[@pc.value + 1].value)
+                @e.copy(@pc.read8(@memory))
                 t_states = 7
-                op_size = 2
             when 0x1F #RRA
                 @a.rotate_right_trough_carry @f.flag_c
                 @f.flag_n, @f.flag_hc = false
@@ -376,20 +389,16 @@ module Z80
                 if @f.flag_z
                     t_states = 7
                 else
-                    @pc += @memory[@pc.value + 1].value
+                    @pc.store(@pc.value + @pc.read8(@memory))
                     t_states = 12
                 end
-                op_size = 2
             when 0x21 #LD HL,HHLL
-                @hl.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
+                @hl.copy(@pc.read16(@memory))
                 t_states = 10
-                op_size = 3
             when 0x22 #LD (HHLL),HL
-                v = Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value
-                @memory[v + 1].store(@h.value)
-                @memory[v].store(@l.value)
+                v = @pc.read16(@memory).value
+                Register16.new(@memory[v + 1], @memory[v]).copy(@hl)
                 t_states = 16
-                op_size = 3
             when 0x23 #INC HL
                 @hl.store(@hl.value + 1)
                 t_states = 6
@@ -402,9 +411,8 @@ module Z80
                 @f.flag_n = true
                 @h.flags(@f)
             when 0x26 #LD H,NN
-                @h.store(@memory[@pc.value + 1].value)
+                @h.copy(@pc.read8(@memory))
                 t_states = 7
-                op_size = 2
             when 0x27 #DAA
                 q, r = @a.as_unsigned.divmod MAX4
                 c = @f.flag_c
@@ -454,22 +462,20 @@ module Z80
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
                 if @f.flag_z
-                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
+                    @pc.store(@pc.value + @pc.read8(@memory))
                     t_states = 12
                 else
                     t_states = 7
                 end
-                op_size = 2
             when 0x29 #ADD HL,HL
                 @hl.store(@hl.value + @hl.value)
                 @f.flag_n = false
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
-                v = Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value
-                @hl.store(@memory[v + 1].value, @memory[v].value)
+                v = @pc.read16(@memory).value
+                @hl.copy(Register16.new(@memory[v + 1].value, @memory[v].value))
                 t_states = 16
-                op_size = 3
             when 0x2B #DEC HL
                 @hl.store(@hl.value - 1)
                 t_states = 6
@@ -482,9 +488,8 @@ module Z80
                 @f.flag_n = true
                 @l.flags(@f)
             when 0x2E #LD L,NN
-                @l.store(@memory[@pc.value + 1].value)
+                @l.copy(@pc.read8(@memory))
                 t_states = 7
-                op_size = 2
             when 0x2F #CPL
                 @a.store(~@a.as_unsigned)
                 @f.flag_n, @f.flag_hc = true
@@ -492,18 +497,15 @@ module Z80
                 if @f.flag_c
                     t_states = 7
                 else
-                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
+                    @pc.store(@pc.value + @pc.read8(@memory).value)
                     t_states = 12
                 end
-                op_size = 2
             when 0x31 #LD SP,HHLL
-                @sp.store(@memory[@pc.value + 2].value, @memory[@pc.value + 1].value)
+                @sp.copy(@pc.read16(@memory))
                 t_states = 10
-                op_size = 3
             when 0x32 #LD (HHLL),A
-                @memory[Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value].store(@a.value)
+                @memory[@pc.read16(@memory).value].copy(@a)
                 t_states = 16
-                op_size = 3
             when 0x33 #INC SP
                 @sp.store(@sp.value + 1)
                 t_states = 6
@@ -520,29 +522,26 @@ module Z80
                 m.flags(@f)
                 t_states = 11
             when 0x36 #LD (HL),NN
-                @memory[@hl.value].store(@memory[@pc.value + 1].value)
+                @memory[@hl.value].copy(@pc.read8(@memory))
                 t_states = 10
-                op_size = 2
             when 0x37 #SCF
                 @f.flag_c = true
                 @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
                 if @f.flag_c
-                    @pc.store(@pc.value + @memory[@pc.value + 1].value)
+                    @pc.store(@pc.value + @pc.read8(@memory).value)
                     t_states = 12
                 else
                     t_states = 7
                 end
-                op_size = 2
             when 0x39 #ADD HL,SP
                 @hl.store(@hl.value + @sp.value)
                 @f.flag_n = false
                 @hl.flags_math(@f)
                 t_states = 11
             when 0x3A #LD A,(HHLL)
-                @a.store(@memory[Register16.new(@memory[@pc.value + 2], @memory[@pc.value + 1]).value].value)
+                @a.copy(@memory[@pc.read16(@memory).value])
                 t_states = 13
-                op_size = 3
             when 0x3B #DEC SP
                 @sp.store(@sp.value - 1)
                 t_states = 6
@@ -555,146 +554,145 @@ module Z80
                 @f.flag_n = false
                 @a.flags(@f)
             when 0x3E #LD A,NN
-                @a.store(@memory[@pc.value + 1].value)
+                @a.copy(@pc.read8(@memory))
                 t_states = 7
-                op_size = 2
             when 0x3F #CCF
                 @f.flag_hc = @f.flag_c
                 @f.flag_c = !@f.flag_c
                 @f.flag_n = false
             when 0x40 #LD B,B
             when 0x41 #LD B,C
-                @b.store(@c.value)
+                @b.copy(@c)
             when 0x42 #LD B,D
-                @b.store(@d.value)
+                @b.copy(@d)
             when 0x43 #LD B,E
-                @b.store(@e.value)
+                @b.copy(@e)
             when 0x44 #LD B,H
-                @b.store(@h.value)
+                @b.copy(@h)
             when 0x45 #LD B,L
-                @b.store(@l.value)
+                @b.copy(@l)
             when 0x46 #LD B,(HL)
-                @b.store(@memory[@hl.value].value)
+                @b.copy(@memory[@hl.value])
                 t_states = 7
             when 0x47 #LD B,A
-                @b.store(@a.value)
+                @b.copy(@a)
             when 0x48 #LD C,B
-                @c.store(@b.value)
+                @c.copy(@b)
             when 0x49 #LD C,C
             when 0x4A #LD C,D
-                @c.store(@d.value)
+                @c.copy(@d)
             when 0x4B #LD C,E
-                @c.store(@e.value)
+                @c.copy(@e)
             when 0x4C #LD C,H
-                @c.store(@h.value)
+                @c.copy(@h)
             when 0x4D #LD C,L
-                @c.store(@l.value)
+                @c.copy(@l)
             when 0x4E #LD C,(HL)
-                @c.store(@memory[@hl.value].value)
+                @c.copy(@memory[@hl.value])
                 t_states = 7
             when 0x4F #LD C,A
-                @c.store(@a.value)
+                @c.copy(@a)
             when 0x50 #LD D,B
-                @d.store(@b.value)
+                @d.copy(@b)
             when 0x51 #LD D,C
-                @d.store(@c.value)
+                @d.copy(@c)
             when 0x52 #LD D,D
             when 0x53 #LD D,E
-                @d.store(@e.value)
+                @d.copy(@e)
             when 0x54 #LD D,H
-                @d.store(@h.value)
+                @d.copy(@h)
             when 0x55 #LD D,L
-                @d.store(@l.value)
+                @d.copy(@l)
             when 0x56 #LD D,(HL)
-                @d.store(@memory[@hl.value].value)
+                @d.copy(@memory[@hl.value])
                 t_states = 7
             when 0x57 #LD D,A
-                @d.store(@a.value)
+                @d.copy(@a)
             when 0x58 #LD E,B
-                @e.store(@b.value)
+                @e.copy(@b)
             when 0x59 #LD E,C
-                @e.store(@c.value)
+                @e.copy(@c)
             when 0x5A #LD E,D
-                @e.store(@d.value)
+                @e.copy(@d)
             when 0x5B #LD E,E
             when 0x5C #LD E,H
-                @e.store(@h.value)
+                @e.copy(@h)
             when 0x5D #LD E,L
-                @e.store(@l.value)
+                @e.copy(@l)
             when 0x5E #LD E,(HL)
-                @e.store(@memory[@hl.value].value)
+                @e.copy(@memory[@hl.value])
                 t_states = 7
             when 0x5F #LD E,A
-                @e.store(@a.value)
+                @e.copy(@a)
             when 0x60 #LD H,B
-                @h.store(@b.value)
+                @h.copy(@b)
             when 0x61 #LD H,C
-                @h.store(@c.value)
+                @h.copy(@c)
             when 0x62 #LD H,D
-                @h.store(@d.value)
+                @h.copy(@d)
             when 0x63 #LD H,E
-                @h.store(@e.value)
+                @h.copy(@e)
             when 0x64 #LD H,H
             when 0x65 #LD H,L
-                @h.store(@l.value)
+                @h.copy(@l)
             when 0x66 #LD H,(HL)
-                @h.store(@memory[@hl.value].value)
+                @h.copy(@memory[@hl.value])
                 t_states = 7
             when 0x67 #LD H,A
-                @h.store(@a.value)
+                @h.copy(@a)
             when 0x68 #LD L,B
-                @l.store(@b.value)
+                @l.copy(@b)
             when 0x69 #LD L,C
-                @l.store(@c.value)
+                @l.copy(@c)
             when 0x6A #LD L,D
-                @l.store(@d.value)
+                @l.copy(@d)
             when 0x6B #LD L,E
-                @l.store(@e.value)
+                @l.copy(@e)
             when 0x6C #LD L,H
-                @l.store(@h.value)
+                @l.copy(@h)
             when 0x6D #LD L,L
             when 0x6E #LD L,(HL)
-                @l.store(@memory[@hl.value].value)
+                @l.copy(@memory[@hl.value])
                 t_states = 7
             when 0x6F #LD L,A
-                @l.store(@a.value)
+                @l.copy(@a)
             when 0x70 #LD (HL),B
-                @memory[@hl.value].store(@b.value)
+                @memory[@hl.value].copy(@b)
                 t_states = 7
             when 0x71 #LD (HL),C
-                @memory[@hl.value].store(@c.value)
+                @memory[@hl.value].copy(@c)
                 t_states = 7
             when 0x72 #LD (HL),D
-                @memory[@hl.value].store(@d.value)
+                @memory[@hl.value].copy(@d)
                 t_states = 7
             when 0x73 #LD (HL),E
-                @memory[@hl.value].store(@e.value)
+                @memory[@hl.value].copy(@e)
                 t_states = 7
             when 0x74 #LD (HL),H
-                @memory[@hl.value].store(@h.value)
+                @memory[@hl.value].copy(@h)
                 t_states = 7
             when 0x75 #LD (HL),L
-                @memory[@hl.value].store(@l.value)
+                @memory[@hl.value].copy(@l)
                 t_states = 7
             when 0x76 #HALT
                 return false
             when 0x77 #LD (HL),A
-                @memory[@hl.value].value = @a.value
+                @memory[@hl.value].copy(@a)
                 t_states = 7
             when 0x78 #LD A,B
-                @a.store(@b.value)
+                @a.copy(@b)
             when 0x79 #LD A,C
-                @a.store(@c.value)
+                @a.copy(@c)
             when 0x7A #LD A,D
-                @a.store(@d.value)
+                @a.copy(@d)
             when 0x7B #LD A,E
-                @a.store(@e.value)
+                @a.copy(@e)
             when 0x7C #LD A,H
-                @a.store(@h.value)
+                @a.copy(@h)
             when 0x7D #LD A,L
-                @a.store(@l.value)
+                @a.copy(@l)
             when 0x7E #LD A,(HL)
-                @a.value = @memory[@hl.value].value
+                @a.copy(@memory[@hl.value])
                 t_states = 7
             when 0x7F #LD A,A
             when 0x80 #ADD A,B
@@ -836,14 +834,12 @@ module Z80
                 if @f.flag_z
                     t_states = 5
                 else
-                    @pc.store(Register16.new(@memory[@sp.value + 1], @memory[@sp.value]).value)
-                    @sp.store(@sp.value + 2)
+                    @pc.copy(@sp.read16(@memory))
                     t_states = 11
                 end
             else
                 fail
             end
-            @pc.store(@pc.value + op_size)
             sleep (t + t_states * @state_duration - Time.now) / 1000.0
             return true
         end
