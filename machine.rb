@@ -491,7 +491,7 @@ module Z80
                 @l.copy(@pc.read8(@memory))
                 t_states = 7
             when 0x2F #CPL
-                @a.store(~@a.as_unsigned)
+                @a.store(~(@a.as_unsigned + MAX16))
                 @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
                 if @f.flag_c
