@@ -840,7 +840,7 @@ module Z80
             else
                 fail
             end
-            sleep (t + t_states * @state_duration - Time.now) / 1000.0
+            sleep(t + t_states * @state_duration - Time.now) / 1000.0
             return true
         end
     end
