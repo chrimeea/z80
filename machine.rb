@@ -906,6 +906,15 @@ module Z80
                 @sp.push(@memory).copy(@pc)
                 @pc.copy(reg)
                 t_states = 17
+            when 0xDD #DD
+                #TODO: DD
+                fail
+            when 0xED #ED
+                #TODO: ED
+                fail
+            when 0xDD #FD
+                #TODO: FD
+                fail
             else
                 fail
             end
