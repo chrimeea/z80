@@ -851,9 +851,7 @@ module Z80
                 t_states = 10
             when 0xC2 #JP NZ,HHLL
                 reg = @pc.read16(@memory)
-                if !@f.flag_z
-                    @pc.copy(reg)
-                end
+                @pc.copy(reg) if !@f.flag_z
                 t_states = 10
             when 0xC3 #JP HHLL
                 @pc.copy(@pc.read16(@memory))
@@ -884,6 +882,13 @@ module Z80
                 else
                     t_states = 11
                 end
+            when 0xC9 #RET
+                @pc.copy(@sp.read16(@memory))
+                t_states = 10
+            when 0xCA #JP Z,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if @f.flag_z
+                t_states = 10
             else
                 fail
             end
