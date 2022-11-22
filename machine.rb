@@ -230,9 +230,13 @@ module Z80
         end
 
         def read16 mem
-            val = Register16.new(mem[@value + 1], mem[@value])
             self.store(@value + 2)
-            val
+            Register16.new(mem[@value - 1], mem[@value - 2])
+        end
+
+        def push mem
+            self.store(@value - 2)
+            Register16.new(mem[@value + 1], mem[@value])
         end
     end
 
@@ -855,6 +859,19 @@ module Z80
                 @pc.copy(@pc.read16(@memory))
                 t_states = 10
             when 0xC4 #CALL NZ,HHLL
+                val = @pc.read16(@memory).value
+                if @f.flag_z
+                    t_states = 10
+                else
+                    @sp.push(@memory).copy(@pc)
+                    t_states = 17
+                end
+            when 0xC5 #PUSH BC
+                @sp.push(@memory).copy(@bc)
+                t_states = 10
+            when 0xC6 #ADD A,NN
+                @a.add(@pc.read8(@memory).value, @f)
+                t_states = 7
             else
                 fail
             end
