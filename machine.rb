@@ -913,6 +913,20 @@ module Z80
                 @sp.push(@memory).copy(@pc)
                 @pc.copy(8)
                 t_states = 11
+            when 0xD0 #RET NC
+                if @f.flag_c
+                    t_states = 11
+                else
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                end
+            when 0xD1 #POP DE
+                @de.copy(@sp.read16(@memory))
+                t_states = 10
+            when 0xD2 #JP NC,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if !@f.flag_c
+                t_states = 10
             when 0xDD #DD
                 #TODO: DD
                 fail
