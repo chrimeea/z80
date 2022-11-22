@@ -864,6 +864,7 @@ module Z80
                     t_states = 10
                 else
                     @sp.push(@memory).copy(@pc)
+                    @pc.copy(val)
                     t_states = 17
                 end
             when 0xC5 #PUSH BC
@@ -872,6 +873,10 @@ module Z80
             when 0xC6 #ADD A,NN
                 @a.add(@pc.read8(@memory).value, @f)
                 t_states = 7
+            when 0xC7 #RST 00
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(0)
+                t_states = 11
             else
                 fail
             end
