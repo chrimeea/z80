@@ -857,12 +857,12 @@ module Z80
                 @pc.copy(@pc.read16(@memory))
                 t_states = 10
             when 0xC4 #CALL NZ,HHLL
-                val = @pc.read16(@memory).value
+                reg = @pc.read16(@memory)
                 if @f.flag_z
                     t_states = 10
                 else
                     @sp.push(@memory).copy(@pc)
-                    @pc.copy(val)
+                    @pc.copy(reg)
                     t_states = 17
                 end
             when 0xC5 #PUSH BC
@@ -889,6 +889,23 @@ module Z80
                 reg = @pc.read16(@memory)
                 @pc.copy(reg) if @f.flag_z
                 t_states = 10
+            when 0xCB #CB
+                #TODO: CB
+                fail
+            when 0xCC #CALL Z,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_z
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                else
+                    t_states = 10
+                end
+            when 0xCD #CALL HHLL
+                reg = @pc.read16(@memory)
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(reg)
+                t_states = 17
             else
                 fail
             end
