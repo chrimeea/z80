@@ -906,6 +906,13 @@ module Z80
                 @sp.push(@memory).copy(@pc)
                 @pc.copy(reg)
                 t_states = 17
+            when 0xCE #ADC A,NN
+                @a.add(@pc.read8(@memory).value + (@f.carry ? 1 : 0), @f)
+                t_states = 7
+            when 0xCF #RST 08
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(8)
+                t_states = 11
             when 0xDD #DD
                 #TODO: DD
                 fail
