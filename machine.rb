@@ -837,6 +837,17 @@ module Z80
                     @pc.copy(@sp.read16(@memory))
                     t_states = 11
                 end
+            when 0xC1 #POP BC
+                @bc.copy(@sp.read16(@memory))
+                t_states = 10
+            when 0xC2 #JP NZ,HHLL
+                if !@f.flag_z
+                    @pc.copy(@pc.read16(@memory))
+                end
+                t_states = 10
+            when 0xC3 #JP HHLL
+                @pc.copy(@pc.read16(@memory))
+                t_states = 10
             else
                 fail
             end
