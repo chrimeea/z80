@@ -841,10 +841,10 @@ module Z80
                 @f.flag_z = true
             when 0xC0 #RET NZ
                 if @f.flag_z
-                    t_states = 5
+                    t_states = 11
                 else
                     @pc.copy(@sp.read16(@memory))
-                    t_states = 11
+                    t_states = 15
                 end
             when 0xC1 #POP BC
                 @bc.copy(@sp.read16(@memory))
@@ -877,6 +877,13 @@ module Z80
                 @sp.push(@memory).copy(@pc)
                 @pc.copy(0)
                 t_states = 11
+            when 0xC8 #RET Z
+                if @f.flag_z
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                else
+                    t_states = 11
+                end
             else
                 fail
             end
