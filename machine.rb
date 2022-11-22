@@ -325,9 +325,10 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x10 #DJNZ NN
+                val = @pc.read8(@memory).value
                 @b.store(@b.value - 1)
                 if @b.nonzero?
-                    @pc.store(@pc.value + @pc.read8(@memory).value)
+                    @pc.store(@pc.value + val)
                     t_states = 13
                 else
                     t_states = 8
@@ -357,7 +358,7 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x18 #JR NN
-                @pc.store(@pc.value + @pc.read8(@memory))
+                @pc.store(@pc.value + @pc.read8(@memory).value)
                 t_states = 12
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
@@ -386,10 +387,11 @@ module Z80
                 @f.flag_n, @f.flag_hc = false
                 @f.flag_c = !@a.carry
             when 0x20 #JR NZ,NN
+                val = @pc.read8(@memory).value
                 if @f.flag_z
                     t_states = 7
                 else
-                    @pc.store(@pc.value + @pc.read8(@memory))
+                    @pc.store(@pc.value + val)
                     t_states = 12
                 end
             when 0x21 #LD HL,HHLL
@@ -461,8 +463,9 @@ module Z80
                 @f.flag_z = (@a.value == 1)
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
+                val = @pc.read8(@memory).value
                 if @f.flag_z
-                    @pc.store(@pc.value + @pc.read8(@memory))
+                    @pc.store(@pc.value + val)
                     t_states = 12
                 else
                     t_states = 7
@@ -494,10 +497,11 @@ module Z80
                 @a.store(~(@a.as_unsigned + MAX16))
                 @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
+                val = @pc.read8(@memory).value
                 if @f.flag_c
                     t_states = 7
                 else
-                    @pc.store(@pc.value + @pc.read8(@memory).value)
+                    @pc.store(@pc.value + val)
                     t_states = 12
                 end
             when 0x31 #LD SP,HHLL
@@ -528,8 +532,9 @@ module Z80
                 @f.flag_c = true
                 @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
+                val = @pc.read8(@memory).value
                 if @f.flag_c
-                    @pc.store(@pc.value + @pc.read8(@memory).value)
+                    @pc.store(@pc.value + val)
                     t_states = 12
                 else
                     t_states = 7
@@ -841,13 +846,15 @@ module Z80
                 @bc.copy(@sp.read16(@memory))
                 t_states = 10
             when 0xC2 #JP NZ,HHLL
+                reg = @pc.read16(@memory)
                 if !@f.flag_z
-                    @pc.copy(@pc.read16(@memory))
+                    @pc.copy(reg)
                 end
                 t_states = 10
             when 0xC3 #JP HHLL
                 @pc.copy(@pc.read16(@memory))
                 t_states = 10
+            when 0xC4 #CALL NZ,HHLL
             else
                 fail
             end
