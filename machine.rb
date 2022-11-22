@@ -927,6 +927,21 @@ module Z80
                 reg = @pc.read16(@memory)
                 @pc.copy(reg) if !@f.flag_c
                 t_states = 10
+            when 0xD3 #OUT (NN),A
+                #TODO: OUT
+                fail
+            when 0xD4 #CALL NC,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_c
+                    t_states = 10
+                else
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                end
+            when 0xD5 #PUSH DE
+                @sp.push(@memory).copy(@de)
+                t_states = 10
             when 0xDD #DD
                 #TODO: DD
                 fail
