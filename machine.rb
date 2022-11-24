@@ -942,6 +942,27 @@ module Z80
             when 0xD5 #PUSH DE
                 @sp.push(@memory).copy(@de)
                 t_states = 10
+            when 0xD6 #SUB A,NN
+                @a.sub(@pc.read8(@memory), @f)
+                t_states = 7
+            when 0xD7 #RST 10
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(10)
+                t_states = 11
+            when 0xD8 #RET C
+                if @f.flag_c
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15                    
+                else
+                    t_states = 11
+                end
+            when 0xD9 #EXX
+                @b.exchange(@b’)
+                @c.exchange(@c’)
+                @d.exchange(@d’)
+                @e.exchange(@e’)
+                @h.exchange(@h’)
+                @l.exchange(@l’)
             when 0xDD #DD
                 #TODO: DD
                 fail
