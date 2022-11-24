@@ -131,7 +131,7 @@ module Z80
         def xor(num, f)
             self.store(@value ^ num)
             self.flags_s_z(f)
-            f.flag_pv = @value.even?
+            f.parity(@value)
             f.flag_hc, f.flag_n, f.flag_c = false
         end
 
@@ -167,6 +167,10 @@ module Z80
             @flag_hc = (v[4] == '1')
             @flag_z = (v[6] == '1')
             @flag_s = (v[8] == '1')
+        end
+
+        def parity(val)
+            @flag_pv = val.to_s(2).count(1).even?
         end
     end
 
@@ -463,7 +467,7 @@ module Z80
                     v = 0x9A
                     @f.flag_c = true
                 end
-                @f.flag_pv = @a.value.even?
+                @f.parity(@a.value)
                 @f.flag_z = (@a.value == 1)
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
@@ -963,9 +967,39 @@ module Z80
                 @e.exchange(@e’)
                 @h.exchange(@h’)
                 @l.exchange(@l’)
+            when 0xDA #JP C,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if @f.flag_c
+                t_states = 10
+            when 0xDB #IN A,(NN)
+                #TODO: IN
+                fail
+            when 0xDC #CALL C,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_c
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                else
+                    t_states = 10
+                end
             when 0xDD #DD
                 #TODO: DD
                 fail
+            when 0xDE #SBC A,NN
+                @a.sub(@pc.read8(@memory) + (@f.carry ? 1 : 0), @f)
+                t_states = 7
+            when 0xDF #RST 18
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(18)
+                t_states = 11
+            when 0xE0 #RET PO
+                if @f.flag_pv
+                    t_states = 11
+                else
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                end
             when 0xED #ED
                 #TODO: ED
                 fail
