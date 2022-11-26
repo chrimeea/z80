@@ -46,10 +46,11 @@ module Z80
             @value += 1 if @carry
         end
 
-        def rotate_left_trough_carry c
-            v, @carry = c
+        def rotate_left_trough_carry f
+            v, @carry = f.flag_c
             self.shift_left
             @value += 1 if v
+            f.flag_c = @carry
         end
 
         def shift_right
@@ -67,10 +68,11 @@ module Z80
             @value -= MAX7 if @carry
         end
 
-        def rotate_right_trough_carry c
-            v, @carry = c
+        def rotate_right_trough_carry f
+            v, @carry = f.flag_c
             self.shift_right
             @value -= MAX7 if v
+            f.flag_c = @carry
         end
 
         def flags f
@@ -335,7 +337,7 @@ module Z80
             when 0x0F #RRCA
                 @a.rotate_right
                 @f.flag_n, @f.flag_hc = false
-                @f.flag_c = !@a.carry
+                @f.flag_c = @a.carry
             when 0x10 #DJNZ NN
                 val = @pc.read8(@memory).value
                 @b.store(@b.value - 1)
@@ -366,9 +368,8 @@ module Z80
                 @d.store(@pc.read8(@memor))
                 t_states = 7
             when 0x17 #RLA
-                @a.rotate_left_trough_carry @f.flag_c
+                @a.rotate_left_trough_carry @f
                 @f.flag_n, @f.flag_hc = false
-                @f.flag_c = !@a.carry
             when 0x18 #JR NN
                 @pc.store(@pc.value + @pc.read8(@memory).value)
                 t_states = 12
@@ -395,9 +396,8 @@ module Z80
                 @e.copy(@pc.read8(@memory))
                 t_states = 7
             when 0x1F #RRA
-                @a.rotate_right_trough_carry @f.flag_c
+                @a.rotate_right_trough_carry @f
                 @f.flag_n, @f.flag_hc = false
-                @f.flag_c = !@a.carry
             when 0x20 #JR NZ,NN
                 val = @pc.read8(@memory).value
                 if @f.flag_z
@@ -901,106 +901,60 @@ module Z80
                 #TODO: CB
                 case @pc.read8(@memory)
                 when 0x00 #RLC B
+                    reg = @b
                     @b.rotate_left
-                    @f.flag_c = @b.carry
-                    @f.s_z(@b)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@b.value)
                 when 0x01 #RLC C
+                    reg = @c
                     @c.rotate_left
-                    @f.flag_c = @c.carry
-                    @f.s_z(@c)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@c.value)
                 when 0x02 #RLC D
+                    reg = @d
                     @d.rotate_left
-                    @f.flag_c = @d.carry
-                    @f.s_z(@d)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@d.value)
                 when 0x03 #RLC E
+                    reg = @e
                     @e.rotate_left
-                    @f.flag_c = @e.carry
-                    @f.s_z(@e)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@e.value)
                 when 0x04 #RLC H
+                    reg = @h
                     @h.rotate_left
-                    @f.flag_c = @h.carry
-                    @f.s_z(@h)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@h.value)
                 when 0x05 #RLC L
+                    reg = @l
                     @l.rotate_left
-                    @f.flag_c = @l.carry
-                    @f.s_z(@l)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@l.value)
                 when 0x06 #RLC (HL)
                     reg = @memory[@hl.value]
                     reg.rotate_left
-                    @f.flag_c = @reg.carry
-                    @f.s_z(@reg)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@reg.value)
                 when 0x07 #RLC A
+                    reg = @a
                     @a.rotate_left
-                    @f.flag_c = @a.carry
-                    @f.s_z(@a)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@a.value)
                 when 0x08 #RRC B
+                    reg = @b
                     @b.rotate_right
-                    @f.flag_c = @b.carry
-                    @f.s_z(@b)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@b.value)
                 when 0x09 #RRC C
+                    reg = @c
                     @c.rotate_right
-                    @f.flag_c = @c.carry
-                    @f.s_z(@c)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@c.value)
                 when 0x0A #RRC D
+                    reg = @d
                     @d.rotate_right
-                    @f.flag_c = @d.carry
-                    @f.s_z(@d)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@d.value)
                 when 0x0B #RRC E
+                    reg = @e
                     @e.rotate_right
-                    @f.flag_c = @e.carry
-                    @f.s_z(@e)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@e.value)
                 when 0x0C #RRC H
+                    reg = @h
                     @h.rotate_right
-                    @f.flag_c = @h.carry
-                    @f.s_z(@h)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@h.value)
                 when 0x0D #RRC L
+                    reg = @l
                     @l.rotate_right
-                    @f.flag_c = @l.carry
-                    @f.s_z(@l)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@l.value)
                 when 0x0E #RRC (HL)
                     reg = @memory[@hl.value]
                     reg.rotate_right
-                    @f.flag_c = reg.carry
-                    @f.s_z(reg)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(reg.value)
                 when 0x0F #RRC A
+                    reg = @a
                     @a.rotate_right
-                    @f.flag_c = @a.carry
-                    @f.s_z(@a)
-                    @f.flag_n, @f.flag_hc = false
-                    @f.parity(@a.value)
                 else
                     fail
                 end
+                @f.flag_c = reg.carry
+                @f.s_z(reg)
+                @f.flag_n, @f.flag_hc = false
+                @f.parity(reg.value)
                 t_states = 8
             when 0xCC #CALL Z,HHLL
                 reg = @pc.read16(@memory)
