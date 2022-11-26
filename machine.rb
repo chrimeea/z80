@@ -1057,6 +1057,27 @@ module Z80
             when 0xED #ED
                 #TODO: ED
                 fail
+            when 0xEE #XOR A,NN
+                @a.xor(@pc.read8(@memory), @f)
+                t_states = 7
+            when 0xEF #RST 28
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(28)
+                t_states = 11
+            when 0xF0 #RET P
+                if @f.flag_s
+                    t_states = 11
+                else
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                end
+            when 0xF1 #POP AF
+                @af.copy(@sp.read16(@memory))
+                t_states = 10
+            when 0xF2 #JP P,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if !@f.flag_s
+                t_states = 10
             when 0xDD #FD
                 #TODO: FD
                 fail
