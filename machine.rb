@@ -1000,6 +1000,13 @@ module Z80
                     @pc.copy(@sp.read16(@memory))
                     t_states = 15
                 end
+            when 0xE1 #POP HL
+                @hl.copy(@sp.read16(@memory))
+                t_states = 10
+            when 0xE2 #JP PO,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if !@f.flag_pv
+                t_states = 10
             when 0xED #ED
                 #TODO: ED
                 fail
