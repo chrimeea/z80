@@ -46,11 +46,10 @@ module Z80
             @value += 1 if @carry
         end
 
-        def rotate_left_trough_carry f
-            v, @carry = f.flag_c
+        def rotate_left_trough_carry
+            v = @carry
             self.shift_left
             @value += 1 if v
-            f.flag_c = @carry
         end
 
         def shift_right
@@ -68,11 +67,10 @@ module Z80
             @value -= MAX7 if @carry
         end
 
-        def rotate_right_trough_carry f
-            v, @carry = f.flag_c
+        def rotate_right_trough_carry
+            v = @carry
             self.shift_right
             @value -= MAX7 if v
-            f.flag_c = @carry
         end
 
         def flags f
@@ -174,6 +172,16 @@ module Z80
             @flag_s = val.negative?
             @flag_z = val.zero?
         end
+
+        def flags_shift reg
+            @flag_n, @flag_hc = false
+            @flag_c = reg.carry
+        end
+
+        def flags_math reg
+            @flag_hc = reg.hc
+            @flag_c = reg.overflow
+        end
     end
 
     class Register16
@@ -206,11 +214,6 @@ module Z80
             q, r = num.divmod MAX8
             self.store q, r
             @hc = ((prev_high.abs < MAX4 && @high.abs >= MAX4) || (prev_high.abs > MAX4 && @high.abs <= MAX4))
-        end
-
-        def flags_math f
-            f.flag_hc = @hc
-            f.flag_c = @overflow
         end
     end
 
@@ -307,15 +310,14 @@ module Z80
                 op_size = 2
             when 0x07 #RLCA
                 @a.rotate_left
-                @f.flag_n, @f.flag_hc = false
-                @f.flag_c = @a.carry
+                @f.flags_shift(@a)
             when 0x08 #EX AF,AF’
                 @a.exchange(@a’)
                 @f.exchange(@f’)
             when 0x09 #ADD HL,BC
                 @hl.store(@hl.value + @bc.value)
                 @f.flag_n = false
-                @hl.flags_math(@f)
+                @f.flags_math(@hl)
                 t_states = 11
             when 0x0A #LD A,(BC)
                 @a.copy(@memory[@bc.value])
@@ -336,8 +338,7 @@ module Z80
                 t_states = 7
             when 0x0F #RRCA
                 @a.rotate_right
-                @f.flag_n, @f.flag_hc = false
-                @f.flag_c = @a.carry
+                @f.flags_shift(@a)
             when 0x10 #DJNZ NN
                 val = @pc.read8(@memory).value
                 @b.store(@b.value - 1)
@@ -368,15 +369,16 @@ module Z80
                 @d.store(@pc.read8(@memor))
                 t_states = 7
             when 0x17 #RLA
-                @a.rotate_left_trough_carry @f
-                @f.flag_n, @f.flag_hc = false
+                @a.carry = @f.flag_c
+                @a.rotate_left_trough_carry
+                @f.flags_shift(@a)
             when 0x18 #JR NN
                 @pc.store(@pc.value + @pc.read8(@memory).value)
                 t_states = 12
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
                 @f.flag_n = false
-                @hl.flags_math(@f)
+                @f.flags_math(@hl)
                 t_states = 11
             when 0x1A #LD A,(DE)
                 @a.copy(@memory[@de.value])
@@ -396,8 +398,9 @@ module Z80
                 @e.copy(@pc.read8(@memory))
                 t_states = 7
             when 0x1F #RRA
-                @a.rotate_right_trough_carry @f
-                @f.flag_n, @f.flag_hc = false
+                @a.carry = @f.flag_c
+                @a.rotate_right_trough_carry
+                @f.flags_shift(@a)
             when 0x20 #JR NZ,NN
                 val = @pc.read8(@memory).value
                 if @f.flag_z
@@ -485,7 +488,7 @@ module Z80
             when 0x29 #ADD HL,HL
                 @hl.store(@hl.value + @hl.value)
                 @f.flag_n = false
-                @hl.flags_math(@f)
+                @f.flags_math(@hl)
                 t_states = 11
             when 0x2A #LD HL,(HHLL)
                 v = @pc.read16(@memory).value
@@ -554,7 +557,7 @@ module Z80
             when 0x39 #ADD HL,SP
                 @hl.store(@hl.value + @sp.value)
                 @f.flag_n = false
-                @hl.flags_math(@f)
+                @f.flags_math(@hl)
                 t_states = 11
             when 0x3A #LD A,(HHLL)
                 @a.copy(@memory[@pc.read16(@memory).value])
@@ -951,9 +954,8 @@ module Z80
                 else
                     fail
                 end
-                @f.flag_c = reg.carry
+                @f.flags_shift(@a)
                 @f.s_z(reg)
-                @f.flag_n, @f.flag_hc = false
                 @f.parity(reg.value)
                 t_states = 8
             when 0xCC #CALL Z,HHLL
