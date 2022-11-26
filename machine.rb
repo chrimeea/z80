@@ -73,15 +73,10 @@ module Z80
             @value -= MAX7 if v
         end
 
-        def flags_s_z f
-            f.flag_s = @value.negative?
-            f.flag_z = @value.zero?
-        end
-
         def flags f
             f.flag_pv = @overflow
             f.flag_hc = @hc
-            flags_s_z(f)
+            f.s_z(@value)
         end
 
         def exchange reg8
@@ -123,21 +118,21 @@ module Z80
 
         def and(num, f)
             self.store(@value & num)
-            self.flags_s_z(f)
+            f.s_z(@value)
             f.flag_hc = true
             f.flag_pv, f.flag_n, f.flag_c = false
         end
 
         def xor(num, f)
             self.store(@value ^ num)
-            self.flags_s_z(f)
+            f.s_z(@value)
             f.parity(@value)
             f.flag_hc, f.flag_n, f.flag_c = false
         end
 
         def or(num, f)
             self.store(@value | num)
-            self.flags_s_z(f)
+            f.s_z(@value)
             f.flag_pv, f.flag_hc, f.flag_n, f.flag_c = false
         end
     end
@@ -171,6 +166,11 @@ module Z80
 
         def parity(val)
             @flag_pv = val.to_s(2).count(1).even?
+        end
+
+        def s_z(val)
+            @flag_s = val.negative?
+            @flag_z = val.zero?
         end
     end
 
@@ -899,7 +899,53 @@ module Z80
                 t_states = 10
             when 0xCB #CB
                 #TODO: CB
-                fail
+                case @pc.read8(@memory)
+                when 0x00
+                    @b.rotate_left
+                    @f.flag_c = @b.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x01
+                    @c.rotate_left
+                    @f.flag_c = @c.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x02
+                    @d.rotate_left
+                    @f.flag_c = @d.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x03
+                    @e.rotate_left
+                    @f.flag_c = @e.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x04
+                    @h.rotate_left
+                    @f.flag_c = @h.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x05
+                    @l.rotate_left
+                    @f.flag_c = @l.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                when 0x07
+                    @a.rotate_left
+                    @f.flag_c = @a.carry
+                    @f.s_z(@b)
+                    @f.flag_n, @f.flag_hc = false
+                    @f.parity(@b.value)
+                else
+                    fail
+                end
+                t_states = 8
             when 0xCC #CALL Z,HHLL
                 reg = @pc.read16(@memory)
                 if @f.flag_z
