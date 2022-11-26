@@ -1084,6 +1084,32 @@ module Z80
                 t_states = 10
             when 0xF3 #DI
                 can_interrupt = false
+            when 0xF4 #CALL P,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_s
+                    t_states = 10
+                else
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                end
+            when 0xF5 #PUSH AF
+                @sp.push(@memory).copy(@af)
+                t_states = 10
+            when 0xF6 #OR A,NN
+                @a.or(@pc.read8(@memory), @f)
+                t_states = 7
+            when 0xF7 #RST 30
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(30)
+                t_states = 11
+            when 0xF8 #RET M
+                if @f.flag_s
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                else
+                    t_states = 11
+                end
             when 0xDD #FD
                 #TODO: FD
                 fail
