@@ -1029,6 +1029,31 @@ module Z80
                 @sp.push(@memory).copy(@pc)
                 @pc.copy(20)
                 t_states = 11
+            when 0xE8 #RET PE
+                if @f.flag_pv
+                    @pc.copy(@sp.read16(@memory))
+                    t_states = 15
+                else
+                    t_states = 11
+                end
+            when 0xE9 #JP (HL)
+                @pc.copy(Register16.new(@memory[@hl.value + 1], @memory[@hl.value]))
+            when 0xEA #JP PE,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if @f.flag_pv
+                t_states = 10
+            when 0xEB #EX DE,HL
+                @d.exchange(@h)
+                @e.exchange(@l)
+            when 0xEC #CALL PE,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_pv
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                else
+                    t_states = 10
+                end
             when 0xED #ED
                 #TODO: ED
                 fail
