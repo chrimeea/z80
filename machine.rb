@@ -281,7 +281,6 @@ module Z80
         end
 
         def interrupt
-            return false
         end
 
         def execute opcode
