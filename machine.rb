@@ -258,13 +258,17 @@ module Z80
             @x = @y = 0
             @memory = Array.new(49152) { Register8.new }
             @state_duration = 1
+            @can_interrupt, @can_execute = true
         end
 
         def run
             loop do
-                interrupt while execute(@pc.read8(@memory).value)
-                execute(0x00) while !interrupt
-                execute(@pc.read8(@memory).value)
+                interrupt if can_interrupt
+                if can_execute
+                    execute(@pc.read8(@memory).value)
+                else
+                    execute(0x00)
+                end
             end
         end
 
@@ -688,7 +692,7 @@ module Z80
                 @memory[@hl.value].copy(@l)
                 t_states = 7
             when 0x76 #HALT
-                return false
+                @can_execute = false
             when 0x77 #LD (HL),A
                 @memory[@hl.value].copy(@a)
                 t_states = 7
@@ -1078,6 +1082,8 @@ module Z80
                 reg = @pc.read16(@memory)
                 @pc.copy(reg) if !@f.flag_s
                 t_states = 10
+            when 0xF3 #DI
+                can_interrupt = false
             when 0xDD #FD
                 #TODO: FD
                 fail
@@ -1085,7 +1091,6 @@ module Z80
                 fail
             end
             sleep(t + t_states * @state_duration - Time.now) / 1000.0
-            return true
         end
     end
 
