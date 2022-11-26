@@ -2,9 +2,10 @@
 
 module Z80
 
-    MAX0 = 0x1
-    MAX1 = 0x2
-    MAX2 = 0x4
+    MAX0 = 0x01
+    MAX1 = 0x02
+    MAX2 = 0x04
+    MAX3 = 0x08
     MAX4 = 0x10
     MAX6 = 0x40
     MAX7 = 0x80
@@ -281,6 +282,30 @@ module Z80
         end
 
         def interrupt
+        end
+
+        def decode_register code
+            case code & (MAX3 - 1)
+            when 0x00
+                @b
+            when 0x01
+                @c
+            when 0x02
+                @d
+            when 0x03
+                @e
+            when 0x04
+                @h
+            when 0x05
+                @l
+            when 0x06
+                @t_states += 3
+                @memory[@hl.value]
+            when 0x07
+                @a
+            else
+                fail
+            end
         end
 
         def execute opcode
