@@ -1110,9 +1110,32 @@ module Z80
                 else
                     t_states = 11
                 end
+            when 0xF9 #LD SP,HL
+                @sp.copy(@hl)
+            when 0xFA #JP M,HHLL
+                reg = @pc.read16(@memory)
+                @pc.copy(reg) if @f.flag_s
+                t_states = 10
+            when 0xFB #EI
+                @can_interrupt = true
+            when 0xFC #CALL M,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_s
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                else
+                    t_states = 10
+                end
             when 0xDD #FD
                 #TODO: FD
                 fail
+            when 0xFE #CP A,NN
+                @f.flag_z = (@a.value == @pc.read8(@memory).value)
+            when 0xFF #RST 38
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(38)
+                t_states = 11
             else
                 fail
             end
