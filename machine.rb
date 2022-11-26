@@ -786,12 +786,12 @@ module Z80
                 @a.and(@e.value, @f)
             when 0xA4 #AND A,H
                 @a.and(@h.value, @f)
-            when 0xA5 #AND L
+            when 0xA5 #AND A,L
                 @a.and(@l.value, @f)
             when 0xA6 #AND (HL)
                 @a.and(@memory[@hl.value].value, @f)
                 t_states = 7
-            when 0xA7 #AND A
+            when 0xA7 #AND A,A
                 @a.and(@a.value, @f)
             when 0xA8 #XOR A,B
                 @a.xor(@b.value, @f)
@@ -1007,6 +1007,28 @@ module Z80
                 reg = @pc.read16(@memory)
                 @pc.copy(reg) if !@f.flag_pv
                 t_states = 10
+            when 0xE3 #EX (SP),HL
+                @l.exchange(@memory[@sp.value])
+                @h.exchange(@memory[@sp.value + 1])
+                t_states = 19
+            when 0xE4 #CALL PO,HHLL
+                reg = @pc.read16(@memory)
+                if @f.flag_pv
+                    t_states = 10
+                else
+                    @sp.push(@memory).copy(@pc)
+                    @pc.copy(reg)
+                    t_states = 17
+                end
+            when 0xE5 #PUSH HL
+                @sp.push(@memory).copy(@hl)
+                t_states = 10
+            when 0xE6 #AND A,NN
+                @a.and(@pc.read8(@memory), @f)
+            when 0xE7 #RST 20
+                @sp.push(@memory).copy(@pc)
+                @pc.copy(20)
+                t_states = 11
             when 0xED #ED
                 #TODO: ED
                 fail
