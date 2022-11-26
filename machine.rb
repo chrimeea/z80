@@ -919,7 +919,7 @@ module Z80
                 t_states = 7
             when 0xCF #RST 08
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(8)
+                @pc.copy(0x08)
                 t_states = 11
             when 0xD0 #RET NC
                 if @f.flag_c
@@ -955,7 +955,7 @@ module Z80
                 t_states = 7
             when 0xD7 #RST 10
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(10)
+                @pc.copy(0x10)
                 t_states = 11
             when 0xD8 #RET C
                 if @f.flag_c
@@ -995,7 +995,7 @@ module Z80
                 t_states = 7
             when 0xDF #RST 18
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(18)
+                @pc.copy(0x18)
                 t_states = 11
             when 0xE0 #RET PO
                 if @f.flag_pv
@@ -1031,7 +1031,7 @@ module Z80
                 @a.and(@pc.read8(@memory), @f)
             when 0xE7 #RST 20
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(20)
+                @pc.copy(0x20)
                 t_states = 11
             when 0xE8 #RET PE
                 if @f.flag_pv
@@ -1066,7 +1066,7 @@ module Z80
                 t_states = 7
             when 0xEF #RST 28
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(28)
+                @pc.copy(0x28)
                 t_states = 11
             when 0xF0 #RET P
                 if @f.flag_s
@@ -1101,7 +1101,7 @@ module Z80
                 t_states = 7
             when 0xF7 #RST 30
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(30)
+                @pc.copy(0x30)
                 t_states = 11
             when 0xF8 #RET M
                 if @f.flag_s
@@ -1134,7 +1134,7 @@ module Z80
                 @f.flag_z = (@a.value == @pc.read8(@memory).value)
             when 0xFF #RST 38
                 @sp.push(@memory).copy(@pc)
-                @pc.copy(38)
+                @pc.copy(0x38)
                 t_states = 11
             else
                 fail
