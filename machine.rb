@@ -125,19 +125,19 @@ module Z80
             @flag_s = (v[8] == '1')
         end
 
-        def parity(val)
-            @flag_pv = val.to_s(2).count(1).even?
+        def parity reg
+            @flag_pv = reg.value.to_s(2).count(1).even?
         end
 
-        def s_z(val)
-            @flag_s = val.negative?
-            @flag_z = val.zero?
+        def s_z reg
+            @flag_s = reg.value.negative?
+            @flag_z = reg.value.zero?
         end
 
         def s_z_v_hc reg
             @flag_pv = reg.overflow
             @flag_hc = reg.hc
-            self.s_z(reg.value)
+            self.s_z(reg)
         end
 
         def flags_shift reg
@@ -461,7 +461,7 @@ module Z80
                     v = 0x9A
                     @f.flag_c = true
                 end
-                @f.parity(@a.value)
+                @f.parity(@a)
                 @f.flag_z = (@a.value == 1)
                 @f.flag_s = @a.value.negative?
             when 0x28 #JR Z,NN
@@ -720,16 +720,16 @@ module Z80
                 @f.s_z_v_hc(@a)
             when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
                 @a.store(@a.value & decode_register(opcode).value)
-                @f.s_z(@a.value)
+                @f.s_z(@a)
                 @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
             when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF
                 @a.store(@a.value ^ decode_register(opcode).value)
-                @f.s_z(@a.value)
-                @f.parity(@a.value)
+                @f.s_z(@a)
+                @f.parity(@a)
                 @f.flag_hc, @f.flag_n, @f.flag_c = false
             when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7
                 @a.store(@a.value | decode_register(opcode).value)
-                @f.s_z(@a.value)
+                @f.s_z(@a)
                 @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
             when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF
                 @f.flag_z = (@a.value == decode_register(opcode).value)
@@ -791,14 +791,14 @@ module Z80
                 when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07
                     reg.rotate_left
                     @f.flags_shift(reg)
-                    @f.s_z(reg.value)
-                    @f.parity(reg.value)
+                    @f.s_z(reg)
+                    @f.parity(reg)
                     @t_states += 4
                 when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
                     reg.rotate_right
                     @f.flags_shift(reg)
-                    @f.s_z(reg.value)
-                    @f.parity(reg.value)
+                    @f.s_z(reg)
+                    @f.parity(reg)
                     @t_states += 4
                 else
                     fail
