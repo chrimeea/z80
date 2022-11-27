@@ -702,36 +702,36 @@ module Z80
                 @a.copy(@memory[@hl.value])
                 @t_states = 7
             when 0x7F #LD A,A
-            when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87
+            when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
                 @a.store(@a.value + decode_register(opcode).value)
                 @f.flag_n, @f.flag_c = false, @a.carry
                 @f.s_z_v_hc(@a)
-            when 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F
+            when 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F #ADC A,r
                 @a.store(@a.value + decode_register(opcode).value + (@f.flag_c ? 1 : 0))
                 @f.flag_n, @f.flag_c = false, @a.carry
                 @f.s_z_v_hc(@a)
-            when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97
+            when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97 #SUB A,r
                 @a.store(@a.value - decode_register(opcode).value)
                 @f.flag_n, @f.flag_c = true, @a.carry
                 @f.s_z_v_hc(@a)
-            when 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F
+            when 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F #SBC A,r
                 @a.store(@a.value - decode_register(opcode).value - (@f.flag_c ? 1 : 0))
                 @f.flag_n, @f.flag_c = true, @a.carry
                 @f.s_z_v_hc(@a)
-            when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
+            when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7 #AND A,r
                 @a.store(@a.value & decode_register(opcode).value)
                 @f.s_z(@a)
                 @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
-            when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF
+            when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF #XOR A,r
                 @a.store(@a.value ^ decode_register(opcode).value)
                 @f.s_z(@a)
                 @f.parity(@a)
                 @f.flag_hc, @f.flag_n, @f.flag_c = false
-            when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7
+            when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7 #OR A,r
                 @a.store(@a.value | decode_register(opcode).value)
                 @f.s_z(@a)
                 @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
-            when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF
+            when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF #CP A,r
                 @f.flag_z = (@a.value == decode_register(opcode).value)
             when 0xC0 #RET NZ
                 if @f.flag_z
@@ -788,13 +788,13 @@ module Z80
                 opcode = @pc.read8(@memory)
                 reg = decode_register(opcode, 7)
                 case opcode
-                when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07
+                when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                     reg.rotate_left
                     @f.flags_shift(reg)
                     @f.s_z(reg)
                     @f.parity(reg)
                     @t_states += 4
-                when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+                when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
                     reg.rotate_right
                     @f.flags_shift(reg)
                     @f.s_z(reg)
