@@ -74,12 +74,6 @@ module Z80
             @value -= MAX7 if v
         end
 
-        def flags f
-            f.flag_pv = @overflow
-            f.flag_hc = @hc
-            f.s_z(@value)
-        end
-
         def exchange reg8
             @value, reg8.value = reg8.value, @value
         end
@@ -138,6 +132,12 @@ module Z80
         def s_z(val)
             @flag_s = val.negative?
             @flag_z = val.zero?
+        end
+
+        def s_z_v_hc reg
+            @flag_pv = reg.overflow
+            @flag_hc = reg.hc
+            self.s_z(reg.value)
         end
 
         def flags_shift reg
@@ -286,11 +286,11 @@ module Z80
             when 0x04 #INC B
                 @b.store(@b.value + 1)
                 @f.flag_n = false
-                @b.flags(@f)
+                @f.s_z_v_hc(@b)
             when 0x05 #DEC B
                 @b.store(@b.value - 1)
                 @f.flag_n = true
-                @b.flags(@f)
+                @f.s_z_v_hc(@b)
             when 0x06 #LD B,NN
                 @b.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -315,11 +315,11 @@ module Z80
             when 0x0C #INC C
                 @c.store(@c.value + 1)
                 @f.flag_n = false
-                @c.flags(@f)
+                @f.s_z_v_hc(@c)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
                 @f.flag_n = false
-                @c.flags(@f)
+                @f.s_z_v_hc(@c)
             when 0x0E #LD C,NN
                 @c.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -347,11 +347,11 @@ module Z80
             when 0x14 #INC D
                 @d.store(@d.value + 1)
                 @f.flag_n = false
-                @d.flags(@f)
+                @f.s_z_v_hc(@d)
             when 0x15 #DEC D
                 @d.store(@d.value - 1)
                 @f.flag_n = true
-                @d.flags(@f)
+                @f.s_z_v_hc(@d)
             when 0x16 #LD D,NN
                 @d.store(@pc.read8(@memor))
                 @t_states = 7
@@ -376,11 +376,11 @@ module Z80
             when 0x1C #INC E
                 @e.store(@e.value + 1)
                 @f.flag_n = false
-                @e.flags(@f)
+                @f.s_z_v_hc(@e)
             when 0x1D #DEC E
                 @e.store(@e.value - 1)
                 @f.flag_n = true
-                @e.flags(@f)
+                @f.s_z_v_hc(@e)
             when 0x1E #LD E,NN
                 @e.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -409,11 +409,11 @@ module Z80
             when 0x24 #INC H
                 @h.store(@h.value + 1)
                 @f.flag_n = false
-                @h.flags(@f)
+                @f.s_z_v_hc(@h)
             when 0x25 #DEC H
                 @h.store(@h.value - 1)
                 @f.flag_n = true
-                @h.flags(@f)
+                @f.s_z_v_hc(@h)
             when 0x26 #LD H,NN
                 @h.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -487,11 +487,11 @@ module Z80
             when 0x2C #INC L
                 @l.store(@l.value + 1)
                 @f.flag_n = false
-                @l.flags(@f)
+                @f.s_z_v_hc(@l)
             when 0x2D #DEC L
                 @l.store(@l.value - 1)
                 @f.flag_n = true
-                @l.flags(@f)
+                @f.s_z_v_hc(@l)
             when 0x2E #LD L,NN
                 @l.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -519,13 +519,13 @@ module Z80
                 m = @memory[@hl.value]
                 m.store(m.value + 1)
                 @f.flag_n = true
-                m.flags(@f)
+                @f.s_z_v_hc(m)
                 @t_states = 11
             when 0x35 #DEC (HL)
                 m = @memory[@hl.value]
                 m.store(m.value - 1)
                 @f.flag_n = true
-                m.flags(@f)
+                @f.s_z_v_hc(m)
                 @t_states = 11
             when 0x36 #LD (HL),NN
                 @memory[@hl.value].copy(@pc.read8(@memory))
@@ -555,11 +555,11 @@ module Z80
             when 0x3C #INC A
                 @a.store(@a.value + 1)
                 @f.flag_n = false
-                @a.flags(@f)
+                @f.s_z_v_hc(@a)
             when  0x3D #DEC A
                 @a.store(@a.value - 1)
                 @f.flag_n = false
-                @a.flags(@f)
+                @f.s_z_v_hc(@a)
             when 0x3E #LD A,NN
                 @a.copy(@pc.read8(@memory))
                 @t_states = 7
@@ -705,19 +705,19 @@ module Z80
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87
                 @a.store(@a.value + decode_register(opcode).value)
                 @f.flag_n, @f.flag_c = false, @a.carry
-                @a.flags(f)
+                @f.s_z_v_hc(@a)
             when 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F
                 @a.store(@a.value + decode_register(opcode).value + (@f.flag_c ? 1 : 0))
                 @f.flag_n, @f.flag_c = false, @a.carry
-                @a.flags(f)
+                @f.s_z_v_hc(@a)
             when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97
                 @a.store(@a.value - decode_register(opcode).value)
                 @f.flag_n, @f.flag_c = true, @a.carry
-                @a.flags(@f)
+                @f.s_z_v_hc(@a)
             when 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F
                 @a.store(@a.value - decode_register(opcode).value - (@f.flag_c ? 1 : 0))
                 @f.flag_n, @f.flag_c = true, @a.carry
-                @a.flags(@f)
+                @f.s_z_v_hc(@a)
             when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
                 @a.store(@a.value & decode_register(opcode).value)
                 @f.s_z(@a.value)
