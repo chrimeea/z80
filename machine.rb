@@ -102,40 +102,6 @@ module Z80
             end
             @hc = ((prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4))
         end
-
-        def add(num, f)
-            self.store(@value + num)
-            f.flag_n = false
-            f.flag_c = @carry
-            self.flags(f)
-        end
-
-        def sub(num, f)
-            self.store(@value + num)
-            f.flag_n = true
-            f.flag_c = @carry
-            self.flags(f)
-        end
-
-        def and(num, f)
-            self.store(@value & num)
-            f.s_z(@value)
-            f.flag_hc = true
-            f.flag_pv, f.flag_n, f.flag_c = false
-        end
-
-        def xor(num, f)
-            self.store(@value ^ num)
-            f.s_z(@value)
-            f.parity(@value)
-            f.flag_hc, f.flag_n, f.flag_c = false
-        end
-
-        def or(num, f)
-            self.store(@value | num)
-            f.s_z(@value)
-            f.flag_pv, f.flag_hc, f.flag_n, f.flag_c = false
-        end
     end
 
     class Flag8 < Register8
@@ -272,11 +238,7 @@ module Z80
                 interrupt if can_interrupt
                 t = Time.now
                 @t_states = 4
-                if can_execute
-                    execute(@pc.read8(@memory).value)
-                else
-                    execute(0x00)
-                end
+                execute(@pc.read8(@memory).value) if can_execute
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
         end
@@ -284,7 +246,7 @@ module Z80
         def interrupt
         end
 
-        def decode_register code
+        def decode_register code, t = 3
             case code & (MAX3 - 1)
             when 0x00
                 @b
@@ -299,7 +261,7 @@ module Z80
             when 0x05
                 @l
             when 0x06
-                @t_states += 3
+                @t_states += t
                 @memory[@hl.value]
             when 0x07
                 @a
@@ -740,141 +702,37 @@ module Z80
                 @a.copy(@memory[@hl.value])
                 @t_states = 7
             when 0x7F #LD A,A
-            when 0x80 #ADD A,B
-                @a.add(@b.value, @f)
-            when 0x81 #ADD A,C
-                @a.add(@c.value, @f)
-            when 0x82 #ADD A,D
-                @a.add(@d.value, @f)
-            when 0x83 #ADD A,E
-                @a.add(@e.value, @f)
-            when 0x84 #ADD A,H
-                @a.add(@h.value, @f)
-            when 0x85 #ADD A,L
-                @a.add(@l.value, @f)
-            when 0x86 #ADD A,(HL)
-                @a.add(@memory[@hl.value].value, @f)
-                @t_states = 7
-            when 0x87 #ADD A,A
-                @a.add(@a.value, @f)
-            when 0x88 #ADC A,B
-                @a.add(@b.value + (@f.carry ? 1 : 0), @f)
-            when 0x89 #ADC A,C
-                @a.add(@c.value + (@f.carry ? 1 : 0), @f)
-            when 0x8A #ADC A,D
-                @a.add(@d.value + (@f.carry ? 1 : 0), @f)
-            when 0x8B #ADC A,E
-                @a.add(@e.value + (@f.carry ? 1 : 0), @f)
-            when 0x8C #ADC A,H
-                @a.add(@h.value + (@f.carry ? 1 : 0), @f)
-            when 0x8D #ADC A,L
-                @a.add(@l.value + (@f.carry ? 1 : 0), @f)
-            when 0x8E #ADC A,(HL)
-                @a.add(@memory[@hl.value].value + (@f.carry ? 1 : 0), @f)
-                @t_states = 7
-            when 0x8F #ADC A,A
-                @a.add(@a.value + (@f.carry ? 1 : 0), @f)
-            when 0x90 #SUB A,B
-                @a.sub(@b.value, @f)
-            when 0x91 #SUB A,C
-                @a.sub(@c.value, @f)
-            when 0x92 #SUB A,D
-                @a.sub(@d.value, @f)
-            when 0x93 #SUB A,E
-                @a.sub(@e.value, @f)
-            when 0x94 #SUB A,H
-                @a.sub(@h.value, @f)
-            when 0x95 #SUB A,L
-                @a.sub(@l.value, @f)
-            when 0x96 #SUB A,(HL)
-                @a.sub(@memory[@hl.value].value, @f)
-                @t_states = 7
-            when 0x97 #SUB A,A
-                @a.sub(@a.value, @f)
-            when 0x98 #SBC A,B
-                @a.sub(@a.value + (@f.carry ? 1 : 0), @f)
-            when 0x99 #SBC A,C
-                @a.sub(@c.value + (@f.carry ? 1 : 0), @f)
-            when 0x9A #SBC A,D
-                @a.sub(@d.value + (@f.carry ? 1 : 0), @f)
-            when 0x9B #SBC A,E
-                @a.sub(@e.value + (@f.carry ? 1 : 0), @f)
-            when 0x9C #SBC A,H
-                @a.sub(@h.value + (@f.carry ? 1 : 0), @f)
-            when 0x9D #SBC A,L
-                @a.sub(@l.value + (@f.carry ? 1 : 0), @f)
-            when 0x9E #SBC A,(HL)
-                @a.sub(@memory[@hl.value].value + (@f.carry ? 1 : 0), @f)
-                @t_states = 7
-            when 0x9F #SBC A,A
-                @a.sub(@a.value + (@f.carry ? 1 : 0), @f)
-            when 0xA0 #AND A,B
-                @a.and(@b.value, @f)
-            when 0xA1 #AND A,C
-                @a.and(@c.value, @f)
-            when 0xA2 #AND A,D
-                @a.and(@d.value, @f)
-            when 0xA3 #AND A,E
-                @a.and(@e.value, @f)
-            when 0xA4 #AND A,H
-                @a.and(@h.value, @f)
-            when 0xA5 #AND A,L
-                @a.and(@l.value, @f)
-            when 0xA6 #AND (HL)
-                @a.and(@memory[@hl.value].value, @f)
-                @t_states = 7
-            when 0xA7 #AND A,A
-                @a.and(@a.value, @f)
-            when 0xA8 #XOR A,B
-                @a.xor(@b.value, @f)
-            when 0xA9 #XOR A,C
-                @a.xor(@c.value, @f)
-            when 0xAA #XOR A,D
-                @a.xor(@d.value, @f)
-            when 0xAB #XOR A,E
-                @a.xor(@e.value, @f)
-            when 0xAC #XOR A,H
-                @a.xor(@h.value, @f)
-            when 0xAD #XOR A,L
-                @a.xor(@l.value, @f)
-            when 0xAE #XOR A,(HL)
-                @a.xor(@memory[@hl.value].value, @f)
-                @t_states = 7
-            when 0xAF #XOR A,A
-                @a.xor(@a.value, @f)
-            when 0xB0 #OR A,B
-                @a.or(@b.value, @f)
-            when 0xB1 #OR A,C
-                @a.or(@c.value, @f)
-            when 0xB2 #OR A,D
-                @a.or(@d.value, @f)
-            when 0xB3 #OR A,E
-                @a.or(@e.value, @f)
-            when 0xB4 #OR A,H
-                @a.or(@h.value, @f)
-            when 0xB5 #OR A,L
-                @a.or(@l.value, @f)
-            when 0xB6 #OR A,(HL)
-                @a.or(@memory[@hl.value].value, @f)
-                @t_states = 7
-            when 0xB7 #OR A,A
-                @a.or(@a.value, @f)
-            when 0xB8 #CP A,B
-                @f.flag_z = (@a.value == @b.value)
-            when 0xB9 #CP A,C
-                @f.flag_z = (@a.value == @c.value)
-            when 0xBA #CP A,D
-                @f.flag_z = (@a.value == @d.value)
-            when 0xBB #CP A,E
-                @f.flag_z = (@a.value == @e.value)
-            when 0xBC #CP A,H
-                @f.flag_z = (@a.value == @h.value)
-            when 0xBD #CP A,L
-                @f.flag_z = (@a.value == @l.value)
-            when 0xBE #CP A,(HL)
-                @f.flag_z = (@a.value == @memory[@hl.value].value)
-            when 0xBF #CP A,A
-                @f.flag_z = true
+            when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87
+                @a.store(@a.value + decode_register(opcode).value)
+                @f.flag_n, @f.flag_c = false, @a.carry
+                @a.flags(f)
+            when 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F
+                @a.store(@a.value + decode_register(opcode).value + (@f.flag_c ? 1 : 0))
+                @f.flag_n, @f.flag_c = false, @a.carry
+                @a.flags(f)
+            when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97
+                @a.store(@a.value - decode_register(opcode).value)
+                @f.flag_n, @f.flag_c = true, @a.carry
+                @a.flags(@f)
+            when 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F
+                @a.store(@a.value - decode_register(opcode).value - (@f.flag_c ? 1 : 0))
+                @f.flag_n, @f.flag_c = true, @a.carry
+                @a.flags(@f)
+            when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
+                @a.store(@a.value & decode_register(opcode).value)
+                @f.s_z(@a.value)
+                @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
+            when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF
+                @a.store(@a.value ^ decode_register(opcode).value)
+                @f.s_z(@a.value)
+                @f.parity(@a.value)
+                @f.flag_hc, @f.flag_n, @f.flag_c = false
+            when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7
+                @a.store(@a.value | decode_register(opcode).value)
+                @f.s_z(@a.value)
+                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
+            when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF
+                @f.flag_z = (@a.value == decode_register(opcode).value)
             when 0xC0 #RET NZ
                 if @f.flag_z
                     @t_states = 11
@@ -927,62 +785,24 @@ module Z80
                 @t_states = 10
             when 0xCB #CB
                 #TODO: CB
-                case @pc.read8(@memory)
-                when 0x00 #RLC B
-                    reg = @b
-                    @b.rotate_left
-                when 0x01 #RLC C
-                    reg = @c
-                    @c.rotate_left
-                when 0x02 #RLC D
-                    reg = @d
-                    @d.rotate_left
-                when 0x03 #RLC E
-                    reg = @e
-                    @e.rotate_left
-                when 0x04 #RLC H
-                    reg = @h
-                    @h.rotate_left
-                when 0x05 #RLC L
-                    reg = @l
-                    @l.rotate_left
-                when 0x06 #RLC (HL)
-                    reg = @memory[@hl.value]
+                opcode = @pc.read8(@memory)
+                reg = decode_register(opcode, 7)
+                case opcode
+                when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07
                     reg.rotate_left
-                when 0x07 #RLC A
-                    reg = @a
-                    @a.rotate_left
-                when 0x08 #RRC B
-                    reg = @b
-                    @b.rotate_right
-                when 0x09 #RRC C
-                    reg = @c
-                    @c.rotate_right
-                when 0x0A #RRC D
-                    reg = @d
-                    @d.rotate_right
-                when 0x0B #RRC E
-                    reg = @e
-                    @e.rotate_right
-                when 0x0C #RRC H
-                    reg = @h
-                    @h.rotate_right
-                when 0x0D #RRC L
-                    reg = @l
-                    @l.rotate_right
-                when 0x0E #RRC (HL)
-                    reg = @memory[@hl.value]
+                    @f.flags_shift(reg)
+                    @f.s_z(reg.value)
+                    @f.parity(reg.value)
+                    @t_states += 4
+                when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
                     reg.rotate_right
-                when 0x0F #RRC A
-                    reg = @a
-                    @a.rotate_right
+                    @f.flags_shift(reg)
+                    @f.s_z(reg.value)
+                    @f.parity(reg.value)
+                    @t_states += 4
                 else
                     fail
                 end
-                @f.flags_shift(@a)
-                @f.s_z(reg)
-                @f.parity(reg.value)
-                @t_states = 8
             when 0xCC #CALL Z,HHLL
                 reg = @pc.read16(@memory)
                 if @f.flag_z
