@@ -12,6 +12,7 @@ module Z80
     MAX8 = 0x100
     MAX15 = 0x8000
 
+    #TODO: fix as_unsigned and negative-to-positive-to-negative by bit shifting
     class Register8
         attr_reader :value, :overflow, :hc, :carry
 
@@ -22,10 +23,18 @@ module Z80
 
         def as_unsigned
             if @value.negative?
-                MAX8 - @value
+                MAX8 + @value
             else
                 @value
             end
+        end
+
+        def set_sign_bit
+            self.store(MAX7 - MAX8 + @value)
+        end
+
+        def reset_sign_bit
+            self.store(MAX8 - MAX7 + @value)
         end
 
         def shift_left
@@ -818,7 +827,20 @@ module Z80
                     @f.s_z_p(reg)
                     @t_states += 4
                 when 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F #SRA r
-                    reg.shift_right
+                    reg.carry = reg.value.negative?
+                    reg.rotate_right_trough_carry
+                    @f.flags_shift(reg)
+                    @f.s_z_p(reg)
+                    @t_states += 4
+                when 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37 #SLL r
+                    reg.carry = true
+                    reg.rotate_left_trough_carry
+                    @f.flags_shift(reg)
+                    @f.s_z_p(reg)
+                    @t_states += 4
+                when 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F #SRL r
+                    reg.carry = false
+                    reg.rotate_right_trough_carry
                     @f.flags_shift(reg)
                     @f.s_z_p(reg)
                     @t_states += 4
