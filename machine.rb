@@ -800,6 +800,13 @@ module Z80
                     @f.s_z(reg)
                     @f.parity(reg)
                     @t_states += 4
+                when 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 #RL r
+                    reg.carry = @f.flag_c
+                    reg.rotate_left_trough_carry
+                    @f.flags_shift(reg)
+                    @f.s_z(reg)
+                    @f.parity(reg)
+                    @t_states += 4
                 else
                     fail
                 end
