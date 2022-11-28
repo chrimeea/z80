@@ -129,6 +129,11 @@ module Z80
             @flag_pv = reg.value.to_s(2).count(1).even?
         end
 
+        def s_z_p reg
+            self.s_z(reg)
+            self.parity(reg)
+        end
+
         def s_z reg
             @flag_s = reg.value.negative?
             @flag_z = reg.value.zero?
@@ -461,9 +466,7 @@ module Z80
                     v = 0x9A
                     @f.flag_c = true
                 end
-                @f.parity(@a)
-                @f.flag_z = (@a.value == 1)
-                @f.flag_s = @a.value.negative?
+                @f.s_z_p(@a)
             when 0x28 #JR Z,NN
                 val = @pc.read8(@memory).value
                 if @f.flag_z
@@ -724,8 +727,7 @@ module Z80
                 @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
             when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF #XOR A,r
                 @a.store(@a.value ^ decode_register(opcode).value)
-                @f.s_z(@a)
-                @f.parity(@a)
+                @f.s_z_p(@a)
                 @f.flag_hc, @f.flag_n, @f.flag_c = false
             when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7 #OR A,r
                 @a.store(@a.value | decode_register(opcode).value)
@@ -791,40 +793,34 @@ module Z80
                 when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                     reg.rotate_left
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
                     reg.rotate_right
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 when 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 #RL r
                     reg.carry = @f.flag_c
                     reg.rotate_left_trough_carry
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 when 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F #RR r
                     reg.carry = @f.flag_c
                     reg.rotate_right_trough_carry
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 when 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27 #SLA r
                     reg.shift_left
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 when 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F #SRA r
                     reg.shift_right
                     @f.flags_shift(reg)
-                    @f.s_z(reg)
-                    @f.parity(reg)
+                    @f.s_z_p(reg)
                     @t_states += 4
                 else
                     fail
