@@ -12,98 +12,103 @@ module Z80
     MAX8 = 0x100
     MAX15 = 0x8000
 
-    #TODO: fix as_unsigned and negative-to-positive-to-negative by bit shifting
     class Register8
-        attr_reader :value, :overflow, :hc, :carry
+        attr_reader :byte_value, :overflow, :hc, :carry
 
         def initialize
-            @value = 0
+            @byte_value = 0
             @overflow, @hc, @carry = false
         end
 
-        def as_unsigned
-            if @value.negative?
-                MAX8 + @value
+        def value
+            if @byte_value >= MAX7
+                @value - MAX8
             else
-                @value
+                @byte_value
             end
+        end
+
+        def negative?
+            @byte_value >= MAX7
+        end
+
+        def to_4_bit_pair
+            val = @byte_value & (MAX3 - 1)
+            return @byte_value - val, val
+        end
+
+        def negate
+            @byte_value = ~(@byte_value + MAX16)
         end
 
         def set_sign_bit
-            self.store(MAX7 - MAX8 + @value)
+            @byte_value += MAX7 if @byte_value < MAX7
         end
 
         def reset_sign_bit
-            self.store(MAX8 - MAX7 + @value)
+            @byte_value -= MAX7 if @byte_value >= MAX7
         end
 
         def shift_left
-            if @value.negative?
+            if self.negative?
                 @carry = true
-                v = self.as_unsigned << 1
+                @byte_value = @byte_value << 1
             else
                 @carry = false
-                v = @value << 1
+                @byte_value = @byte_value << 1
             end
-            if v >= MAX7
-                v = MAX8 - v
-            end
-            @value = v
         end
 
         def rotate_left
             self.shift_left
-            @value += 1 if @carry
+            @byte_value += 1 if @carry
         end
 
         def rotate_left_trough_carry
             v = @carry
             self.shift_left
-            @value += 1 if v
+            @byte_value += 1 if v
         end
 
         def shift_right
-            @carry = @value.odd?
-            if @value.negative?
-                v = self.as_unsigned >> 1
-            else
-                v = @value >> 1
-            end
-            @value = v
+            @carry = @byte_value.odd?
+            @byte_value = @byte_value >> 1
         end
 
         def rotate_right
             self.shift_right
-            @value -= MAX7 if @carry
+            self.set_sign_bit if @carry
         end
 
         def rotate_right_trough_carry
             v = @carry
             self.shift_right
-            @value -= MAX7 if v
+            self.set_sign_bit if @carry
         end
 
         def exchange reg8
-            @value, reg8.value = reg8.value, @value
+            @byte_value, reg8.byte_value = reg8.byte_value, @byte_value
         end
 
         def copy reg8
-            @value = reg8.value
+            @byte_value = reg8.byte_value
         end
 
         def store(num)
-            prev_value = @value
+            prev_value = @byte_value
             if num >= MAX7
-                @value = MAX7 - num
+                @byte_value = (MAX8 - 1) & num
                 @overflow = true
             elsif num < -MAX7
-                @value = -MAX7 - num
+                @byte_value = (MAX8 - 1) & -num
                 @overflow = true
+            elsif num.negative?
+                @byte_value = MAX8 + num
             else
-                @value = num
-                @overflow = false
+                @byte_value = num
             end
-            @hc = ((prev_value.abs < MAX4 && @value.abs >= MAX4) || (prev_value.abs > MAX4 && @value.abs <= MAX4))
+            @carry = @overflow
+            @hc = ((prev_value < MAX4 && @byte_value >= MAX4) || (prev_value > MAX4 && @byte_value <= MAX4))
         end
     end
 
@@ -432,7 +437,7 @@ module Z80
                 @h.copy(@pc.read8(@memory))
                 @t_states = 7
             when 0x27 #DAA
-                q, r = @a.as_unsigned.divmod MAX4
+                q, r = @a.to_4_bit_pair
                 c = @f.flag_c
                 h = @f.flag_hc
                 if c == false && h == false && q == 0x90 && r == 0x09
@@ -508,7 +513,7 @@ module Z80
                 @l.copy(@pc.read8(@memory))
                 @t_states = 7
             when 0x2F #CPL
-                @a.store(~(@a.as_unsigned + MAX16))
+                @a.negate
                 @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
                 val = @pc.read8(@memory).value
