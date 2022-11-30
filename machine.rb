@@ -7,10 +7,12 @@ module Z80
     MAX2 = 0x04
     MAX3 = 0x08
     MAX4 = 0x10
+    MAX5 = 0x20
     MAX6 = 0x40
     MAX7 = 0x80
     MAX8 = 0x100
     MAX15 = 0x8000
+    MAX = [MAX0, MAX1, MAX2, MAX3, MAX4, MAX5, MAX6, MAX7]
 
     class Register8
         attr_reader :byte_value, :overflow, :hc, :carry
@@ -37,8 +39,22 @@ module Z80
             return @byte_value - val, val
         end
 
+        def bit?(b)
+            @byte_value.to_s(2)[b] == 1
+        end
+
+        def set_bit(b)
+            fail if b < 0 || b > 7
+            @byte_value &= MAX[b]
+        end
+
+        def reset_bit(b)
+            fail if b < 0 || b > 7
+            @byte_value &= ~(MAX[b] + MAX8)
+        end
+
         def negate
-            @byte_value = ~(@byte_value + MAX16)
+            @byte_value = ~(@byte_value + MAX8)
         end
 
         def set_sign_bit
@@ -149,7 +165,7 @@ module Z80
         end
 
         def s_z reg
-            @flag_s = reg.value.negative?
+            @flag_s = reg.negative?
             @flag_z = reg.value.zero?
         end
 
@@ -802,52 +818,41 @@ module Z80
             when 0xCB #CB
                 #TODO: CB
                 opcode = @pc.read8(@memory)
-                reg = decode_register(opcode, 7)
                 case opcode
-                when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
-                    reg.rotate_left
+                when 0x00..0x3F
+                    reg = decode_register(opcode, 7)
+                    case opcode
+                    when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
+                        reg.rotate_left
+                    when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
+                        reg.rotate_right
+                    when 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 #RL r
+                        reg.carry = @f.flag_c
+                        reg.rotate_left_trough_carry
+                    when 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F #RR r
+                        reg.carry = @f.flag_c
+                        reg.rotate_right_trough_carry
+                    when 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27 #SLA r
+                        reg.shift_left
+                    when 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F #SRA r
+                        reg.carry = reg.negative?
+                        reg.rotate_right_trough_carry
+                    when 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37 #SLL r
+                        reg.carry = true
+                        reg.rotate_left_trough_carry
+                    when 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F #SRL r
+                        reg.carry = false
+                        reg.rotate_right_trough_carry
+                    end
                     @f.flags_shift(reg)
                     @f.s_z_p(reg)
                     @t_states += 4
-                when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
-                    reg.rotate_right
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
+                when 0x40..0x7F #BIT b,r
+                    @f.flag_z = !(decode_register(opcode, 8).bit?(opcode & 0x38))
+                    @f.flag_hc, @f.flag_n = true, false
                     @t_states += 4
-                when 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 #RL r
-                    reg.carry = @f.flag_c
-                    reg.rotate_left_trough_carry
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
-                    @t_states += 4
-                when 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F #RR r
-                    reg.carry = @f.flag_c
-                    reg.rotate_right_trough_carry
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
-                    @t_states += 4
-                when 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27 #SLA r
-                    reg.shift_left
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
-                    @t_states += 4
-                when 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F #SRA r
-                    reg.carry = reg.value.negative?
-                    reg.rotate_right_trough_carry
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
-                    @t_states += 4
-                when 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37 #SLL r
-                    reg.carry = true
-                    reg.rotate_left_trough_carry
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
-                    @t_states += 4
-                when 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F #SRL r
-                    reg.carry = false
-                    reg.rotate_right_trough_carry
-                    @f.flags_shift(reg)
-                    @f.s_z_p(reg)
+                when 0x80..BF #RES b,r
+                    decode_register(opcode, 8).reset_bit(opcode & 0x38)
                     @t_states += 4
                 else
                     fail
