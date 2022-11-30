@@ -816,7 +816,6 @@ module Z80
                 @pc.copy(reg) if @f.flag_z
                 @t_states = 10
             when 0xCB #CB
-                #TODO: CB
                 opcode = @pc.read8(@memory)
                 case opcode
                 when 0x00..0x3F
@@ -846,17 +845,17 @@ module Z80
                     end
                     @f.flags_shift(reg)
                     @f.s_z_p(reg)
-                    @t_states += 4
                 when 0x40..0x7F #BIT b,r
-                    @f.flag_z = !(decode_register(opcode, 8).bit?(opcode & 0x38))
+                    @f.flag_z = !(decode_register(opcode).bit?(opcode & 0x38))
                     @f.flag_hc, @f.flag_n = true, false
-                    @t_states += 4
                 when 0x80..BF #RES b,r
-                    decode_register(opcode, 8).reset_bit(opcode & 0x38)
-                    @t_states += 4
+                    decode_register(opcode, 7).reset_bit(opcode & 0x38)
+                when 0xC0..FF #SET b,r
+                    decode_register(opcode, 7).set_bit(opcode & 0x38)
                 else
                     fail
                 end
+                @t_states += 4
             when 0xCC #CALL Z,HHLL
                 reg = @pc.read16(@memory)
                 if @f.flag_z
