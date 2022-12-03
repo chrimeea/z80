@@ -967,6 +967,17 @@ module Z80
                     @f.s_z_v_hc(reg2)
                     @f.flag_n = true
                     @t_states = 23
+                when 0x36 #LD (IX+d),n
+                    reg = Register16.new
+                    reg.store(@ix.value + @pc.read8(@memory))
+                    Register16.new(@memory[reg.value + 1], @memory[reg.value]).store(@pc.read8(@memory))
+                    @t_states = 19
+                when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
+                    opcode = @pc.read8(@memory)
+                    reg = decode_register(opcode)
+                    reg2 = Register16.new
+                    reg2.store(@ix.value + @pc.read8(@memory))
+                    reg.copy(@memory[reg2.value])
                 else
                     fail
                 end
