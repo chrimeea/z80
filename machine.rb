@@ -282,27 +282,9 @@ module Z80
         end
 
         def decode_register code, t = 3
-            case code & (MAX3 - 1)
-            when 0x00
-                @b
-            when 0x01
-                @c
-            when 0x02
-                @d
-            when 0x03
-                @e
-            when 0x04
-                @h
-            when 0x05
-                @l
-            when 0x06
-                @t_states += t
-                @memory[@hl.value]
-            when 0x07
-                @a
-            else
-                fail
-            end
+            v = code & (MAX3 - 1)
+            @t_states += t if v == 0x06
+            [@b, @c, @d, @e, @h, @l, @memory[@hl.value], @a][v]
         end
 
         def execute opcode
@@ -945,7 +927,15 @@ module Z80
                 end
             when 0xDD #DD
                 #TODO: DD
-                fail
+                opcode = @pc.read8(@memory)
+                case opcode
+                when 0x09, 0x19, 0x29, 0x39
+                    @ix.store(@ix.value + [@bc, @de, @ix, @sp][opcode & 0x30].value)
+                    @f.flags_math(@ix)
+                    @f.flag_n = false
+                else
+                    fail
+                end
             when 0xDE #SBC A,NN
                 @a.sub(@pc.read8(@memory) + (@f.carry ? 1 : 0), @f)
                 @t_states = 7
