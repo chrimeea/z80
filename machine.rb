@@ -974,10 +974,11 @@ module Z80
                     @t_states = 19
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     opcode = @pc.read8(@memory)
-                    reg = decode_register(opcode)
+                    reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
                     reg2 = Register16.new
                     reg2.store(@ix.value + @pc.read8(@memory))
                     reg.copy(@memory[reg2.value])
+                    @t_states = 19
                 else
                     fail
                 end
