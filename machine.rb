@@ -959,6 +959,14 @@ module Z80
                     @f.s_z_v_hc(reg2)
                     @f.flag_n = false
                     @t_states = 23
+                when 0x35 #DEC (IX+d)
+                    reg = Register16.new
+                    reg.store(@ix.value + @pc.read8(@memory))
+                    reg2 = Register16.new(@memory[reg.value + 1], @memory[reg.value])
+                    reg2.store(reg2.value - 1)
+                    @f.s_z_v_hc(reg2)
+                    @f.flag_n = true
+                    @t_states = 23
                 else
                     fail
                 end
