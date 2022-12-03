@@ -940,6 +940,14 @@ module Z80
                 when 0x22 #LD (nn),IX
                     reg = @pc.read16(@memory)
                     Register16.new(@memory[reg.value + 1], @memory[reg.value]).copy(@ix)
+                    @t_states = 20
+                when 0x23 #INC IX
+                    @ix.store(@ix.value + 1)
+                    @t_states = 10
+                when 0x2A #LD IX,(nn)
+                    reg = @pc.read16(@memory)
+                    @ix.copy(Register16.new(@memory[reg.value + 1], @memory[reg.value]))
+                    @t_states = 20    
                 else
                     fail
                 end
