@@ -947,7 +947,10 @@ module Z80
                 when 0x2A #LD IX,(nn)
                     reg = @pc.read16(@memory)
                     @ix.copy(Register16.new(@memory[reg.value + 1], @memory[reg.value]))
-                    @t_states = 20    
+                    @t_states = 20
+                when 0x2B #DEC IX  
+                    @ix.store(@ix.value - 1)
+                    @t_states = 10
                 else
                     fail
                 end
