@@ -929,10 +929,17 @@ module Z80
                 #TODO: DD
                 opcode = @pc.read8(@memory)
                 case opcode
-                when 0x09, 0x19, 0x29, 0x39
+                when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @ix.store(@ix.value + [@bc, @de, @ix, @sp][opcode & 0x30].value)
                     @f.flags_math(@ix)
                     @f.flag_n = false
+                    @t_states = 15
+                when 0x21 #LD IX,nn
+                    @ix.copy(@pc.read16(@memory))
+                    @t_states = 14
+                when 0x22 #LD (nn),IX
+                    reg = @pc.read16(@memory)
+                    Register16.new(@memory[reg.value + 1], @memory[reg.value]).copy(@ix)
                 else
                     fail
                 end
