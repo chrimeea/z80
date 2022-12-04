@@ -189,7 +189,7 @@ module Z80
     class Register16
         attr_reader :high, :low, :overflow, :hc
 
-        def initialize h, l
+        def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
             @overflow, @hc = false
         end
@@ -219,35 +219,19 @@ module Z80
         end
     end
 
-    class Register16U
-        attr_reader :value, :overflow
-
+    class Memory
         def initialize
-            @value, @overflow = 0, false
+            @memory = Array.new(49152) { Register8.new }
         end
 
-        def store(num)
-            if num >= MAX16
-                @value, @overflow = num - MAX16, true
-            else
-                @value, @overflow = num, false
-            end
+        def read8 reg
+            @memory[reg.value]
         end
 
-        def read8 mem
-            val = mem[@value]
-            self.store(@value + 1)
-            val
-        end
-
-        def read16 mem
-            self.store(@value + 2)
-            Register16.new(mem[@value - 1], mem[@value - 2])
-        end
-
-        def push mem
-            self.store(@value - 2)
-            Register16.new(mem[@value + 1], mem[@value])
+        def read16 reg
+            h = Register8.new
+            h.store(reg.value + 1)
+            Register16.new(@memory[h.value], @memory[reg.value])
         end
     end
 
@@ -260,12 +244,35 @@ module Z80
             @de = Register16.new(@d, @e)
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
-            @pc, @sp = [Register16U.new] * 2
+            @pc, @sp = [Register16.new] * 2
             @i = 0
             @x = @y = 0
-            @memory = Array.new(49152) { Register8.new }
+            @memory = Memory.new
             @state_duration, @t_states = 1, 4
             @can_interrupt, @can_execute = true
+        end
+
+        def next8
+            val = @memory.read8(@pc)
+            @pc.store(@pc.value + 1)
+            val
+        end
+
+        def next16
+            val = @memory.read16(@pc)
+            @pc.store(@pc.value + 2)
+            val
+        end
+
+        def push16
+            @sp.store(@sp.value - 2)
+            @memory.read16(@sp)
+        end
+
+        def pop16
+            val = @memory.read16(@sp)
+            @sp.store(@sp.value + 2)
+            val
         end
 
         def run
@@ -273,7 +280,7 @@ module Z80
                 interrupt if can_interrupt
                 t = Time.now
                 @t_states = 4
-                execute(@pc.read8(@memory).value) if can_execute
+                execute(self.next8.value) if can_execute
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
         end
@@ -284,14 +291,14 @@ module Z80
         def decode_register code, t = 3
             v = code & (MAX3 - 1)
             @t_states += t if v == 0x06
-            [@b, @c, @d, @e, @h, @l, @memory[@hl.value], @a][v]
+            [@b, @c, @d, @e, @h, @l, @memory.read8(@hl.value), @a][v]
         end
 
         def execute opcode
             case opcode
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
-                @bc.copy(@pc.read16(@memory))
+                @bc.copy(self.next16)
                 @t_states = 10
                 op_size = 3
             when 0x02 #LD (BC),A
@@ -309,7 +316,7 @@ module Z80
                 @f.flag_n = true
                 @f.s_z_v_hc(@b)
             when 0x06 #LD B,NN
-                @b.copy(@pc.read8(@memory))
+                @b.copy(self.next8)
                 @t_states = 7
                 op_size = 2
             when 0x07 #RLCA
@@ -324,7 +331,7 @@ module Z80
                 @f.flags_math(@hl)
                 @t_states = 11
             when 0x0A #LD A,(BC)
-                @a.copy(@memory[@bc.value])
+                @a.copy(@memory.read8(@bc.value))
                 @t_states = 7
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
@@ -338,13 +345,13 @@ module Z80
                 @f.flag_n = false
                 @f.s_z_v_hc(@c)
             when 0x0E #LD C,NN
-                @c.copy(@pc.read8(@memory))
+                @c.copy(self.next8)
                 @t_states = 7
             when 0x0F #RRCA
                 @a.rotate_right
                 @f.flags_shift(@a)
             when 0x10 #DJNZ NN
-                val = @pc.read8(@memory).value
+                val = self.next8.value
                 @b.store(@b.value - 1)
                 if @b.nonzero?
                     @pc.store(@pc.value + val)
@@ -353,10 +360,10 @@ module Z80
                     @t_states = 8
                 end
             when 0x11 #LD DE,HHLL
-                @de.copy(@pc.read16(@memory))
+                @de.copy(self.next16)
                 @t_states = 10
             when 0x12 #LD (DE),A
-                @memory[@de.value].copy(@a)
+                @memory.read8(@de).copy(@a)
                 @t_states = 7
             when 0x13 #INC DE
                 @de.store(@de.value + 1)
@@ -370,14 +377,14 @@ module Z80
                 @f.flag_n = true
                 @f.s_z_v_hc(@d)
             when 0x16 #LD D,NN
-                @d.store(@pc.read8(@memor))
+                @d.store(self.next8)
                 @t_states = 7
             when 0x17 #RLA
                 @a.carry = @f.flag_c
                 @a.rotate_left_trough_carry
                 @f.flags_shift(@a)
             when 0x18 #JR NN
-                @pc.store(@pc.value + @pc.read8(@memory).value)
+                @pc.store(@pc.value + self.next8.value)
                 @t_states = 12
             when 0x19 #ADD HL,DE
                 @hl.store(@hl.value + @bc.value)
@@ -385,7 +392,7 @@ module Z80
                 @f.flags_math(@hl)
                 @t_states = 11
             when 0x1A #LD A,(DE)
-                @a.copy(@memory[@de.value])
+                @a.copy(@memory.read8(@de))
                 @t_states = 7
             when 0x1B #DEC DE
                 @de.store(@de.value - 1)
@@ -399,14 +406,14 @@ module Z80
                 @f.flag_n = true
                 @f.s_z_v_hc(@e)
             when 0x1E #LD E,NN
-                @e.copy(@pc.read8(@memory))
+                @e.copy(self.next8)
                 @t_states = 7
             when 0x1F #RRA
                 @a.carry = @f.flag_c
                 @a.rotate_right_trough_carry
                 @f.flags_shift(@a)
             when 0x20 #JR NZ,NN
-                val = @pc.read8(@memory).value
+                val = self.next8.value
                 if @f.flag_z
                     @t_states = 7
                 else
@@ -414,11 +421,10 @@ module Z80
                     @t_states = 12
                 end
             when 0x21 #LD HL,HHLL
-                @hl.copy(@pc.read16(@memory))
+                @hl.copy(self.next16)
                 @t_states = 10
             when 0x22 #LD (HHLL),HL
-                v = @pc.read16(@memory).value
-                Register16.new(@memory[v + 1], @memory[v]).copy(@hl)
+                @memory.read16(self.next16).copy(@hl)
                 @t_states = 16
             when 0x23 #INC HL
                 @hl.store(@hl.value + 1)
@@ -432,7 +438,7 @@ module Z80
                 @f.flag_n = true
                 @f.s_z_v_hc(@h)
             when 0x26 #LD H,NN
-                @h.copy(@pc.read8(@memory))
+                @h.copy(self.next8)
                 @t_states = 7
             when 0x27 #DAA
                 q, r = @a.to_4_bit_pair
@@ -480,7 +486,7 @@ module Z80
                 end
                 @f.s_z_p(@a)
             when 0x28 #JR Z,NN
-                val = @pc.read8(@memory).value
+                val = self.next8.value
                 if @f.flag_z
                     @pc.store(@pc.value + val)
                     @t_states = 12
@@ -493,8 +499,7 @@ module Z80
                 @f.flags_math(@hl)
                 @t_states = 11
             when 0x2A #LD HL,(HHLL)
-                v = @pc.read16(@memory).value
-                @hl.copy(Register16.new(@memory[v + 1].value, @memory[v].value))
+                @hl.copy(@memory.read16(self.next16))
                 @t_states = 16
             when 0x2B #DEC HL
                 @hl.store(@hl.value - 1)
@@ -508,13 +513,13 @@ module Z80
                 @f.flag_n = true
                 @f.s_z_v_hc(@l)
             when 0x2E #LD L,NN
-                @l.copy(@pc.read8(@memory))
+                @l.copy(self.next8)
                 @t_states = 7
             when 0x2F #CPL
                 @a.negate
                 @f.flag_n, @f.flag_hc = true
             when 0x30 #JR NC,NN
-                val = @pc.read8(@memory).value
+                val = self.next8.value
                 if @f.flag_c
                     @t_states = 7
                 else
@@ -522,34 +527,34 @@ module Z80
                     @t_states = 12
                 end
             when 0x31 #LD SP,HHLL
-                @sp.copy(@pc.read16(@memory))
+                @sp.copy(self.next16)
                 @t_states = 10
             when 0x32 #LD (HHLL),A
-                @memory[@pc.read16(@memory).value].copy(@a)
+                @memory.read8(self.next16).copy(@a)
                 @t_states = 16
             when 0x33 #INC SP
                 @sp.store(@sp.value + 1)
                 @t_states = 6
             when 0x34 #INC (HL)
-                m = @memory[@hl.value]
+                m = @memory.read8(@hl.value)
                 m.store(m.value + 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(m)
                 @t_states = 11
             when 0x35 #DEC (HL)
-                m = @memory[@hl.value]
+                m = @memory.read8(@hl.value)
                 m.store(m.value - 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(m)
                 @t_states = 11
             when 0x36 #LD (HL),NN
-                @memory[@hl.value].copy(@pc.read8(@memory))
+                @memory.read8(@hl).copy(self.next8)
                 @t_states = 10
             when 0x37 #SCF
                 @f.flag_c = true
                 @f.flag_n, @f.flag_hc = false
             when 0x38 #JR C,NN
-                val = @pc.read8(@memory).value
+                val = self.next8.value
                 if @f.flag_c
                     @pc.store(@pc.value + val)
                     @t_states = 12
@@ -562,7 +567,7 @@ module Z80
                 @f.flags_math(@hl)
                 @t_states = 11
             when 0x3A #LD A,(HHLL)
-                @a.copy(@memory[@pc.read16(@memory).value])
+                @a.copy(@memory.read8(self.next16))
                 @t_states = 13
             when 0x3B #DEC SP
                 @sp.store(@sp.value - 1)
@@ -576,7 +581,7 @@ module Z80
                 @f.flag_n = false
                 @f.s_z_v_hc(@a)
             when 0x3E #LD A,NN
-                @a.copy(@pc.read8(@memory))
+                @a.copy(self.next8)
                 @t_states = 7
             when 0x3F #CCF
                 @f.flag_hc = @f.flag_c
@@ -594,7 +599,7 @@ module Z80
             when 0x45 #LD B,L
                 @b.copy(@l)
             when 0x46 #LD B,(HL)
-                @b.copy(@memory[@hl.value])
+                @b.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x47 #LD B,A
                 @b.copy(@a)
@@ -610,7 +615,7 @@ module Z80
             when 0x4D #LD C,L
                 @c.copy(@l)
             when 0x4E #LD C,(HL)
-                @c.copy(@memory[@hl.value])
+                @c.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x4F #LD C,A
                 @c.copy(@a)
@@ -626,7 +631,7 @@ module Z80
             when 0x55 #LD D,L
                 @d.copy(@l)
             when 0x56 #LD D,(HL)
-                @d.copy(@memory[@hl.value])
+                @d.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x57 #LD D,A
                 @d.copy(@a)
@@ -642,7 +647,7 @@ module Z80
             when 0x5D #LD E,L
                 @e.copy(@l)
             when 0x5E #LD E,(HL)
-                @e.copy(@memory[@hl.value])
+                @e.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x5F #LD E,A
                 @e.copy(@a)
@@ -658,7 +663,7 @@ module Z80
             when 0x65 #LD H,L
                 @h.copy(@l)
             when 0x66 #LD H,(HL)
-                @h.copy(@memory[@hl.value])
+                @h.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x67 #LD H,A
                 @h.copy(@a)
@@ -674,32 +679,32 @@ module Z80
                 @l.copy(@h)
             when 0x6D #LD L,L
             when 0x6E #LD L,(HL)
-                @l.copy(@memory[@hl.value])
+                @l.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x6F #LD L,A
                 @l.copy(@a)
             when 0x70 #LD (HL),B
-                @memory[@hl.value].copy(@b)
+                @memory.read8(@hl).copy(@b)
                 @t_states = 7
             when 0x71 #LD (HL),C
-                @memory[@hl.value].copy(@c)
+                @memory.read8(@hl).copy(@c)
                 @t_states = 7
             when 0x72 #LD (HL),D
-                @memory[@hl.value].copy(@d)
+                @memory.read8(@hl).copy(@d)
                 @t_states = 7
             when 0x73 #LD (HL),E
-                @memory[@hl.value].copy(@e)
+                @memory.read8(@hl).copy(@e)
                 @t_states = 7
             when 0x74 #LD (HL),H
-                @memory[@hl.value].copy(@h)
+                @memory.read8(@hl).copy(@h)
                 @t_states = 7
             when 0x75 #LD (HL),L
-                @memory[@hl.value].copy(@l)
+                @memory.read8(@hl).copy(@l)
                 @t_states = 7
             when 0x76 #HALT
                 @can_execute = false
             when 0x77 #LD (HL),A
-                @memory[@hl.value].copy(@a)
+                @memory.read8(@hl).copy(@a)
                 @t_states = 7
             when 0x78 #LD A,B
                 @a.copy(@b)
@@ -714,7 +719,7 @@ module Z80
             when 0x7D #LD A,L
                 @a.copy(@l)
             when 0x7E #LD A,(HL)
-                @a.copy(@memory[@hl.value])
+                @a.copy(@memory.read8(@hl))
                 @t_states = 7
             when 0x7F #LD A,A
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
@@ -751,54 +756,56 @@ module Z80
                 if @f.flag_z
                     @t_states = 11
                 else
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 end
             when 0xC1 #POP BC
-                @bc.copy(@sp.read16(@memory))
+                @bc.copy(self.pop16)
                 @t_states = 10
             when 0xC2 #JP NZ,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if !@f.flag_z
                 @t_states = 10
             when 0xC3 #JP HHLL
-                @pc.copy(@pc.read16(@memory))
+                @pc.copy(self.next16)
                 @t_states = 10
             when 0xC4 #CALL NZ,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_z
                     @t_states = 10
                 else
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 end
             when 0xC5 #PUSH BC
-                @sp.push(@memory).copy(@bc)
+                self.push16.copy(@bc)
                 @t_states = 10
             when 0xC6 #ADD A,NN
-                @a.add(@pc.read8(@memory).value, @f)
+                @a.store(@a.value + self.next8.value)
+                @f.flag_n, @f.flag_c = false, @a.carry
+                @f.s_z_v_hc(@a)
                 @t_states = 7
             when 0xC7 #RST 00
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0)
                 @t_states = 11
             when 0xC8 #RET Z
                 if @f.flag_z
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 else
                     @t_states = 11
                 end
             when 0xC9 #RET
-                @pc.copy(@sp.read16(@memory))
+                @pc.copy(self.pop16)
                 @t_states = 10
             when 0xCA #JP Z,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if @f.flag_z
                 @t_states = 10
             when 0xCB #CB
-                opcode = @pc.read8(@memory)
+                opcode = self.next8
                 case opcode
                 when 0x00..0x3F
                     reg = decode_register(opcode, 7)
@@ -839,65 +846,67 @@ module Z80
                 end
                 @t_states += 4
             when 0xCC #CALL Z,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_z
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 else
                     @t_states = 10
                 end
             when 0xCD #CALL HHLL
-                reg = @pc.read16(@memory)
-                @sp.push(@memory).copy(@pc)
+                reg = self.next16
+                self.push16.copy(@pc)
                 @pc.copy(reg)
                 @t_states = 17
             when 0xCE #ADC A,NN
-                @a.add(@pc.read8(@memory).value + (@f.carry ? 1 : 0), @f)
+                @a.add(self.next8.value + (@f.carry ? 1 : 0), @f)
                 @t_states = 7
             when 0xCF #RST 08
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x08)
                 @t_states = 11
             when 0xD0 #RET NC
                 if @f.flag_c
                     @t_states = 11
                 else
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 end
             when 0xD1 #POP DE
-                @de.copy(@sp.read16(@memory))
+                @de.copy(self.pop16)
                 @t_states = 10
             when 0xD2 #JP NC,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if !@f.flag_c
                 @t_states = 10
             when 0xD3 #OUT (NN),A
                 #TODO: OUT
                 fail
             when 0xD4 #CALL NC,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_c
                     @t_states = 10
                 else
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 end
             when 0xD5 #PUSH DE
-                @sp.push(@memory).copy(@de)
+                self.push16.copy(@de)
                 @t_states = 10
             when 0xD6 #SUB A,NN
-                @a.sub(@pc.read8(@memory), @f)
+                @a.store(@a.value - self.next8.value)
+                @f.flag_n, @f.flag_c = true, @a.carry
+                @f.s_z_v_hc(@a)
                 @t_states = 7
             when 0xD7 #RST 10
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x10)
                 @t_states = 11
             when 0xD8 #RET C
                 if @f.flag_c
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15                    
                 else
                     @t_states = 11
@@ -910,16 +919,16 @@ module Z80
                 @h.exchange(@h’)
                 @l.exchange(@l’)
             when 0xDA #JP C,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if @f.flag_c
                 @t_states = 10
             when 0xDB #IN A,(NN)
                 #TODO: IN
                 fail
             when 0xDC #CALL C,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_c
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 else
@@ -927,7 +936,7 @@ module Z80
                 end
             when 0xDD #DD
                 #TODO: DD
-                opcode = @pc.read8(@memory)
+                opcode = self.next8
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @ix.store(@ix.value + [@bc, @de, @ix, @sp][opcode & 0x30].value)
@@ -935,116 +944,118 @@ module Z80
                     @f.flag_n = false
                     @t_states = 15
                 when 0x21 #LD IX,nn
-                    @ix.copy(@pc.read16(@memory))
+                    @ix.copy(self.next16)
                     @t_states = 14
                 when 0x22 #LD (nn),IX
-                    reg = @pc.read16(@memory)
-                    Register16.new(@memory[reg.value + 1], @memory[reg.value]).copy(@ix)
+                    @memory.read16(self.next16).copy(@ix)
                     @t_states = 20
                 when 0x23 #INC IX
                     @ix.store(@ix.value + 1)
                     @t_states = 10
                 when 0x2A #LD IX,(nn)
-                    reg = @pc.read16(@memory)
-                    @ix.copy(Register16.new(@memory[reg.value + 1], @memory[reg.value]))
+                    @ix.copy(@memory.read16(self.next16))
                     @t_states = 20
                 when 0x2B #DEC IX  
                     @ix.store(@ix.value - 1)
                     @t_states = 10
                 when 0x34 #INC (IX+d)
                     reg = Register16.new
-                    reg.store(@ix.value + @pc.read8(@memory))
-                    reg2 = Register16.new(@memory[reg.value + 1], @memory[reg.value])
+                    reg.store(@ix.value + self.next8)
+                    reg2 = @memory.read16(reg)
                     reg2.store(reg2.value + 1)
                     @f.s_z_v_hc(reg2)
                     @f.flag_n = false
                     @t_states = 23
                 when 0x35 #DEC (IX+d)
                     reg = Register16.new
-                    reg.store(@ix.value + @pc.read8(@memory))
-                    reg2 = Register16.new(@memory[reg.value + 1], @memory[reg.value])
+                    reg.store(@ix.value + self.next8)
+                    reg2 = @memory.read16(reg)
                     reg2.store(reg2.value - 1)
                     @f.s_z_v_hc(reg2)
                     @f.flag_n = true
                     @t_states = 23
                 when 0x36 #LD (IX+d),n
                     reg = Register16.new
-                    reg.store(@ix.value + @pc.read8(@memory))
-                    Register16.new(@memory[reg.value + 1], @memory[reg.value]).store(@pc.read8(@memory))
+                    reg.store(@ix.value + self.next8)
+                    @memory.read16(reg).store(self.next8)
                     @t_states = 19
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
-                    opcode = @pc.read8(@memory)
+                    opcode = self.next8
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
                     reg2 = Register16.new
-                    reg2.store(@ix.value + @pc.read8(@memory))
-                    reg.copy(@memory[reg2.value])
+                    reg2.store(@ix.value + self.next8)
+                    reg.copy(@memory.read8(reg2))
                     @t_states = 19
                 else
                     fail
                 end
             when 0xDE #SBC A,NN
-                @a.sub(@pc.read8(@memory) + (@f.carry ? 1 : 0), @f)
+                @a.sub(self.next8 + (@f.carry ? 1 : 0), @f)
                 @t_states = 7
             when 0xDF #RST 18
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x18)
                 @t_states = 11
             when 0xE0 #RET PO
                 if @f.flag_pv
                     @t_states = 11
                 else
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 end
             when 0xE1 #POP HL
-                @hl.copy(@sp.read16(@memory))
+                @hl.copy(self.pop16)
                 @t_states = 10
             when 0xE2 #JP PO,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if !@f.flag_pv
                 @t_states = 10
             when 0xE3 #EX (SP),HL
-                @l.exchange(@memory[@sp.value])
-                @h.exchange(@memory[@sp.value + 1])
+                reg = @memory.read16(@sp)
+                @l.exchange(reg.low)
+                @h.exchange(reg.high)
                 @t_states = 19
             when 0xE4 #CALL PO,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_pv
                     @t_states = 10
                 else
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 end
             when 0xE5 #PUSH HL
-                @sp.push(@memory).copy(@hl)
+                self.push16.copy(@hl)
                 @t_states = 10
             when 0xE6 #AND A,NN
-                @a.and(@pc.read8(@memory), @f)
+                @a.store(@a.value & self.next8.value)
+                @f.s_z(@a)
+                @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
+                @t_states = 7
             when 0xE7 #RST 20
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x20)
                 @t_states = 11
             when 0xE8 #RET PE
                 if @f.flag_pv
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 else
                     @t_states = 11
                 end
             when 0xE9 #JP (HL)
-                @pc.copy(Register16.new(@memory[@hl.value + 1], @memory[@hl.value]))
+                @pc.copy(@memory.read16(@hl))
             when 0xEA #JP PE,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if @f.flag_pv
                 @t_states = 10
             when 0xEB #EX DE,HL
                 @d.exchange(@h)
                 @e.exchange(@l)
             when 0xEC #CALL PE,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_pv
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 else
@@ -1054,50 +1065,54 @@ module Z80
                 #TODO: ED
                 fail
             when 0xEE #XOR A,NN
-                @a.xor(@pc.read8(@memory), @f)
+                @a.store(@a.value ^ self.next8.value)
+                @f.s_z_p(@a)
+                @f.flag_hc, @f.flag_n, @f.flag_c = false
                 @t_states = 7
             when 0xEF #RST 28
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x28)
                 @t_states = 11
             when 0xF0 #RET P
                 if @f.flag_s
                     @t_states = 11
                 else
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 end
             when 0xF1 #POP AF
-                @af.copy(@sp.read16(@memory))
+                @af.copy(self.pop16)
                 @t_states = 10
             when 0xF2 #JP P,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if !@f.flag_s
                 @t_states = 10
             when 0xF3 #DI
                 can_interrupt = false
             when 0xF4 #CALL P,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_s
                     @t_states = 10
                 else
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 end
             when 0xF5 #PUSH AF
-                @sp.push(@memory).copy(@af)
+                self.push16.copy(@af)
                 @t_states = 10
             when 0xF6 #OR A,NN
-                @a.or(@pc.read8(@memory), @f)
+                @a.store(@a.value | self.next8.value)
+                @f.s_z(@a)
+                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
                 @t_states = 7
             when 0xF7 #RST 30
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x30)
                 @t_states = 11
             when 0xF8 #RET M
                 if @f.flag_s
-                    @pc.copy(@sp.read16(@memory))
+                    @pc.copy(self.pop16)
                     @t_states = 15
                 else
                     @t_states = 11
@@ -1105,15 +1120,15 @@ module Z80
             when 0xF9 #LD SP,HL
                 @sp.copy(@hl)
             when 0xFA #JP M,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 @pc.copy(reg) if @f.flag_s
                 @t_states = 10
             when 0xFB #EI
                 @can_interrupt = true
             when 0xFC #CALL M,HHLL
-                reg = @pc.read16(@memory)
+                reg = self.next16
                 if @f.flag_s
-                    @sp.push(@memory).copy(@pc)
+                    self.push16.copy(@pc)
                     @pc.copy(reg)
                     @t_states = 17
                 else
@@ -1123,9 +1138,9 @@ module Z80
                 #TODO: FD
                 fail
             when 0xFE #CP A,NN
-                @f.flag_z = (@a.value == @pc.read8(@memory).value)
+                @f.flag_z = (@a.value == self.next8.value)
             when 0xFF #RST 38
-                @sp.push(@memory).copy(@pc)
+                self.push16.copy(@pc)
                 @pc.copy(0x38)
                 @t_states = 11
             else
@@ -1136,6 +1151,7 @@ module Z80
 
 end
 
-#TODO: how to set carry (for example on ADD A,A) ??
+#TODO: sp, pc, ix, iy are unsigned ?
+#TODO: how to set carry and hc (for example on ADD A,A) ??
 z80 = Z80::Z80.new
 #z80.run
