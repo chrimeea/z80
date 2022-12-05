@@ -980,11 +980,15 @@ module Z80
                     @memory.read16(reg).store(self.next8)
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     @t_states = 19
-                    opcode = self.next8
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
                     reg2 = Register16.new
                     reg2.store(@ix.value + self.next8)
                     reg.copy(@memory.read8(reg2))
+                when 0x86 #ADD A,(IX+d)
+                    @t_states = 19
+                    @a.store(@a.value + @ix.value + self.next8)
+                    @f.s_z_v_hc(@a)
+                    @f.flag_n = false
                 else
                     fail
                 end
@@ -1150,7 +1154,6 @@ module Z80
 
 end
 
-#TODO: compute t_states (self.next8 + 3, self.next16 + 4 ?)
 #TODO: sp, pc, ix, iy are unsigned ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
 z80 = Z80::Z80.new
