@@ -291,7 +291,7 @@ module Z80
         def decode_register code, t = 3
             v = code & (MAX3 - 1)
             @t_states += t if v == 0x06
-            [@b, @c, @d, @e, @h, @l, @memory.read8(@hl.value), @a][v]
+            [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
         def execute opcode
@@ -331,7 +331,7 @@ module Z80
                 @f.flags_math(@hl)
             when 0x0A #LD A,(BC)
                 @t_states = 7
-                @a.copy(@memory.read8(@bc.value))
+                @a.copy(@memory.read8(@bc))
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
                 @t_states = 6
@@ -536,13 +536,13 @@ module Z80
                 @sp.store(@sp.value + 1)
             when 0x34 #INC (HL)
                 @t_states = 11
-                m = @memory.read8(@hl.value)
+                m = @memory.read8(@hl)
                 m.store(m.value + 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(m)
             when 0x35 #DEC (HL)
                 @t_states = 11
-                m = @memory.read8(@hl.value)
+                m = @memory.read8(@hl)
                 m.store(m.value - 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(m)
