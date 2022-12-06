@@ -989,6 +989,11 @@ module Z80
                     @a.store(@a.value + @ix.value + self.next8)
                     @f.s_z_v_hc(@a)
                     @f.flag_n = false
+                when 0x8E #ADC A,(IX+d)
+                    @t_states = 19
+                    @a.store(@a.value + @ix.value + self.next8 + (@f.flag_c ? 1 : 0))
+                    @f.s_z_v_hc(@a)
+                    @f.flag_n = false
                 else
                     fail
                 end
