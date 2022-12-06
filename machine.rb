@@ -1019,6 +1019,11 @@ module Z80
                     @a.store(@a.value | @memory.read8(reg.value))
                     @f.s_z(@a)
                     @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, false
+                when 0xBE #CP A,(IX+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @f.flag_z = (@a.value == reg.value)
                 else
                     fail
                 end
