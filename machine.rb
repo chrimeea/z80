@@ -984,16 +984,16 @@ module Z80
                     reg2 = Register16.new
                     reg2.store(@ix.value + self.next8)
                     reg.copy(@memory.read8(reg2))
-                when 0x86 #ADD A,(IX+d)
+                when 0x86, 0x8E #ADD A,(IX+d), ADC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value + @ix.value + self.next8)
+                    @a.store(@a.value + @ix.value + self.next8 + (opcode == 0x8E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
                     @f.flag_n = false
-                when 0x8E #ADC A,(IX+d)
+                when 0x96, 0x9E #SUB A,(IX+d), SBC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value + @ix.value + self.next8 + (@f.flag_c ? 1 : 0))
+                    @a.store(@a.value - @ix.value - self.next8 - (opcode == 0x9E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
-                    @f.flag_n = false
+                    @f.flag_n = true
                 else
                     fail
                 end
