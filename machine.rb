@@ -984,16 +984,41 @@ module Z80
                     reg2 = Register16.new
                     reg2.store(@ix.value + self.next8)
                     reg.copy(@memory.read8(reg2))
-                when 0x86, 0x8E #ADD A,(IX+d), ADC A,(IX+d)
+                when 0x86, 0x8E #ADD/ADC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value + @ix.value + self.next8 + (opcode == 0x8E && @f.flag_c ? 1 : 0))
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @a.store(@a.value + @memory.read8(reg.value) + (opcode == 0x8E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
                     @f.flag_n = false
-                when 0x96, 0x9E #SUB A,(IX+d), SBC A,(IX+d)
+                when 0x96, 0x9E #SUB/SBC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value - @ix.value - self.next8 - (opcode == 0x9E && @f.flag_c ? 1 : 0))
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @a.store(@a.value - @memory.read8(reg.value) - (opcode == 0x9E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
                     @f.flag_n = true
+                when 0xA6 #AND A,(IX+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @a.store(@a.value & @memory.read8(reg.value))
+                    @f.s_z(@a)
+                    @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
+                when 0xAE #XOR A,(IX+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @a.store(@a.value ^ @memory.read8(reg.value))
+                    @f.s_z_p(@a)
+                    @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false
+                when 0xB6 #OR A,(IX+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@ix.value + self.next8)
+                    @a.store(@a.value | @memory.read8(reg.value))
+                    @f.s_z(@a)
+                    @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, false
                 else
                     fail
                 end
