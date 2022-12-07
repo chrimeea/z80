@@ -202,6 +202,11 @@ module Z80
             @high.value, @low.value = reg16.high.value, reg16.low.value
         end
 
+        def exchange reg16
+            low.exchange(reg16.low)
+            high.exchange(reg16.high)
+        end
+
         def store(num)
             prev_high = @high
             if num >= MAX15
@@ -1024,6 +1029,24 @@ module Z80
                     reg = Register16.new
                     reg.store(@ix.value + self.next8)
                     @f.flag_z = (@a.value == reg.value)
+                when 0xCB #DDCB
+                    #TODO: DDCB
+                    fail
+                when 0xE1 #POP IX
+                    @t_states = 19
+                    @ix.copy(self.pop16)
+                when 0xE3 #EX (SP),IX
+                    @t_states = 23
+                    @ix.exchange(@memory.read16(@sp))
+                when 0xE5 #PUSH IX
+                    @t_states = 15
+                    self.push16.copy(@ix)
+                when 0xE9 #JP (IX)
+                    @t_states = 8
+                    @pc.copy(@memory.read16(@ix))
+                when 0xF9 #LD SP,IX
+                    @t_states = 10
+                    @sp.copy(@ix)
                 else
                     fail
                 end
@@ -1050,9 +1073,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_pv
             when 0xE3 #EX (SP),HL
                 @t_states = 19
-                reg = @memory.read16(@sp)
-                @l.exchange(reg.low)
-                @h.exchange(reg.high)
+                @hl.exchange(@memory.read16(@sp))
             when 0xE4 #CALL PO,HHLL
                 reg = self.next16
                 if @f.flag_pv
@@ -1088,8 +1109,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_pv
             when 0xEB #EX DE,HL
-                @d.exchange(@h)
-                @e.exchange(@l)
+                @de.exchange(@hl)
             when 0xEC #CALL PE,HHLL
                 reg = self.next16
                 if @f.flag_pv
