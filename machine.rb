@@ -1015,6 +1015,7 @@ module Z80
                     @t_states = 19
                     @f.flag_z = (@a.value == self.read8indexed.value)
                 when 0xCB #DDCB
+                    #TODO: DDCB
                     opcode = self.next8
                     case opcode
                     when 0x06 #RLC (IX+d)	
@@ -1044,8 +1045,6 @@ module Z80
                     else
                         fail
                     end
-                    #TODO: DDCB
-                    fail
                 when 0xE1 #POP IX
                     @t_states = 19
                     @ix.copy(self.pop16)
