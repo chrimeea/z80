@@ -1018,8 +1018,27 @@ module Z80
                     opcode = self.next8
                     case opcode
                     when 0x06 #RLC (IX+d)	
+                        @t_states = 23
                         reg = self.read8indexed
                         reg.rotate_left
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x0E #RRC (IX+d)
+                        @t_states = 23
+                        reg = self.read8indexed
+                        reg.rotate_right
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x16 #RL (IX+d)
+                        @t_states = 23
+                        reg = self.read8indexed
+                        reg.rotate_left_trough_carry
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x1E #RR (IX+d)
+                        @t_states = 23
+                        reg = self.read8indexed
+                        reg.rotate_right_trough_carry
                         @f.s_z_p(@reg)
                         @f.flags_shift(@reg)
                     else
