@@ -1017,31 +1017,61 @@ module Z80
                 when 0xCB #DDCB
                     #TODO: DDCB
                     opcode = self.next8
+                    reg = self.read8indexed
                     case opcode
                     when 0x06 #RLC (IX+d)	
                         @t_states = 23
-                        reg = self.read8indexed
                         reg.rotate_left
                         @f.s_z_p(@reg)
                         @f.flags_shift(@reg)
                     when 0x0E #RRC (IX+d)
                         @t_states = 23
-                        reg = self.read8indexed
                         reg.rotate_right
                         @f.s_z_p(@reg)
                         @f.flags_shift(@reg)
                     when 0x16 #RL (IX+d)
                         @t_states = 23
-                        reg = self.read8indexed
                         reg.rotate_left_trough_carry
                         @f.s_z_p(@reg)
                         @f.flags_shift(@reg)
                     when 0x1E #RR (IX+d)
                         @t_states = 23
-                        reg = self.read8indexed
                         reg.rotate_right_trough_carry
                         @f.s_z_p(@reg)
                         @f.flags_shift(@reg)
+                    when 0x26 #SLA (IX+d)
+                        @t_states = 23
+                        reg.shift_left
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x2E #SRA (IX+d)
+                        @t_states = 23
+                        reg.carry = reg.negative?
+                        reg.rotate_right_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x36 #SLL (IX+d)
+                        @t_states = 23
+                        reg.carry = true
+                        reg.rotate_left_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x3E #SRL (IX+d)
+                        @t_states = 23
+                        reg.carry = false
+                        reg.rotate_right_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IX+d)
+                        @t_states = 20
+                        @f.flag_z = !(reg.bit?(opcode & 0x38))
+                        @f.flag_hc, @f.flag_n = true, false
+                    when 0x86, 0x8E, 0x96, 0x9E, 0xA6, 0xAE, 0xB6, 0xBE #RES b,(IX+d)
+                        @t_states = 23
+                        reg.reset_bit(opcode & 0x38)
+                    when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IX+d)
+                        @t_states = 20
+                        reg.set_bit(opcode & 0x38)
                     else
                         fail
                     end
