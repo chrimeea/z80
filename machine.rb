@@ -945,7 +945,6 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #DD
-                #TODO: DD
                 opcode = self.next8
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
