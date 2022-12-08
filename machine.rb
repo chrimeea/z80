@@ -784,9 +784,9 @@ module Z80
                 if @f.flag_z
                     @t_states = 10
                 else
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 end
             when 0xC5 #PUSH BC
                 @t_states = 10
@@ -802,8 +802,8 @@ module Z80
                 @pc.copy(0)
             when 0xC8 #RET Z
                 if @f.flag_z
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 else
                     @t_states = 11
                 end
@@ -858,9 +858,9 @@ module Z80
             when 0xCC #CALL Z,HHLL
                 reg = self.next16
                 if @f.flag_z
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 else
                     @t_states = 10
                 end
@@ -880,8 +880,8 @@ module Z80
                 if @f.flag_c
                     @t_states = 11
                 else
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 end
             when 0xD1 #POP DE
                 @t_states = 10
@@ -898,9 +898,9 @@ module Z80
                 if @f.flag_c
                     @t_states = 10
                 else
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 end
             when 0xD5 #PUSH DE
                 @t_states = 10
@@ -916,8 +916,8 @@ module Z80
                 @pc.copy(0x10)
             when 0xD8 #RET C
                 if @f.flag_c
-                    @pc.copy(self.pop16)
-                    @t_states = 15                    
+                    @t_states = 15
+                    @pc.copy(self.pop16)                    
                 else
                     @t_states = 11
                 end
@@ -938,9 +938,9 @@ module Z80
             when 0xDC #CALL C,HHLL
                 reg = self.next16
                 if @f.flag_c
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 else
                     @t_states = 10
                 end
@@ -1102,8 +1102,8 @@ module Z80
                 if @f.flag_pv
                     @t_states = 11
                 else
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 end
             when 0xE1 #POP HL
                 @t_states = 10
@@ -1120,9 +1120,9 @@ module Z80
                 if @f.flag_pv
                     @t_states = 10
                 else
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 end
             when 0xE5 #PUSH HL
                 @t_states = 10
@@ -1138,8 +1138,8 @@ module Z80
                 @pc.copy(0x20)
             when 0xE8 #RET PE
                 if @f.flag_pv
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 else
                     @t_states = 11
                 end
@@ -1154,9 +1154,9 @@ module Z80
             when 0xEC #CALL PE,HHLL
                 reg = self.next16
                 if @f.flag_pv
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 else
                     @t_states = 10
                 end
@@ -1176,8 +1176,8 @@ module Z80
                 if @f.flag_s
                     @t_states = 11
                 else
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 end
             when 0xF1 #POP AF
                 @t_states = 10
@@ -1193,9 +1193,9 @@ module Z80
                 if @f.flag_s
                     @t_states = 10
                 else
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 end
             when 0xF5 #PUSH AF
                 @t_states = 10
@@ -1211,8 +1211,8 @@ module Z80
                 @pc.copy(0x30)
             when 0xF8 #RET M
                 if @f.flag_s
-                    @pc.copy(self.pop16)
                     @t_states = 15
+                    @pc.copy(self.pop16)
                 else
                     @t_states = 11
                 end
@@ -1227,9 +1227,9 @@ module Z80
             when 0xFC #CALL M,HHLL
                 reg = self.next16
                 if @f.flag_s
+                    @t_states = 17
                     self.push16.copy(@pc)
                     @pc.copy(reg)
-                    @t_states = 17
                 else
                     @t_states = 10
                 end
