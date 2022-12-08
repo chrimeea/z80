@@ -1015,7 +1015,6 @@ module Z80
                     @t_states = 19
                     @f.flag_z = (@a.value == self.read8indexed.value)
                 when 0xCB #DDCB
-                    #TODO: DDCB
                     opcode = self.next8
                     reg = self.read8indexed
                     case opcode
