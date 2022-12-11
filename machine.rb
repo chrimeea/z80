@@ -847,9 +847,9 @@ module Z80
                 when 0x40..0x7F #BIT b,r
                     @f.flag_z = !(decode_register(opcode).bit?(opcode & 0x38))
                     @f.flag_hc, @f.flag_n = true, false
-                when 0x80..BF #RES b,r
+                when 0x80..0xBF #RES b,r
                     decode_register(opcode, 7).reset_bit(opcode & 0x38)
-                when 0xC0..FF #SET b,r
+                when 0xC0..0xFF #SET b,r
                     decode_register(opcode, 7).set_bit(opcode & 0x38)
                 else
                     fail
@@ -892,6 +892,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 #TODO: OUT
+                @t_states = 11
                 fail
             when 0xD4 #CALL NC,HHLL
                 reg = self.next16
@@ -934,6 +935,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
                 #TODO: IN
+                @t_states = 11
                 fail
             when 0xDC #CALL C,HHLL
                 reg = self.next16
@@ -1162,7 +1164,21 @@ module Z80
                 end
             when 0xED #ED
                 #TODO: ED
-                fail
+                opcode = self.next8
+                case opcode
+                when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
+                    @t_states = 12
+                    reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
+                    #TODO: IN r,(C)
+                    fail
+                when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
+                    @t_states = 12
+                    reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
+                    #TODO: OUT (C),r
+                    fail
+                else
+                    fail
+                end
             when 0xEE #XOR A,NN
                 @t_states = 7
                 @a.store(@a.value ^ self.next8.value)
