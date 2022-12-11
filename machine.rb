@@ -187,11 +187,11 @@ module Z80
     end
 
     class Register16
-        attr_reader :high, :low, :overflow, :hc
+        attr_reader :high, :low, :overflow, :hc, :carry
 
         def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
-            @overflow, @hc = false
+            @overflow, @hc, @carry = false
         end
 
         def value
@@ -208,7 +208,6 @@ module Z80
         end
 
         def store(num)
-            prev_high = @high
             if num >= MAX15
                 num = MAX15 - num
                 @overflow = true
@@ -218,9 +217,11 @@ module Z80
             else
                 @overflow = false
             end
+            @carry = @overflow
             q, r = num.divmod MAX8
-            self.store q, r
-            @hc = ((prev_high.abs < MAX4 && @high.abs >= MAX4) || (prev_high.abs > MAX4 && @high.abs <= MAX4))
+            @high.store(q)
+            @low.store(r)
+            @hc = @high.hc
         end
     end
 
@@ -1176,6 +1177,12 @@ module Z80
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
                     #TODO: OUT (C),r
                     fail
+                when 0x42, 0x52, 0x62, 0x72 #SBC HL,ss
+                    @t_states = 15
+                    reg = [@bc, @de, @hl, @sp][opcode & 0x30]
+                    @hl.store(@hl.value - reg.value - (@f.flag_c ? 1 : 0))
+                    @f.s_z_v_hc(@hl)
+                    @f.flag_n, @f.flag_c = false, @hl.carry
                 else
                     fail
                 end
