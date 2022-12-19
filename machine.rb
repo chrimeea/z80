@@ -838,7 +838,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_z
             when 0xCB #CB
-                opcode = self.next8
+                opcode = self.next8.value
                 case opcode
                 when 0x00..0x3F
                     reg = decode_register(opcode, 7)
@@ -970,7 +970,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #DD
-                opcode = self.next8
+                opcode = self.next8.value
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @t_states = 15
@@ -1039,7 +1039,7 @@ module Z80
                     @t_states = 19
                     @f.flag_z = (@a.value == self.read8indexed.value)
                 when 0xCB #DDCB
-                    opcode = self.next8
+                    opcode = self.next8.value
                     reg = self.read8indexed
                     case opcode
                     when 0x06 #RLC (IX+d)	
@@ -1187,7 +1187,7 @@ module Z80
                 end
             when 0xED #ED
                 #TODO: ED
-                opcode = self.next8
+                opcode = self.next8.value
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
@@ -1218,6 +1218,10 @@ module Z80
                     @t_states = 14
                     @pc.copy(self.pop16)
                     @iff1 = @iff2
+                when 0x46 #IM 0
+                    @mode = 0
+                when 0x56 #IM 1
+                    @mode = 1
                 else
                     fail
                 end
