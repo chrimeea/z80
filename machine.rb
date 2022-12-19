@@ -1183,6 +1183,15 @@ module Z80
                     @hl.store(@hl.value - reg.value - (@f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@hl)
                     @f.flag_n, @f.flag_c = false, @hl.carry
+                when 0x43, 0x53, 0x73 #LD (nn),dd
+                    @t_states = 20
+                    reg = [@bc, @de, nil, @sp][opcode & 0x30]
+                    @memory.read16(self.next16).copy(reg)
+                when 0x44 #NEG
+                    @t_states = 8
+                    @a.store(-@a.value)
+                    @f.s_z_v_hc(@a)
+                    @f.flag_c, @f.flag_n = @a.value.nonzero?, true
                 else
                     fail
                 end
