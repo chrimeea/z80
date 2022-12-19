@@ -256,6 +256,7 @@ module Z80
             @memory = Memory.new
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
+            @mode = 0
         end
 
         def next8
@@ -289,16 +290,35 @@ module Z80
 
         def run
             loop do
-                interrupt if @iff1
+                nonmaskable_interrupt
+                maskable_interrupt if @iff1
                 t = Time.now
                 @t_states = 4
-                execute(self.next8.value) if can_execute
+                execute if can_execute
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
         end
 
-        def interrupt
+        def nonmaskable_interrupt
             @iff1, @iff2 = false, @iff1
+            self.push16.copy(@pc)
+            @pc.copy(0x66)
+            #TODO: t_states ?
+        end
+
+        def maskable_interrupt
+            #TODO: implement
+            #TODO: t_states ?
+            case @mode
+            when 0
+            when 1
+                self.push16.copy(@pc)
+                @pc.copy(0x38)
+            when 2
+                @t_states = 19
+            else
+                fail
+            end
         end
 
         def decode_register code, t = 3
@@ -307,7 +327,8 @@ module Z80
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
-        def execute opcode
+        def execute
+            opcode = self.next8.value
             case opcode
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
