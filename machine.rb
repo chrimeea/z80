@@ -255,7 +255,7 @@ module Z80
             @x = @y = 0
             @memory = Memory.new
             @state_duration, @t_states = 1, 4
-            @can_interrupt, @can_execute = true
+            @iff1, @iff2, @can_execute = false, false, true
         end
 
         def next8
@@ -289,7 +289,7 @@ module Z80
 
         def run
             loop do
-                interrupt if can_interrupt
+                interrupt if @iff1
                 t = Time.now
                 @t_states = 4
                 execute(self.next8.value) if can_execute
@@ -298,6 +298,7 @@ module Z80
         end
 
         def interrupt
+            @iff1, @iff2 = false, @iff1
         end
 
         def decode_register code, t = 3
@@ -1192,6 +1193,10 @@ module Z80
                     @a.store(-@a.value)
                     @f.s_z_v_hc(@a)
                     @f.flag_c, @f.flag_n = @a.value.nonzero?, true
+                when 0x45 #RETN
+                    @t_states = 14
+                    @pc.copy(self.pop16)
+                    @iff1 = @iff2
                 else
                     fail
                 end
@@ -1219,7 +1224,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if !@f.flag_s
             when 0xF3 #DI
-                can_interrupt = false
+                @iff1, @iff2 = false
             when 0xF4 #CALL P,HHLL
                 reg = self.next16
                 if @f.flag_s
@@ -1255,7 +1260,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_s
             when 0xFB #EI
-                @can_interrupt = true
+                @iff1, @iff2 = true
             when 0xFC #CALL M,HHLL
                 reg = self.next16
                 if @f.flag_s
