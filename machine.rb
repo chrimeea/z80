@@ -1204,6 +1204,8 @@ module Z80
                     @address_bus.copy(@bc)
                     #TODO: read one byte from device in address_bus to data_bus
                     reg.copy(@data_bus)
+                    @f.s_z_p(reg)
+                    @f.flag_hc, @f.flag_n = false, false
                 when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
                     @t_states = 12
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
@@ -1243,6 +1245,9 @@ module Z80
                     @a.copy(@i)
                     @f.s_z(@a)
                     @f.flag_pv, @f.flag_n = @iff2, false
+                when 0x5E #IM 2
+                    @t_states = 8
+                    @mode = 2
                 when 0x67 #RRD
                     @t_states = 18
                     reg = @memory.read8(@hl)
