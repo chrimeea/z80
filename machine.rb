@@ -243,7 +243,7 @@ module Z80
 
     class Z80
         def initialize
-            @a, @b, @c, @d, @e, @h, @l = [Register8.new] * 8
+            @a, @b, @c, @d, @e, @h, @l, @i = [Register8.new] * 8
             @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 8
             @f, @f’ = [Flag8.new] * 2
             @bc = Register16.new(@b, @c)
@@ -251,7 +251,6 @@ module Z80
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
             @pc, @sp = [Register16.new] * 2
-            @i = 0
             @x = @y = 0
             @memory = Memory.new
             @state_duration, @t_states = 1, 4
@@ -1236,8 +1235,12 @@ module Z80
                     @iff1 = @iff2
                 when 0x46 #IM 0
                     @mode = 0
+                when 0x47 #LD I,A
+                    @i.copy(@a)
                 when 0x56 #IM 1
                     @mode = 1
+                when 0x57 #LD A,I
+                    @a.copy(@i)
                 else
                     fail
                 end
