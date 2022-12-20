@@ -294,7 +294,6 @@ module Z80
         def run
             loop do
                 t = Time.now
-                @t_states = 4
                 if @nonmaskable_interrupt_flag
                     @nonmaskable_interrupt_flag = false
                     nonmaskable_interrupt
@@ -302,7 +301,7 @@ module Z80
                     @maskable_interrupt_flag = false
                     maskable_interrupt
                 elsif @can_execute
-                    execute
+                    execute self.next8
                 end
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
@@ -316,16 +315,19 @@ module Z80
         end
 
         def maskable_interrupt
-            #TODO: implement
-            #TODO: t_states ?
             case @mode
             when 0
+                #TODO: wait 2 cycles for interrupting device to write to data_bus
+                execute @data_bus
+                @t_states += 2
             when 1
                 @t_states = 13
                 self.push16.copy(@pc)
-                @pc.copy(0x38)
+                @pc.store(0x38)
             when 2
                 @t_states = 19
+                self.push16.copy(@pc)
+                @pc.copy(@memory.read16(Register16.new(@i, @data_bus)))
             else
                 fail
             end
@@ -337,9 +339,9 @@ module Z80
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
-        def execute
-            opcode = self.next8.value
-            case opcode
+        def execute opcode
+            @t_states = 4
+            case opcode.value
             when 0x00 #NOP
             when 0x01 #LD BC,HHLL
                 @t_states = 10
@@ -832,7 +834,7 @@ module Z80
             when 0xC7 #RST 00
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x00)
+                @pc.store(0x00)
             when 0xC8 #RET Z
                 if @f.flag_z
                     @t_states = 15
@@ -908,7 +910,7 @@ module Z80
             when 0xCF #RST 08
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x08)
+                @pc.store(0x08)
             when 0xD0 #RET NC
                 if @f.flag_c
                     @t_states = 11
@@ -948,7 +950,7 @@ module Z80
             when 0xD7 #RST 10
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x10)
+                @pc.store(0x10)
             when 0xD8 #RET C
                 if @f.flag_c
                     @t_states = 15
@@ -1134,7 +1136,7 @@ module Z80
             when 0xDF #RST 18
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x18)
+                @pc.store(0x18)
             when 0xE0 #RET PO
                 if @f.flag_pv
                     @t_states = 11
@@ -1172,7 +1174,7 @@ module Z80
             when 0xE7 #RST 20
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x20)
+                @pc.store(0x20)
             when 0xE8 #RET PE
                 if @f.flag_pv
                     @t_states = 15
@@ -1247,7 +1249,7 @@ module Z80
             when 0xEF #RST 28
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x28)
+                @pc.store(0x28)
             when 0xF0 #RET P
                 if @f.flag_s
                     @t_states = 11
@@ -1284,7 +1286,7 @@ module Z80
             when 0xF7 #RST 30
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x30)
+                @pc.store(0x30)
             when 0xF8 #RET M
                 if @f.flag_s
                     @t_states = 15
@@ -1317,7 +1319,7 @@ module Z80
             when 0xFF #RST 38
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0x38)
+                @pc.store(0x38)
             else
                 fail
             end
