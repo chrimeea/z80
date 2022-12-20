@@ -57,14 +57,6 @@ module Z80
             @byte_value = ~(@byte_value + MAX8)
         end
 
-        def set_sign_bit
-            @byte_value += MAX7 if @byte_value < MAX7
-        end
-
-        def reset_sign_bit
-            @byte_value -= MAX7 if @byte_value >= MAX7
-        end
-
         def shift_left
             if self.negative?
                 @carry = true
@@ -93,13 +85,13 @@ module Z80
 
         def rotate_right
             self.shift_right
-            self.set_sign_bit if @carry
+            self.set_bit(7) if @carry
         end
 
         def rotate_right_trough_carry
             v = @carry
             self.shift_right
-            self.set_sign_bit if @carry
+            self.set_bit(7) if @carry
         end
 
         def exchange reg8
