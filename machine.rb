@@ -257,6 +257,9 @@ module Z80
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
+            @address_bus = Register16.new
+            @data_bus = Register8.new
+            @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false
         end
 
         def next8
@@ -290,20 +293,26 @@ module Z80
 
         def run
             loop do
-                nonmaskable_interrupt
-                maskable_interrupt if @iff1
                 t = Time.now
                 @t_states = 4
-                execute if can_execute
+                if @nonmaskable_interrupt_flag
+                    @nonmaskable_interrupt_flag = false
+                    nonmaskable_interrupt
+                elsif @maskable_interrupt_flag && @iff1
+                    @maskable_interrupt_flag = false
+                    maskable_interrupt
+                elsif @can_execute
+                    execute
+                end
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
         end
 
         def nonmaskable_interrupt
+            @t_states = 11
             @iff1, @iff2 = false, @iff1
             self.push16.copy(@pc)
             @pc.copy(0x66)
-            #TODO: t_states ?
         end
 
         def maskable_interrupt
@@ -312,6 +321,7 @@ module Z80
             case @mode
             when 0
             when 1
+                @t_states = 13
                 self.push16.copy(@pc)
                 @pc.copy(0x38)
             when 2
@@ -822,7 +832,7 @@ module Z80
             when 0xC7 #RST 00
                 @t_states = 11
                 self.push16.copy(@pc)
-                @pc.copy(0)
+                @pc.copy(0x00)
             when 0xC8 #RET Z
                 if @f.flag_z
                     @t_states = 15
@@ -914,9 +924,10 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
-                #TODO: OUT
                 @t_states = 11
-                fail
+                @address_bus = Register16.new(@a, self.next8)
+                @data_bus.copy(@a)
+                #TODO: write one byte from data_bus to device in address_bus
             when 0xD4 #CALL NC,HHLL
                 reg = self.next16
                 if @f.flag_c
@@ -957,9 +968,10 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
-                #TODO: IN
                 @t_states = 11
-                fail
+                @address_bus = Register16.new(@a, self.next8)
+                #TODO: read one byte from device in address_bus to data_bus
+                @a.copy(@data_bus)
             when 0xDC #CALL C,HHLL
                 reg = self.next16
                 if @f.flag_c
@@ -1192,13 +1204,15 @@ module Z80
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
-                    #TODO: IN r,(C)
-                    fail
+                    @address_bus.copy(@bc)
+                    #TODO: read one byte from device in address_bus to data_bus
+                    reg.copy(@data_bus)
                 when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
                     @t_states = 12
                     reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
-                    #TODO: OUT (C),r
-                    fail
+                    @address_bus.copy(@bc)
+                    @data_bus.copy(reg)
+                    #TODO: write one byte from data_bus to device in address_bus
                 when 0x42, 0x52, 0x62, 0x72 #SBC HL,ss
                     @t_states = 15
                     reg = [@bc, @de, @hl, @sp][opcode & 0x30]
