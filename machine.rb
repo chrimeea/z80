@@ -35,8 +35,12 @@ module Z80
         end
 
         def to_4_bit_pair
-            val = @byte_value & (MAX3 - 1)
-            return @byte_value - val, val
+            @byte_value.divmod MAX4
+        end
+
+        def store_4_bit_pair(high4, low4)
+            fail if high4 < 0 || high4 >= MAX4 || low4 < 0 || low4 >= MAX4
+            @byte_value = high4 * MAX4 + low4
         end
 
         def bit?(b)
@@ -1226,13 +1230,29 @@ module Z80
                     @pc.copy(self.pop16)
                     @iff1 = @iff2
                 when 0x46 #IM 0
+                    @t_states = 8
                     @mode = 0
                 when 0x47 #LD I,A
+                    @t_states = 9
                     @i.copy(@a)
                 when 0x56 #IM 1
+                    @t_states = 8
                     @mode = 1
                 when 0x57 #LD A,I
+                    @t_states = 9
                     @a.copy(@i)
+                    @f.s_z(@a)
+                    @f.flag_pv, @f.flag_n = @iff2, false
+                when 0x67 #RRD
+                    @t_states = 18
+                    reg = @memory.read8(@hl)
+                    reg_high4, reg_low4 = reg.to_4_bit_pair
+                    a_high4, a_low4 = @a.to_4_bit_pair
+                    temp4 = reg_low4
+                    @a.store_4_bit_pair(a_high4, reg_low4)
+                    reg.store_4_bit_pair(temp, reg_high4)
+                    @f.s_z_p(@a)
+                    @f.flag_hc, @f.flag_n = false, false
                 else
                     fail
                 end
