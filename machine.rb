@@ -1298,14 +1298,15 @@ module Z80
                     reg.store_4_bit_pair(reg_low4, temp4)
                     @f.s_z_p(@a)
                     @f.flag_hc, @f.flag_n = false, false
-                when 0xA0 #LDI
+                when 0xA0, 0xB0 #LDI & LDIR
                     @t_states = 16
-                    @memory.read16(@de).copy(@memory.read16(@hl))
+                    @memory.read8(@de).copy(@memory.read8(@hl))
                     @de.store(@de.value + 1)
                     @hl.store(@hl.value + 1)
                     @bc.store(@bc.value - 1)
                     @f.flag_hc, @f.flag_n = false, false
                     @f.flag_pv = @bc.nonzero?
+                    @pc.store(@pc.value - 2) if opcode == 0xB0 && @f.flag_pv
                 else
                     fail
                 end
