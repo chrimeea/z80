@@ -1304,9 +1304,22 @@ module Z80
                     @de.store(@de.value + 1)
                     @hl.store(@hl.value + 1)
                     @bc.store(@bc.value - 1)
-                    @f.flag_hc, @f.flag_n = false, false
                     @f.flag_pv = @bc.nonzero?
+                    @f.flag_hc, @f.flag_n = false, false
                     if opcode == 0xB0 && @f.flag_pv
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
+                when 0xA1,0xB1 #CPI & CPIR
+                    @t_states = 16
+                    reg = Register8.new
+                    reg.store(@a.value - @memory.read8(@hl).value)
+                    @hl.store(@hl.value + 1)
+                    @bc.store(@bc.value - 1)
+                    @f.s_z_v_hc(reg)
+                    @f.flag_pv = @bc.nonzero?
+                    @f.flag_n = true
+                    if opcode == 0xB1 && @f.flag_pv
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
