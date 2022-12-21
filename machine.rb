@@ -1260,6 +1260,8 @@ module Z80
                     @t_states = 14
                     @pc.copy(self.pop16)
                     #TODO: signal devices that interrupt routine is completed
+                when 0x4F #LD R,A
+                    @r.copy(@a)
                 when 0x56 #IM 1
                     @t_states = 8
                     @mode = 1
@@ -1271,6 +1273,10 @@ module Z80
                 when 0x5E #IM 2
                     @t_states = 8
                     @mode = 2
+                when 0x5F #LD A,R
+                    @a.copy(@r)
+                    @f.s_z(@a)
+                    @f.flag_hc, @f.flag_n, @f.flag_pv = false, false, @iff2
                 when 0x67 #RRD
                     @t_states = 18
                     reg = @memory.read8(@hl)
