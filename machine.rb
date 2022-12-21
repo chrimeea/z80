@@ -1237,6 +1237,13 @@ module Z80
                 when 0x47 #LD I,A
                     @t_states = 9
                     @i.copy(@a)
+                when 0x4A, 0x5A, 0x6A, 0x7A #ADC HL,ss
+                    @t_states = 15
+                    reg = [@bc, @de, @hl, @sp][opcode & 0x30]
+                    @hl.store(@hl.value + reg.value + (@f.flag_c ? 1 : 0))
+                    @f.s_z_v_hc(@hl)
+                    @f.flags_math(@hl)
+                    @f.flag_n = false
                 when 0x56 #IM 1
                     @t_states = 8
                     @mode = 1
