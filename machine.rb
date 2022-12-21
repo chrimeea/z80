@@ -194,6 +194,15 @@ module Z80
             @high.value * MAX8 + @low.value
         end
 
+        def to_8_bit_pair_reg
+            [@high, @low]
+        end
+
+        def store_8_bit_pair_reg(high8, low8)
+            @high.copy(high8)
+            @low.copy(low8)
+        end
+
         def copy reg16
             @high.value, @low.value = reg16.high.value, reg16.low.value
         end
@@ -934,7 +943,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 @t_states = 11
-                @address_bus = Register16.new(@a, self.next8)
+                @address_bus.store_8_bit_pair_reg(@a, self.next8)
                 @data_bus.copy(@a)
                 #TODO: write one byte from data_bus to device in address_bus
             when 0xD4 #CALL NC,HHLL
@@ -978,7 +987,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
                 @t_states = 11
-                @address_bus = Register16.new(@a, self.next8)
+                @address_bus.store_8_bit_pair_reg(@a, self.next8)
                 #TODO: read one byte from device in address_bus to data_bus
                 @a.copy(@data_bus)
             when 0xDC #CALL C,HHLL
@@ -1310,7 +1319,7 @@ module Z80
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
-                when 0xA1,0xB1 #CPI & CPIR
+                when 0xA1, 0xB1 #CPI & CPIR
                     @t_states = 16
                     reg = Register8.new
                     reg.store(@a.value - @memory.read8(@hl).value)
@@ -1323,6 +1332,7 @@ module Z80
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
+                when 0xA2, 0xB2 #INI & INIR
                 else
                     fail
                 end
@@ -1418,5 +1428,6 @@ end
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
 #TODO: compact LD, INC, DEC, POP, PUSH opcodes using decode_register
+#TODO: unify register classes into one class on n bytes (n = 8, 16, etc)
 z80 = Z80::Z80.new
 #z80.run
