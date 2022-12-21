@@ -1363,5 +1363,6 @@ end
 #TODO: i is part of ix ?
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
+#TODO: compact LD opcodes using decode_register8
 z80 = Z80::Z80.new
 #z80.run
