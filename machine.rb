@@ -1248,6 +1248,10 @@ module Z80
                 when 0x4B, 0x5B, 0x6B, 0x7B #LD dd,(nn)
                     @t_states = 20
                     @memory.read16(decode_register16(opcode)).store(self.next16)
+                when 0x4D #RETI
+                    @t_states = 14
+                    @pc.copy(self.pop16)
+                    #TODO: signal devices that interrupt routine is completed
                 when 0x56 #IM 1
                     @t_states = 8
                     @mode = 1
@@ -1363,6 +1367,6 @@ end
 #TODO: i is part of ix ?
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
-#TODO: compact LD opcodes using decode_register8
+#TODO: compact LD, INC, DEC, POP, PUSH opcodes using decode_register
 z80 = Z80::Z80.new
 #z80.run
