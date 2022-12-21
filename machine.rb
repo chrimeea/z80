@@ -1333,6 +1333,19 @@ module Z80
                         @pc.store(@pc.value - 2)
                     end
                 when 0xA2, 0xB2 #INI & INIR
+                    @t_states = 16
+                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    #TODO: read one byte from device in address_bus to data_bus
+                    @address_bus.copy(@hl)
+                    @memory.read8(@hl).copy(@data_bus)
+                    @b.store(@b.value - 1)
+                    @hl.store(@hl.value + 1)
+                    @f.flag_z(@b)
+                    @f.flag_n = true
+                    if opcode == 0xB2 && @f.flag_z
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
                 else
                     fail
                 end
