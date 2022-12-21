@@ -239,7 +239,7 @@ module Z80
 
     class Z80
         def initialize
-            @a, @b, @c, @d, @e, @h, @l, @i = [Register8.new] * 8
+            @a, @b, @c, @d, @e, @h, @l, @i, @r = [Register8.new] * 8
             @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 8
             @f, @f’ = [Flag8.new] * 2
             @bc = Register16.new(@b, @c)
@@ -257,15 +257,23 @@ module Z80
             @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false
         end
 
+        def memory_refresh
+            val = @r.value + 1
+            val = 0 if val == MAX7
+            @r.store(val)
+        end
+
         def next8
             val = @memory.read8(@pc)
             @pc.store(@pc.value + 1)
+            memory_refresh
             val
         end
 
         def next16
             val = @memory.read16(@pc)
             @pc.store(@pc.value + 2)
+            memory_refresh
             val
         end
 
