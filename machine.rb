@@ -1306,7 +1306,10 @@ module Z80
                     @bc.store(@bc.value - 1)
                     @f.flag_hc, @f.flag_n = false, false
                     @f.flag_pv = @bc.nonzero?
-                    @pc.store(@pc.value - 2) if opcode == 0xB0 && @f.flag_pv
+                    if opcode == 0xB0 && @f.flag_pv
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
                 else
                     fail
                 end
