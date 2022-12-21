@@ -1274,6 +1274,7 @@ module Z80
                     @t_states = 8
                     @mode = 2
                 when 0x5F #LD A,R
+                    @t_states = 9
                     @a.copy(@r)
                     @f.s_z(@a)
                     @f.flag_hc, @f.flag_n, @f.flag_pv = false, false, @iff2
@@ -1285,6 +1286,16 @@ module Z80
                     temp4 = reg_low4
                     @a.store_4_bit_pair(a_high4, reg_low4)
                     reg.store_4_bit_pair(temp, reg_high4)
+                    @f.s_z_p(@a)
+                    @f.flag_hc, @f.flag_n = false, false
+                when 0x6F #RLD
+                    @t_states = 18
+                    reg = @memory.read8(@hl)
+                    reg_high4, reg_low4 = reg.to_4_bit_pair
+                    a_high4, a_low4 = @a.to_4_bit_pair
+                    temp4 = a_low4
+                    @a.store_4_bit_pair(a_high4, reg_high4)
+                    reg.store_4_bit_pair(reg_low4, temp4)
                     @f.s_z_p(@a)
                     @f.flag_hc, @f.flag_n = false, false
                 else
