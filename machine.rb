@@ -1216,7 +1216,6 @@ module Z80
                     @t_states = 10
                 end
             when 0xED #ED
-                #TODO: ED
                 opcode = self.next8.value
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
@@ -1486,7 +1485,14 @@ module Z80
                 end
             when 0xDD #FD
                 #TODO: FD
-                fail
+                opcode = self.next8.value
+                case opcode
+                when 0x20 #LD IY,nn
+                    @t_states = 14
+                    @iy.copy(self.next16)
+                else
+                    fail
+                end
             when 0xFE #CP A,NN
                 @f.flag_z = (@a.value == self.next8.value)
             when 0xFF #RST 38
