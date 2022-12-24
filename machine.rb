@@ -1360,12 +1360,17 @@ module Z80
                         @pc.store(@pc.value - 2)
                     end
                 when 0xA8, 0xB8 #LDD & LDDR
+                    @t_states = 16
                     @de.copy(@hl)
                     @de.store(@de.value - 1)
                     @hl.store(@hl.value - 1)
                     @bc.store(@bc.value - 1)
                     @f.flag_pv = @bc.value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
+                    if opcode == 0xB8 && @f.flag_z
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
                 else
                     fail
                 end
