@@ -1487,6 +1487,11 @@ module Z80
                 #TODO: FD
                 opcode = self.next8.value
                 case opcode
+                when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
+                    @t_states = 15
+                    @iy.store(@iy.value + [@bc, @de, @iy, @sp][code & 0x30].value)
+                    @f.flags_math(@iy)
+                    @f.flag_n = false
                 when 0x21 #LD IY,nn
                     @t_states = 14
                     @iy.copy(self.next16)
