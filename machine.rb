@@ -1367,7 +1367,7 @@ module Z80
                     @bc.store(@bc.value - 1)
                     @f.flag_pv = @bc.value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
-                    if opcode == 0xB8 && @f.flag_z
+                    if opcode == 0xB8 && @f.flag_pv
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
