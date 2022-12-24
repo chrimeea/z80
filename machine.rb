@@ -1501,6 +1501,9 @@ module Z80
                 when 0x23 #INC IY
                     @t_states = 10
                     @iy.store(@iy.value + 1)
+                when 0x2A #LD IY,(nn)
+                    @t_states = 20
+                    @iy.copy(@memory.read16(self.next16))
                 else
                     fail
                 end
