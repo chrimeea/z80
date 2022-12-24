@@ -1487,9 +1487,15 @@ module Z80
                 #TODO: FD
                 opcode = self.next8.value
                 case opcode
-                when 0x20 #LD IY,nn
+                when 0x21 #LD IY,nn
                     @t_states = 14
                     @iy.copy(self.next16)
+                when 0x22 #LD (nn),IY
+                    @t_states = 20
+                    @memory.read16(self.next16).copy(@iy)
+                when 0x23 #INC IY
+                    @t_states = 10
+                    @iy.store(@iy.value + 1)
                 else
                     fail
                 end
