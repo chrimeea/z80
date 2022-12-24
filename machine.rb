@@ -1346,6 +1346,19 @@ module Z80
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
+                when 0xA3, 0xB3 #OUTI & OUTIR
+                    @t_states = 16
+                    @b.store(@b.value - 1)
+                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @data_bus.copy(@memory.read8(@hl))
+                    #TODO: write one byte from address_bus to device
+                    @hl.store(@hl.value + 1)
+                    @f.flag_z(@b)
+                    @f.flag_n = true
+                    if opcode == 0xB3 && @f.flag_z
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
                 else
                     fail
                 end
