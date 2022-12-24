@@ -1346,7 +1346,7 @@ module Z80
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
-                when 0xA3, 0xB3 #OUTI & OUTIR
+                when 0xA3, 0xB3 #OUTI & OTIR
                     @t_states = 16
                     @b.store(@b.value - 1)
                     @address_bus.store_8_bit_pair_reg(@b, @c)
@@ -1381,6 +1381,33 @@ module Z80
                     @f.flag_pv = @bc.nonzero?
                     @f.flag_n = true
                     if opcode == 0xB9 && @f.flag_pv
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
+                when 0xAA, 0xBA #IND & INDR
+                    @t_states = 16
+                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    #TODO: read one byte from device in address_bus to data_bus
+                    @address_bus.copy(@hl)
+                    @memory.read8(@hl).copy(@data_bus)
+                    @b.store(@b.value - 1)
+                    @hl.store(@hl.value - 1)
+                    @f.flag_z(@b)
+                    @f.flag_n = true
+                    if opcode == 0xBA && @f.flag_z
+                        @t_states = 21
+                        @pc.store(@pc.value - 2)
+                    end
+                when 0xAB, 0xBB #OUTD & OTDR
+                    @t_states = 16
+                    @b.store(@b.value - 1)
+                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @data_bus.copy(@memory.read8(@hl))
+                    #TODO: write one byte from address_bus to device
+                    @hl.store(@hl.value - 1)
+                    @f.flag_z(@b)
+                    @f.flag_n = true
+                    if opcode == 0xB3 && @f.flag_z
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
