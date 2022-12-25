@@ -345,13 +345,13 @@ module Z80
             end
         end
 
-        def decode_register8 code, t = 3
-            v = code & (MAX3 - 1)
+        def decode_register8 code, pos = 0x38, t = 3
+            v = code & pos
             @t_states += t if v == 0x06
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
-        def decode_register16 code
+        def decode_register16 code, pos=0x30
             [@bc, @de, @hl, @sp][code & 0x30]
         end
 
@@ -370,12 +370,12 @@ module Z80
                 reg = self.decode_register16(opcode)
                 @reg.store(@reg.value + 1)
             when 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x3C #INC r
-                reg = self.decode_register8(opcode, 7)
+                reg = self.decode_register8(opcode, 0x38, 7)
                 reg.store(reg.value + 1)
                 @f.flag_n = false
                 @f.s_z_v_hc(reg)
             when 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35, 0x3D #DEC r
-                reg = self.decode_register8(opcode, 7)
+                reg = self.decode_register8(opcode, 0x38, 7)
                 @reg.store(@reg.value - 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(@reg)
@@ -565,141 +565,8 @@ module Z80
                 @f.flag_hc = @f.flag_c
                 @f.flag_c = !@f.flag_c
                 @f.flag_n = false
-            when 0x40 #LD B,B
-            when 0x41 #LD B,C
-                @b.copy(@c)
-            when 0x42 #LD B,D
-                @b.copy(@d)
-            when 0x43 #LD B,E
-                @b.copy(@e)
-            when 0x44 #LD B,H
-                @b.copy(@h)
-            when 0x45 #LD B,L
-                @b.copy(@l)
-            when 0x46 #LD B,(HL)
-                @t_states = 7
-                @b.copy(@memory.read8(@hl))
-            when 0x47 #LD B,A
-                @b.copy(@a)
-            when 0x48 #LD C,B
-                @c.copy(@b)
-            when 0x49 #LD C,C
-            when 0x4A #LD C,D
-                @c.copy(@d)
-            when 0x4B #LD C,E
-                @c.copy(@e)
-            when 0x4C #LD C,H
-                @c.copy(@h)
-            when 0x4D #LD C,L
-                @c.copy(@l)
-            when 0x4E #LD C,(HL)
-                @t_states = 7
-                @c.copy(@memory.read8(@hl))
-            when 0x4F #LD C,A
-                @c.copy(@a)
-            when 0x50 #LD D,B
-                @d.copy(@b)
-            when 0x51 #LD D,C
-                @d.copy(@c)
-            when 0x52 #LD D,D
-            when 0x53 #LD D,E
-                @d.copy(@e)
-            when 0x54 #LD D,H
-                @d.copy(@h)
-            when 0x55 #LD D,L
-                @d.copy(@l)
-            when 0x56 #LD D,(HL)
-                @t_states = 7
-                @d.copy(@memory.read8(@hl))
-            when 0x57 #LD D,A
-                @d.copy(@a)
-            when 0x58 #LD E,B
-                @e.copy(@b)
-            when 0x59 #LD E,C
-                @e.copy(@c)
-            when 0x5A #LD E,D
-                @e.copy(@d)
-            when 0x5B #LD E,E
-            when 0x5C #LD E,H
-                @e.copy(@h)
-            when 0x5D #LD E,L
-                @e.copy(@l)
-            when 0x5E #LD E,(HL)
-                @t_states = 7
-                @e.copy(@memory.read8(@hl))
-            when 0x5F #LD E,A
-                @e.copy(@a)
-            when 0x60 #LD H,B
-                @h.copy(@b)
-            when 0x61 #LD H,C
-                @h.copy(@c)
-            when 0x62 #LD H,D
-                @h.copy(@d)
-            when 0x63 #LD H,E
-                @h.copy(@e)
-            when 0x64 #LD H,H
-            when 0x65 #LD H,L
-                @h.copy(@l)
-            when 0x66 #LD H,(HL)
-                @t_states = 7
-                @h.copy(@memory.read8(@hl))
-            when 0x67 #LD H,A
-                @h.copy(@a)
-            when 0x68 #LD L,B
-                @l.copy(@b)
-            when 0x69 #LD L,C
-                @l.copy(@c)
-            when 0x6A #LD L,D
-                @l.copy(@d)
-            when 0x6B #LD L,E
-                @l.copy(@e)
-            when 0x6C #LD L,H
-                @l.copy(@h)
-            when 0x6D #LD L,L
-            when 0x6E #LD L,(HL)
-                @t_states = 7
-                @l.copy(@memory.read8(@hl))
-            when 0x6F #LD L,A
-                @l.copy(@a)
-            when 0x70 #LD (HL),B
-                @t_states = 7
-                @memory.read8(@hl).copy(@b)
-            when 0x71 #LD (HL),C
-                @t_states = 7
-                @memory.read8(@hl).copy(@c)
-            when 0x72 #LD (HL),D
-                @t_states = 7
-                @memory.read8(@hl).copy(@d)
-            when 0x73 #LD (HL),E
-                @t_states = 7
-                @memory.read8(@hl).copy(@e)
-            when 0x74 #LD (HL),H
-                @t_states = 7
-                @memory.read8(@hl).copy(@h)
-            when 0x75 #LD (HL),L
-                @t_states = 7
-                @memory.read8(@hl).copy(@l)
-            when 0x76 #HALT
-                @can_execute = false
-            when 0x77 #LD (HL),A
-                @memory.read8(@hl).copy(@a)
-                @t_states = 7
-            when 0x78 #LD A,B
-                @a.copy(@b)
-            when 0x79 #LD A,C
-                @a.copy(@c)
-            when 0x7A #LD A,D
-                @a.copy(@d)
-            when 0x7B #LD A,E
-                @a.copy(@e)
-            when 0x7C #LD A,H
-                @a.copy(@h)
-            when 0x7D #LD A,L
-                @a.copy(@l)
-            when 0x7E #LD A,(HL)
-                @t_states = 7
-                @a.copy(@memory.read8(@hl))
-            when 0x7F #LD A,A
+            when 0x40..0x49, 0x4A..0x4F, 0x50..0x59, 0x5A..0x5F, 0x60..0x69, 0x6A..0x6F, 0x70..0x75, 0x77..0x79, 0x7A..0x7F #LD r,r
+                self.decode_register8(opcode).copy(self.decode_register8(opcode, 0x07))
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
                 @a.store(@a.value + self.decode_register8(opcode).value)
                 @f.flag_n, @f.flag_c = false, @a.carry
@@ -786,7 +653,7 @@ module Z80
                 opcode = self.next8.value
                 case opcode
                 when 0x00..0x3F
-                    reg = self.decode_register8(opcode, 7)
+                    reg = self.decode_register8(opcode, 0x38, 7)
                     case opcode
                     when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                         reg.rotate_left
@@ -816,9 +683,9 @@ module Z80
                     @f.flag_z = !(self.decode_register8(opcode).bit?(opcode & 0x38))
                     @f.flag_hc, @f.flag_n = true, false
                 when 0x80..0xBF #RES b,r
-                    self.decode_register8(opcode, 7).reset_bit(opcode & 0x38)
+                    self.decode_register8(opcode, 0x38, 7).reset_bit(opcode & 0x38)
                 when 0xC0..0xFF #SET b,r
-                    self.decode_register8(opcode, 7).set_bit(opcode & 0x38)
+                    self.decode_register8(opcode, 0x38, 7).set_bit(opcode & 0x38)
                 else
                     fail
                 end
@@ -950,7 +817,7 @@ module Z80
                     self.read8indexed.store(self.next8)
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     @t_states = 19
-                    [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38].copy(self.read8indexed)
+                    self.decode_register8(opcode).copy(self.read8indexed)
                 when 0x86, 0x8E #ADD/ADC A,(IX+d)
                     @t_states = 19
                     @a.store(@a.value + self.read8indexed + (opcode == 0x8E && @f.flag_c ? 1 : 0))
@@ -1125,7 +992,7 @@ module Z80
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
-                    reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
+                    reg = self.decode_register8(opcode)
                     @address_bus.copy(@bc)
                     #TODO: read one byte from device in address_bus to data_bus
                     reg.copy(@data_bus)
@@ -1133,7 +1000,7 @@ module Z80
                     @f.flag_hc, @f.flag_n = false, false
                 when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
                     @t_states = 12
-                    reg = [@b, @c, @d, @e, @h, @l, nil, @a][opcode & 0x38]
+                    reg = self.decode_register8(opcode)
                     @address_bus.copy(@bc)
                     @data_bus.copy(reg)
                     #TODO: write one byte from data_bus to device in address_bus
