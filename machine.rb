@@ -365,9 +365,10 @@ module Z80
             when 0x02 #LD (BC),A
                 @t_states = 7
                 @memory[@bc.value].copy(@a)
-            when 0x03 #INC BC
+            when 0x03, 0x13, 0x23, 0x33 #INC ss
                 @t_states = 6
-                @bc.store(@bc.value + 1)
+                reg = decode_register16(opcode)
+                @reg.store(@reg.value + 1)
             when 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x3C #INC r
                 reg = decode_register8(opcode, 7)
                 reg.store(reg.value + 1)
@@ -420,9 +421,6 @@ module Z80
             when 0x12 #LD (DE),A
                 @t_states = 7
                 @memory.read8(@de).copy(@a)
-            when 0x13 #INC DE
-                @t_states = 6
-                @de.store(@de.value + 1)
             when 0x16 #LD D,NN
                 @t_states = 7
                 @d.store(self.next8)
@@ -465,9 +463,6 @@ module Z80
             when 0x22 #LD (HHLL),HL
                 @t_states = 16
                 @memory.read16(self.next16).copy(@hl)
-            when 0x23 #INC HL
-                @t_states = 6
-                @hl.store(@hl.value + 1)
             when 0x26 #LD H,NN
                 @t_states = 7
                 @h.copy(self.next8)
@@ -555,9 +550,6 @@ module Z80
             when 0x32 #LD (HHLL),A
                 @t_states = 16
                 @memory.read8(self.next16).copy(@a)
-            when 0x33 #INC SP
-                @t_states = 6
-                @sp.store(@sp.value + 1)
             when 0x36 #LD (HL),NN
                 @t_states = 10
                 @memory.read8(@hl).copy(self.next8)
