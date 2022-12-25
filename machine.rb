@@ -368,10 +368,11 @@ module Z80
             when 0x03 #INC BC
                 @t_states = 6
                 @bc.store(@bc.value + 1)
-            when 0x04 #INC B
-                @b.store(@b.value + 1)
+            when 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x3C #INC r
+                reg = decode_register8(opcode, 7)
+                reg.store(reg.value + 1)
                 @f.flag_n = false
-                @f.s_z_v_hc(@b)
+                @f.s_z_v_hc(reg)
             when 0x05 #DEC B
                 @b.store(@b.value - 1)
                 @f.flag_n = true
@@ -397,10 +398,6 @@ module Z80
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
                 @t_states = 6
-            when 0x0C #INC C
-                @c.store(@c.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@c)
             when 0x0D #DEC C
                 @c.store(@c.value - 1)
                 @f.flag_n = false
@@ -429,10 +426,6 @@ module Z80
             when 0x13 #INC DE
                 @t_states = 6
                 @de.store(@de.value + 1)
-            when 0x14 #INC D
-                @d.store(@d.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@d)
             when 0x15 #DEC D
                 @d.store(@d.value - 1)
                 @f.flag_n = true
@@ -458,10 +451,6 @@ module Z80
             when 0x1B #DEC DE
                 @t_states = 6
                 @de.store(@de.value - 1)
-            when 0x1C #INC E
-                @e.store(@e.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@e)
             when 0x1D #DEC E
                 @e.store(@e.value - 1)
                 @f.flag_n = true
@@ -490,10 +479,6 @@ module Z80
             when 0x23 #INC HL
                 @t_states = 6
                 @hl.store(@hl.value + 1)
-            when 0x24 #INC H
-                @h.store(@h.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@h)
             when 0x25 #DEC H
                 @h.store(@h.value - 1)
                 @f.flag_n = true
@@ -565,10 +550,6 @@ module Z80
             when 0x2B #DEC HL
                 @t_states = 6
                 @hl.store(@hl.value - 1)
-            when 0x2C #INC L
-                @l.store(@l.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@l)
             when 0x2D #DEC L
                 @l.store(@l.value - 1)
                 @f.flag_n = true
@@ -596,12 +577,6 @@ module Z80
             when 0x33 #INC SP
                 @t_states = 6
                 @sp.store(@sp.value + 1)
-            when 0x34 #INC (HL)
-                @t_states = 11
-                m = @memory.read8(@hl)
-                m.store(m.value + 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(m)
             when 0x35 #DEC (HL)
                 @t_states = 11
                 m = @memory.read8(@hl)
@@ -633,10 +608,6 @@ module Z80
             when 0x3B #DEC SP
                 @t_states = 6
                 @sp.store(@sp.value - 1)
-            when 0x3C #INC A
-                @a.store(@a.value + 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@a)
             when  0x3D #DEC A
                 @a.store(@a.value - 1)
                 @f.flag_n = false
