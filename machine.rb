@@ -746,9 +746,9 @@ module Z80
                     @pc.copy(self.pop16)
                     @t_states = 15
                 end
-            when 0xC1 #POP BC
+            when 0xC1, 0xD1, 0xE1, 0xF1 #POP qq
                 @t_states = 10
-                @bc.copy(self.pop16)
+                [@bc, @de, @hl, @af][opcode & 0x30].copy(self.pop16)
             when 0xC2 #JP NZ,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -765,9 +765,9 @@ module Z80
                     self.push16.copy(@pc)
                     @pc.copy(reg)
                 end
-            when 0xC5 #PUSH BC
+            when 0xC5, 0xD5, 0xE5, 0xF5 #PUSH qq
                 @t_states = 10
-                self.push16.copy(@bc)
+                self.push16.copy([@bc, @de, @hl, @af][opcode & 0x30])
             when 0xC6 #ADD A,NN
                 @t_states = 7
                 @a.store(@a.value + self.next8.value)
@@ -860,9 +860,6 @@ module Z80
                     @t_states = 15
                     @pc.copy(self.pop16)
                 end
-            when 0xD1 #POP DE
-                @t_states = 10
-                @de.copy(self.pop16)
             when 0xD2 #JP NC,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -881,9 +878,6 @@ module Z80
                     self.push16.copy(@pc)
                     @pc.copy(reg)
                 end
-            when 0xD5 #PUSH DE
-                @t_states = 10
-                self.push16.copy(@de)
             when 0xD6 #SUB A,NN
                 @t_states = 7
                 @a.store(@a.value - self.next8.value)
@@ -1086,9 +1080,6 @@ module Z80
                     @t_states = 15
                     @pc.copy(self.pop16)
                 end
-            when 0xE1 #POP HL
-                @t_states = 10
-                @hl.copy(self.pop16)
             when 0xE2 #JP PO,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -1105,9 +1096,6 @@ module Z80
                     self.push16.copy(@pc)
                     @pc.copy(reg)
                 end
-            when 0xE5 #PUSH HL
-                @t_states = 10
-                self.push16.copy(@hl)
             when 0xE6 #AND A,NN
                 @t_states = 7
                 @a.store(@a.value & self.next8.value)
@@ -1355,9 +1343,6 @@ module Z80
                     @t_states = 15
                     @pc.copy(self.pop16)
                 end
-            when 0xF1 #POP AF
-                @t_states = 10
-                @af.copy(self.pop16)
             when 0xF2 #JP P,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -1373,9 +1358,6 @@ module Z80
                     self.push16.copy(@pc)
                     @pc.copy(reg)
                 end
-            when 0xF5 #PUSH AF
-                @t_states = 10
-                self.push16.copy(@af)
             when 0xF6 #OR A,NN
                 @t_states = 7
                 @a.store(@a.value | self.next8.value)
@@ -1470,7 +1452,7 @@ end
 #TODO: i is part of ix ?
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
-#TODO: compact LD, INC, DEC, POP, PUSH opcodes using decode_register
+#TODO: compact LD, POP, PUSH opcodes using decode_register
 #TODO: unify register classes into one class on n bytes (n = 8, 16, etc)
 z80 = Z80::Z80.new
 #z80.run
