@@ -373,10 +373,11 @@ module Z80
                 reg.store(reg.value + 1)
                 @f.flag_n = false
                 @f.s_z_v_hc(reg)
-            when 0x05 #DEC B
-                @b.store(@b.value - 1)
+            when 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35, 0x3D #DEC r
+                reg = decode_register8(opcode, 7)
+                @reg.store(@reg.value - 1)
                 @f.flag_n = true
-                @f.s_z_v_hc(@b)
+                @f.s_z_v_hc(@reg)
             when 0x06 #LD B,NN
                 @t_states = 7
                 @b.copy(self.next8)
@@ -398,10 +399,6 @@ module Z80
             when 0x0B #DEC BC
                 @bc.store(@bc.value - 1)
                 @t_states = 6
-            when 0x0D #DEC C
-                @c.store(@c.value - 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@c)
             when 0x0E #LD C,NN
                 @t_states = 7
                 @c.copy(self.next8)
@@ -426,10 +423,6 @@ module Z80
             when 0x13 #INC DE
                 @t_states = 6
                 @de.store(@de.value + 1)
-            when 0x15 #DEC D
-                @d.store(@d.value - 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(@d)
             when 0x16 #LD D,NN
                 @t_states = 7
                 @d.store(self.next8)
@@ -451,10 +444,6 @@ module Z80
             when 0x1B #DEC DE
                 @t_states = 6
                 @de.store(@de.value - 1)
-            when 0x1D #DEC E
-                @e.store(@e.value - 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(@e)
             when 0x1E #LD E,NN
                 @t_states = 7
                 @e.copy(self.next8)
@@ -479,10 +468,6 @@ module Z80
             when 0x23 #INC HL
                 @t_states = 6
                 @hl.store(@hl.value + 1)
-            when 0x25 #DEC H
-                @h.store(@h.value - 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(@h)
             when 0x26 #LD H,NN
                 @t_states = 7
                 @h.copy(self.next8)
@@ -550,10 +535,6 @@ module Z80
             when 0x2B #DEC HL
                 @t_states = 6
                 @hl.store(@hl.value - 1)
-            when 0x2D #DEC L
-                @l.store(@l.value - 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(@l)
             when 0x2E #LD L,NN
                 @t_states = 7
                 @l.copy(self.next8)
@@ -577,12 +558,6 @@ module Z80
             when 0x33 #INC SP
                 @t_states = 6
                 @sp.store(@sp.value + 1)
-            when 0x35 #DEC (HL)
-                @t_states = 11
-                m = @memory.read8(@hl)
-                m.store(m.value - 1)
-                @f.flag_n = true
-                @f.s_z_v_hc(m)
             when 0x36 #LD (HL),NN
                 @t_states = 10
                 @memory.read8(@hl).copy(self.next8)
@@ -608,10 +583,6 @@ module Z80
             when 0x3B #DEC SP
                 @t_states = 6
                 @sp.store(@sp.value - 1)
-            when  0x3D #DEC A
-                @a.store(@a.value - 1)
-                @f.flag_n = false
-                @f.s_z_v_hc(@a)
             when 0x3E #LD A,NN
                 @t_states = 7
                 @a.copy(self.next8)
