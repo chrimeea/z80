@@ -1295,19 +1295,29 @@ module Z80
                     reg.store(@iy.value + self.next8)
                     @memory.read8(reg).store(self.next8)
                 when 0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E #LD r,(IY+d)
+                    @t_states = 19
                     reg1 = decode_register8(opcode)
                     reg2 = Register16.new
                     reg2.store(@iy.value + self.next8)
                     reg1.copy(@memory.read8(reg2))
                 when 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 #LD (IY+d),r
+                    @t_states = 19
                     reg1 = decode_register8(opcode)
                     reg2 = Register16.new
                     reg2.store(@iy.value + self.next8)
                     @memory.read8(reg1).copy(reg2)
                 when 0x86 #ADD A, (IY+d)
+                    @t_states = 19
                     reg = Register16.new
                     reg.store(@iy.value + self.next8)
                     @a.store(@a.value + @memory.read8(reg).value)
+                    @f.flag_n, @f.flag_c = false, @a.carry
+                    @f.s_z_v_hc(@a)
+                when 0x8E #ADC A,(IY+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@iy.value + self.next8)
+                    @a.store(@a.value + @memory.read8(reg).value + (@f.flag_c ? 1 : 0))
                     @f.flag_n, @f.flag_c = false, @a.carry
                     @f.s_z_v_hc(@a)
                 else
