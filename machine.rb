@@ -1304,6 +1304,12 @@ module Z80
                     reg2 = Register16.new
                     reg2.store(@iy.value + self.next8)
                     @memory.read8(reg1).copy(reg2)
+                when 0x86 #ADD A, (IY+d)
+                    reg = Register16.new
+                    reg.store(@iy.value + self.next8)
+                    @a.store(@a.value + @memory.read8(reg).value)
+                    @f.flag_n, @f.flag_c = false, @a.carry
+                    @f.s_z_v_hc(@a)
                 else
                     fail
                 end
