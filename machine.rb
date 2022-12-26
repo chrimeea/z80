@@ -297,9 +297,9 @@ module Z80
             val
         end
 
-        def read8indexed
+        def read8_indexed(reg16)
             reg = Register16.new
-            reg.store(@ix.value + self.next8)
+            reg.store(reg16.value + self.next8)
             @memory.read8(reg)
         end
 
@@ -802,53 +802,53 @@ module Z80
                     @ix.store(@ix.value - 1)
                 when 0x34 #INC (IX+d)
                     @t_states = 23
-                    reg = self.read8indexed
+                    reg = self.read8_indexed(@ix)
                     reg.store(reg.value + 1)
                     @f.s_z_v_hc(reg)
                     @f.flag_n = false
                 when 0x35 #DEC (IX+d)
                     @t_states = 23
-                    reg = self.read8indexed
+                    reg = self.read8_indexed(@ix)
                     reg.store(reg.value - 1)
                     @f.s_z_v_hc(reg)
                     @f.flag_n = true
                 when 0x36 #LD (IX+d),n
                     @t_states = 19
-                    self.read8indexed.store(self.next8)
+                    self.read8_indexed(@ix).store(self.next8)
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     @t_states = 19
-                    self.decode_register8(opcode).copy(self.read8indexed)
+                    self.decode_register8(opcode).copy(self.read8_indexed(@ix))
                 when 0x86, 0x8E #ADD/ADC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value + self.read8indexed + (opcode == 0x8E && @f.flag_c ? 1 : 0))
+                    @a.store(@a.value + self.read8_indexed(@ix) + (opcode == 0x8E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
                     @f.flag_n = false
                 when 0x96, 0x9E #SUB/SBC A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value - self.read8indexed - (opcode == 0x9E && @f.flag_c ? 1 : 0))
+                    @a.store(@a.value - self.read8_indexed(@ix) - (opcode == 0x9E && @f.flag_c ? 1 : 0))
                     @f.s_z_v_hc(@a)
                     @f.flag_n = true
                 when 0xA6 #AND A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value & self.read8indexed)
+                    @a.store(@a.value & self.read8_indexed(@ix))
                     @f.s_z(@a)
                     @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
                 when 0xAE #XOR A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value ^ self.read8indexed)
+                    @a.store(@a.value ^ self.read8_indexed(@ix))
                     @f.s_z_p(@a)
                     @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false
                 when 0xB6 #OR A,(IX+d)
                     @t_states = 19
-                    @a.store(@a.value | self.read8indexed)
+                    @a.store(@a.value | self.read8_indexed(@ix))
                     @f.s_z(@a)
                     @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, false
                 when 0xBE #CP A,(IX+d)
                     @t_states = 19
-                    @f.flag_z = (@a.value == self.read8indexed.value)
+                    @f.flag_z = (@a.value == self.read8_indexed(@ix).value)
                 when 0xCB #DDCB
                     opcode = self.next8.value
-                    reg = self.read8indexed
+                    reg = self.read8_indexed(@ix)
                     case opcode
                     when 0x06 #RLC (IX+d)	
                         @t_states = 23
@@ -1275,63 +1275,35 @@ module Z80
                     @iy.store(@iy.value - 1)
                 when 0x34 #INC (IY+d)
                     @t_states = 23
-                    reg1 = Register16.new
-                    reg1.store(@iy.value + self.next8)
-                    reg2 = @memory.read8(reg1)
-                    reg2.store(reg2.value + 1) 
-                    @f.s_z_v_hc(reg2)
+                    reg = self.read8_indexed(@iy)
+                    reg.store(reg.value + 1)
+                    @f.s_z_v_hc(reg)
                     @f.flag_n = false
                 when 0x35 #DEC (IY+d)
                     @t_states = 23
-                    reg1 = Register16.new
-                    reg1.store(@iy.value + self.next8)
-                    reg2 = @memory.read8(reg1)
-                    reg2.store(reg2.value - 1) 
-                    @f.s_z_v_hc(reg2)
+                    reg = self.read8_indexed(@iy)
+                    reg.store(reg.value - 1) 
+                    @f.s_z_v_hc(reg)
                     @f.flag_n = false
                 when 0x36 #LD (IY+d),n
                     @t_states = 19
-                    reg = Register16.new
-                    reg.store(@iy.value + self.next8)
-                    @memory.read8(reg).store(self.next8)
+                    self.read8_indexed(@iy).store(self.next8)
                 when 0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E #LD r,(IY+d)
                     @t_states = 19
-                    reg1 = decode_register8(opcode)
-                    reg2 = Register16.new
-                    reg2.store(@iy.value + self.next8)
-                    reg1.copy(@memory.read8(reg2))
+                    reg1 = self.decode_register8(opcode)
+                    reg1.copy(self.read8_indexed(@iy))
                 when 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 #LD (IY+d),r
                     @t_states = 19
-                    reg1 = decode_register8(opcode)
-                    reg2 = Register16.new
-                    reg2.store(@iy.value + self.next8)
-                    @memory.read8(reg1).copy(reg2)
-                when 0x86 #ADD A, (IY+d)
+                    reg1 = self.decode_register8(opcode, 0x07)
+                    self.read8_indexed(@iy).copy(reg1)
+                when 0x86, 0x8E #ADD A,(IY+d) & ADC A,(IY+d)
                     @t_states = 19
-                    reg = Register16.new
-                    reg.store(@iy.value + self.next8)
-                    @a.store(@a.value + @memory.read8(reg).value)
+                    @a.store(@a.value + self.read8_indexed(@iy).value + (opcode == 0x8E && @f.flag_c ? 1 : 0))
                     @f.flag_n, @f.flag_c = false, @a.carry
                     @f.s_z_v_hc(@a)
-                when 0x8E #ADC A,(IY+d)
+                when 0x96, 0x9E #SUB A,(IY+d) & SBC A,(IY+d)
                     @t_states = 19
-                    reg = Register16.new
-                    reg.store(@iy.value + self.next8)
-                    @a.store(@a.value + @memory.read8(reg).value + (@f.flag_c ? 1 : 0))
-                    @f.flag_n, @f.flag_c = false, @a.carry
-                    @f.s_z_v_hc(@a)
-                when 0x96 #SUB A,(IY+d)
-                    @t_states = 19
-                    reg = Register16.new
-                    reg.store(@iy.value + self.next8)
-                    @a.store(@a.value - @memory.read8(reg).value)
-                    @f.flag_n, @f.flag_c = true, @a.carry
-                    @f.s_z_v_hc(@a)
-                when 0x9E #SBC A,(IY+d)
-                    @t_states = 19
-                    reg = Register16.new
-                    reg.store(@iy.value + self.next8)
-                    @a.store(@a.value - @memory.read8(reg).value + (@f.flag_c ? 1 : 0))
+                    @a.store(@a.value - self.read8_indexed(@iy).value - (opcode == 0x9E && @f.flag_c ? 1 : 0))
                     @f.flag_n, @f.flag_c = true, @a.carry
                     @f.s_z_v_hc(@a)
                 else
