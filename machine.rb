@@ -1299,6 +1299,11 @@ module Z80
                     reg2 = Register16.new
                     reg2.store(@iy.value + self.next8)
                     reg1.copy(@memory.read8(reg2))
+                when 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 #LD (IY+d),r
+                    reg1 = decode_register8(opcode)
+                    reg2 = Register16.new
+                    reg2.store(@iy.value + self.next8)
+                    @memory.read8(reg1).copy(reg2)
                 else
                     fail
                 end
