@@ -1289,6 +1289,11 @@ module Z80
                     reg2.store(reg2.value - 1) 
                     @f.s_z_v_hc(reg2)
                     @f.flag_n = false
+                when 0x36 #LD (IY+d),n
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@iy.value + self.next8)
+                    @memory.read8(reg).store(self.next8) 
                 else
                     fail
                 end
