@@ -1320,6 +1320,20 @@ module Z80
                     @a.store(@a.value + @memory.read8(reg).value + (@f.flag_c ? 1 : 0))
                     @f.flag_n, @f.flag_c = false, @a.carry
                     @f.s_z_v_hc(@a)
+                when 0x96 #SUB A,(IY+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@iy.value + self.next8)
+                    @a.store(@a.value - @memory.read8(reg).value)
+                    @f.flag_n, @f.flag_c = true, @a.carry
+                    @f.s_z_v_hc(@a)
+                when 0x9E #SBC A,(IY+d)
+                    @t_states = 19
+                    reg = Register16.new
+                    reg.store(@iy.value + self.next8)
+                    @a.store(@a.value - @memory.read8(reg).value + (@f.flag_c ? 1 : 0))
+                    @f.flag_n, @f.flag_c = true, @a.carry
+                    @f.s_z_v_hc(@a)
                 else
                     fail
                 end
