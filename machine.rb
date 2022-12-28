@@ -1320,7 +1320,19 @@ module Z80
                     @t_states = 19
                     @a.store(@a.value | @memory.read8_indexed(@iy, self.next8).value)
                     @f.s_z(@a)
-                    @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false    
+                    @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
+                when 0xCB #FDCB
+                    #TODO: FDCB
+                    fail
+                when 0xE1 #POP IY
+                    @t_states = 14
+                    @iy.copy(self.pop16)
+                when 0xE3 #EX (SP),IY
+                    @t_states = 23
+                    @iy.exchange(@memory.read16(@sp))
+                when 0xE5 #PUSH IY
+                    @t_states = 15
+                    self.push16.copy(@iy)
                 else
                     fail
                 end
