@@ -23,7 +23,7 @@ module Z80
         end
 
         def to_s
-            value.to_s(16)
+            "%02X" % value
         end
 
         def value
@@ -200,7 +200,7 @@ module Z80
         end
 
         def to_s
-            value.to_s(16)
+            "%04X" % value
         end
 
         def value
@@ -217,7 +217,8 @@ module Z80
         end
 
         def copy reg16
-            @high.value, @low.value = reg16.high.value, reg16.low.value
+            @high.copy(reg16.high)
+            @low.copy(reg16.low)
         end
 
         def exchange reg16
@@ -248,6 +249,12 @@ module Z80
             @memory = Array.new(49152) { Register8.new }
         end
 
+        def load data
+            data.each_with_index do |v, i|
+                @memory[i].store(v)
+            end
+        end
+
         def read8 reg16
             @memory[reg16.value]
         end
@@ -267,14 +274,14 @@ module Z80
 
     class Z80
         def initialize mem
-            @a, @b, @c, @d, @e, @h, @l, @i, @r = [Register8.new] * 9
-            @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 7
-            @f, @f’ = [Flag8.new] * 2
+            @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
+            @a’, @b’, @c’, @d’, @e’, @h’, @l’ = Array.new(7) { Register8.new }
+            @f, @f’ = [Flag8.new, Flag8.new]
             @bc = Register16.new(@b, @c)
             @de = Register16.new(@d, @e)
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
-            @pc, @sp, @ix, @iy = [Register16.new] * 4
+            @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
             @memory = mem
             @state_duration, @t_states = 1, 4
@@ -286,10 +293,7 @@ module Z80
         end
 
         def to_s
-            "A #{@a}, B #{@b}, C #{@c}, D #{@d}, E #{@e}, H #{@h}, L #{@l}, I #{@i}, R #{@r}, " +
-            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, " +
-            "F [#{@f}], " +
-            "M #{@mode}"
+            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, F [#{@f}], M #{@mode}, IFF1 #{@iff1}"
         end
 
         def memory_refresh
@@ -1432,15 +1436,9 @@ module Z80
 
 end
 
-#TODO: sp, pc, ix, iy are unsigned ?
-#TODO: i is part of ix ?
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
 #TODO: unify register classes into one class on n bytes (n = 8, 16, etc)
-memory = Z80::Memory.new
-z80 = Z80::Z80.new memory
+#memory = Z80::Memory.new
+#z80 = Z80::Z80.new memory
 #z80.run
-reg = Z80::Register8.new
-reg.store(0x00)
-z80.execute reg
-puts z80
