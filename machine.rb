@@ -1250,7 +1250,6 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #FD
-                #TODO: FD
                 opcode = self.next8.value
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
@@ -1322,8 +1321,65 @@ module Z80
                     @f.s_z(@a)
                     @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
                 when 0xCB #FDCB
-                    #TODO: FDCB
-                    fail
+                    reg = @memory.read8_indexed(@iy, self.next8)
+                    opcode = self.next8.value
+                    case opcode
+                    when 0x06 #RLC (IY+d)	
+                        @t_states = 23
+                        reg.rotate_left
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x0E #RRC (IY+d)
+                        @t_states = 23
+                        reg.rotate_right
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x16 #RL (IY+d)
+                        @t_states = 23
+                        reg.rotate_left_trough_carry
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x1E #RR (IY+d)
+                        @t_states = 23
+                        reg.rotate_right_trough_carry
+                        @f.s_z_p(@reg)
+                        @f.flags_shift(@reg)
+                    when 0x26 #SLA (IY+d)
+                        @t_states = 23
+                        reg.shift_left
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x2E #SRA (IY+d)
+                        @t_states = 23
+                        reg.carry = reg.negative?
+                        reg.rotate_right_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x36 #SLL (IY+d)
+                        @t_states = 23
+                        reg.carry = true
+                        reg.rotate_left_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x3E #SRL (IY+d)
+                        @t_states = 23
+                        reg.carry = false
+                        reg.rotate_right_trough_carry                    
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
+                    when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IY+d)
+                        @t_states = 20
+                        @f.flag_z = !(reg.bit?(opcode & 0x38))
+                        @f.flag_hc, @f.flag_n = true, false
+                    when 0x86, 0x8E, 0x96, 0x9E, 0xA6, 0xAE, 0xB6, 0xBE #RES b,(IY+d)
+                        @t_states = 23
+                        reg.reset_bit(opcode & 0x38)
+                    when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IY+d)
+                        @t_states = 20
+                        reg.set_bit(opcode & 0x38)
+                    else
+                        fail
+                    end
                 when 0xE1 #POP IY
                     @t_states = 14
                     @iy.copy(self.pop16)
