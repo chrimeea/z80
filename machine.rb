@@ -1306,6 +1306,21 @@ module Z80
                     @a.store(@a.value - @memory.read8_indexed(@iy, self.next8).value - (opcode == 0x9E && @f.flag_c ? 1 : 0))
                     @f.flag_n, @f.flag_c = true, @a.carry
                     @f.s_z_v_hc(@a)
+                when 0xA6 #AND A,(IY+d)
+                    @t_states = 19
+                    @a.store(@a.value & @memory.read8_indexed(@iy, self.next8).value)
+                    @f.s_z(@a)
+                    @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
+                when 0xAE #XOR A,(IY+d)
+                    @t_states = 19
+                    @a.store(@a.value ^ @memory.read8_indexed(@iy, self.next8).value)
+                    @f.s_z_p(@a)
+                    @f.flag_hc, @f.flag_n, @f.flag_c = false
+                when 0xB6 #OR A,(IY+d)
+                    @t_states = 19
+                    @a.store(@a.value | @memory.read8_indexed(@iy, self.next8).value)
+                    @f.s_z(@a)
+                    @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false    
                 else
                     fail
                 end
