@@ -917,7 +917,7 @@ module Z80
                     self.push16.copy(@ix)
                 when 0xE9 #JP (IX)
                     @t_states = 8
-                    @pc.copy(@memory.read16(@ix))
+                    @pc.copy(@ix)
                 when 0xF9 #LD SP,IX
                     @t_states = 10
                     @sp.copy(@ix)
@@ -1333,6 +1333,9 @@ module Z80
                 when 0xE5 #PUSH IY
                     @t_states = 15
                     self.push16.copy(@iy)
+                when 0xE9 #JP (IY)
+                    @t_states = 8
+                    @pc.copy(@iy)
                 else
                     fail
                 end
