@@ -1336,6 +1336,9 @@ module Z80
                 when 0xE9 #JP (IY)
                     @t_states = 8
                     @pc.copy(@iy)
+                when 0xF9 #LD SP,IY
+                    @t_states = 10
+                    @sp.copy(@iy)
                 else
                     fail
                 end
