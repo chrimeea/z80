@@ -1441,6 +1441,6 @@ memory = Z80::Memory.new
 z80 = Z80::Z80.new memory
 #z80.run
 reg = Z80::Register8.new
-reg.store(4)
-# z80.execute reg
+reg.store(0x00)
+z80.execute reg
 puts z80
