@@ -19,12 +19,16 @@ module Z80
 
         def initialize
             @byte_value = 0
-            @overflow, @hc, @carry = false
+            @overflow, @hc, @carry = false, false, false
+        end
+
+        def to_s
+            value.to_s(16)
         end
 
         def value
             if @byte_value >= MAX7
-                @value - MAX8
+                @byte_value - MAX8
             else
                 @byte_value
             end
@@ -128,7 +132,11 @@ module Z80
         attr_accessor :flag_c, :flag_n, :flag_pv, :flag_hc, :flag_z, :flag_s
 
         def initialize
-            @flag_c, @flag_n, @flag_pv, @flag_hc, @flag_z, @flag_s = false
+            @flag_c, @flag_n, @flag_pv, @flag_hc, @flag_z, @flag_s = [false] * 6
+        end
+
+        def to_s
+            "S #{@flag_s}, Z #{@flag_z}, HC #{@flag_hc}, PV #{@flag_pv}, N #{@flag_n}, C #{@flag_c}"
         end
 
         def value
@@ -139,6 +147,7 @@ module Z80
             v += MAX4 if @flag_hc
             v += MAX6 if @flag_z
             v -= MAX8 if @flag_s
+            v
         end
 
         def store(num)
@@ -172,7 +181,7 @@ module Z80
         end
 
         def flags_shift reg
-            @flag_n, @flag_hc = false
+            @flag_n, @flag_hc = false, false
             @flag_c = reg.carry
         end
 
@@ -187,7 +196,11 @@ module Z80
 
         def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
-            @overflow, @hc, @carry = false
+            @overflow, @hc, @carry = false, false, false
+        end
+
+        def to_s
+            value.to_s(16)
         end
 
         def value
@@ -253,23 +266,30 @@ module Z80
     end
 
     class Z80
-        def initialize
-            @a, @b, @c, @d, @e, @h, @l, @i, @r = [Register8.new] * 8
-            @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 8
+        def initialize mem
+            @a, @b, @c, @d, @e, @h, @l, @i, @r = [Register8.new] * 9
+            @a’, @b’, @c’, @d’, @e’, @h’, @l’ = [Register8.new] * 7
             @f, @f’ = [Flag8.new] * 2
             @bc = Register16.new(@b, @c)
             @de = Register16.new(@d, @e)
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
-            @pc, @sp = [Register16.new] * 2
+            @pc, @sp, @ix, @iy = [Register16.new] * 4
             @x = @y = 0
-            @memory = Memory.new
+            @memory = mem
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
             @address_bus = Register16.new
             @data_bus = Register8.new
-            @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false
+            @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false, false
+        end
+
+        def to_s
+            "A #{@a}, B #{@b}, C #{@c}, D #{@d}, E #{@e}, H #{@h}, L #{@l}, I #{@i}, R #{@r}, " +
+            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, " +
+            "F [#{@f}], " +
+            "M #{@mode}"
         end
 
         def memory_refresh
@@ -346,13 +366,13 @@ module Z80
         end
 
         def decode_register8 code, pos = 0x38, t = 3
-            v = code & pos
+            v = code.value & pos
             @t_states += t if v == 0x06
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
-        def decode_register16 code, pos=0x30
-            [@bc, @de, @hl, @sp][code & 0x30]
+        def decode_register16 code, pos = 0x30
+            [@bc, @de, @hl, @sp][code.value & 0x30]
         end
 
         def execute opcode
@@ -541,7 +561,7 @@ module Z80
                 @memory.read8(@hl).copy(self.next8)
             when 0x37 #SCF
                 @f.flag_c = true
-                @f.flag_n, @f.flag_hc = false
+                @f.flag_n, @f.flag_hc = false, false
             when 0x38 #JR C,NN
                 val = self.next8.value
                 if @f.flag_c
@@ -590,11 +610,11 @@ module Z80
             when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF #XOR A,r
                 @a.store(@a.value ^ self.decode_register8(opcode).value)
                 @f.s_z_p(@a)
-                @f.flag_hc, @f.flag_n, @f.flag_c = false
+                @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
             when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7 #OR A,r
                 @a.store(@a.value | self.decode_register8(opcode).value)
                 @f.s_z(@a)
-                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
+                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
             when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF #CP A,r
                 @f.flag_z = (@a.value == self.decode_register8(opcode).value)
             when 0xC0 #RET NZ
@@ -1189,7 +1209,7 @@ module Z80
                 @t_states = 7
                 @a.store(@a.value ^ self.next8.value)
                 @f.s_z_p(@a)
-                @f.flag_hc, @f.flag_n, @f.flag_c = false
+                @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
             when 0xEF #RST 28
                 @t_states = 11
                 self.push16.copy(@pc)
@@ -1206,7 +1226,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if !@f.flag_s
             when 0xF3 #DI
-                @iff1, @iff2 = false
+                @iff1, @iff2 = false, false
             when 0xF4 #CALL P,HHLL
                 reg = self.next16
                 if @f.flag_s
@@ -1220,7 +1240,7 @@ module Z80
                 @t_states = 7
                 @a.store(@a.value | self.next8.value)
                 @f.s_z(@a)
-                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
+                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
             when 0xF7 #RST 30
                 @t_states = 11
                 self.push16.copy(@pc)
@@ -1314,12 +1334,12 @@ module Z80
                     @t_states = 19
                     @a.store(@a.value ^ @memory.read8_indexed(@iy, self.next8).value)
                     @f.s_z_p(@a)
-                    @f.flag_hc, @f.flag_n, @f.flag_c = false
+                    @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
                 when 0xB6 #OR A,(IY+d)
                     @t_states = 19
                     @a.store(@a.value | @memory.read8_indexed(@iy, self.next8).value)
                     @f.s_z(@a)
-                    @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false
+                    @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
                 when 0xCB #FDCB
                     reg = @memory.read8_indexed(@iy, self.next8)
                     opcode = self.next8.value
@@ -1417,5 +1437,10 @@ end
 #TODO: what happens if an undefined opcode is found ?
 #TODO: how to set carry and hc (for example on ADD A,A) ??
 #TODO: unify register classes into one class on n bytes (n = 8, 16, etc)
-z80 = Z80::Z80.new
+memory = Z80::Memory.new
+z80 = Z80::Z80.new memory
 #z80.run
+reg = Z80::Register8.new
+reg.store(4)
+# z80.execute reg
+puts z80
