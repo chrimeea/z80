@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module Z80
-
     MAX0 = 0x01
     MAX1 = 0x02
     MAX2 = 0x04
@@ -273,7 +272,9 @@ module Z80
     end
 
     class Z80
-        def initialize mem
+        attr_reader :memory
+
+        def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
             @a’, @b’, @c’, @d’, @e’, @h’, @l’ = Array.new(7) { Register8.new }
             @f, @f’ = [Flag8.new, Flag8.new]
@@ -283,7 +284,7 @@ module Z80
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
-            @memory = mem
+            @memory = Memory.new
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
