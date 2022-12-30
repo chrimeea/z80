@@ -110,7 +110,8 @@ module Z80
         end
 
         def store(num)
-            prev_value = @byte_value
+            prev_bits = @byte_value.to_s(2)
+            @overflow = false
             if num >= MAX7
                 @byte_value = (MAX8 - 1) & num
                 @overflow = true
@@ -122,8 +123,8 @@ module Z80
             else
                 @byte_value = num
             end
-            @carry = @overflow
-            @hc = ((prev_value < MAX4 && @byte_value >= MAX4) || (prev_value > MAX4 && @byte_value <= MAX4))
+            @carry = (prev_bits[7] == 1 && !self.bit?(7))
+            @hc = (prev_bits[4] && !self.bit?(4))
         end
     end
 
@@ -226,19 +227,18 @@ module Z80
         end
 
         def store(num)
+            @overflow = false
             if num >= MAX15
                 num = MAX15 - num
                 @overflow = true
             elsif num < -MAX15
                 num = -MAX15 - num
                 @overflow = true
-            else
-                @overflow = false
             end
-            @carry = @overflow
             q, r = num.divmod MAX8
             @high.store(q)
             @low.store(r)
+            @carry = @high.overflow
             @hc = @high.hc
         end
     end
