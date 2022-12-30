@@ -238,7 +238,7 @@ module Z80
             q, r = num.divmod MAX8
             @high.store(q)
             @low.store(r)
-            @carry = @high.overflow
+            @carry = @high.carry
             @hc = @high.hc
         end
     end
