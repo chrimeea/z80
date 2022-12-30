@@ -47,7 +47,7 @@ module Z80
         end
 
         def bit?(b)
-            @byte_value.to_s(2)[b] == 1
+            @byte_value.to_s(2)[b] == '1'
         end
 
         def set_bit(b)
@@ -123,8 +123,8 @@ module Z80
             else
                 @byte_value = num
             end
-            @carry = (prev_bits[7] == 1 && !self.bit?(7))
-            @hc = (prev_bits[4] && !self.bit?(4))
+            @carry = (prev_bits[7] == '1' && !self.bit?(7))
+            @hc = (prev_bits[4] == '1' && !self.bit?(4))
         end
     end
 
