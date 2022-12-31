@@ -113,13 +113,13 @@ module Z80
             prev_bits = @byte_value.to_s(2)
             @overflow = false
             if num >= MAX7
-                @byte_value = (MAX8 - 1) & num
+                @byte_value = num
                 @overflow = true
             elsif num < -MAX7
-                @byte_value = (MAX8 - 1) & -num
+                @byte_value = num + MAX8
                 @overflow = true
             elsif num.negative?
-                @byte_value = MAX8 + num
+                @byte_value = num + MAX8
             else
                 @byte_value = num
             end
@@ -272,7 +272,7 @@ module Z80
     end
 
     class Z80
-        attr_reader :memory
+        attr_reader :memory, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
 
         def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
