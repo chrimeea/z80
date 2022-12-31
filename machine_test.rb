@@ -36,6 +36,9 @@ module Z80
             reg.store(-129)
             assert_equal(127, reg.value)
             assert_equal(127, reg.byte_value)
+            reg.store(-256)
+            assert_equal(0, reg.value)
+            assert_equal(0, reg.byte_value)
         end
     end
 
