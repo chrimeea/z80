@@ -111,14 +111,13 @@ module Z80
 
         def store(num)
             prev_bits = @byte_value.to_s(2)
-            @overflow = false
-            if num >= MAX7
-                @byte_value = num
+            if num >= MAX7 || num < -MAX7
+                num = (MAX8 - 1) & num
                 @overflow = true
-            elsif num < -MAX7
-                @byte_value = num + MAX8
-                @overflow = true
-            elsif num.negative?
+            else
+                @overflow = false
+            end
+            if num.negative?
                 @byte_value = num + MAX8
             else
                 @byte_value = num
