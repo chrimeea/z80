@@ -51,7 +51,7 @@ module Z80
         end
 
         def bit?(b)
-            self.to_s(2)[7 - b] == '1'
+            self.to_s(2).reverse[b] == '1'
         end
 
         def set_bit(b)
