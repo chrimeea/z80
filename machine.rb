@@ -737,8 +737,6 @@ module Z80
                     self.decode_register8(opcode, 0x38, 7).reset_bit(opcode & 0x38)
                 when 0xC0..0xFF #SET b,r
                     self.decode_register8(opcode, 0x38, 7).set_bit(opcode & 0x38)
-                else
-                    fail
                 end
                 @t_states += 4
             when 0xCC #CALL Z,HHLL
@@ -954,8 +952,6 @@ module Z80
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IX+d)
                         @t_states = 20
                         reg.set_bit(opcode & 0x38)
-                    else
-                        fail
                     end
                 when 0xE1 #POP IX
                     @t_states = 19
@@ -972,8 +968,6 @@ module Z80
                 when 0xF9 #LD SP,IX
                     @t_states = 10
                     @sp.copy(@ix)
-                else
-                    fail
                 end
             when 0xDE #SBC A,NN
                 @t_states = 7
@@ -1233,8 +1227,6 @@ module Z80
                         @t_states = 21
                         @pc.store(@pc.value - 2)
                     end
-                else
-                    fail
                 end
             when 0xEE #XOR A,NN
                 @t_states = 7
@@ -1428,8 +1420,6 @@ module Z80
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IY+d)
                         @t_states = 20
                         reg.set_bit(opcode & 0x38)
-                    else
-                        fail
                     end
                 when 0xE1 #POP IY
                     @t_states = 14
@@ -1446,8 +1436,6 @@ module Z80
                 when 0xF9 #LD SP,IY
                     @t_states = 10
                     @sp.copy(@iy)
-                else
-                    fail
                 end
             when 0xFE #CP A,NN
                 @f.flag_z = (@a.value == self.next8.value)
@@ -1455,14 +1443,11 @@ module Z80
                 @t_states = 11
                 self.push16.copy(@pc)
                 @pc.store(0x38)
-            else
-                fail
             end
         end
     end
 end
 
-#TODO: what happens if an undefined opcode is found ?
 # z80 = Z80::Z80.new
 # z80.memory.load_rom('./roms/spectrum.rom')
 #z80.run
