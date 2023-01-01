@@ -21,8 +21,12 @@ module Z80
             @overflow, @hc, @carry = false, false, false
         end
 
-        def to_s
-            "%02X" % value
+        def to_s base = 16
+            if base == 2
+                "%08b" % byte_value
+            else
+                "%02X" % value
+            end
         end
 
         def value
@@ -47,7 +51,7 @@ module Z80
         end
 
         def bit?(b)
-            @byte_value.to_s(2)[b] == '1'
+            self.to_s(2)[7 - b] == '1'
         end
 
         def set_bit(b)
@@ -110,7 +114,7 @@ module Z80
         end
 
         def store(num)
-            prev_bits = @byte_value.to_s(2)
+            prev_bits = self.to_s(2)
             if num >= MAX7 || num < -MAX7
                 num = (MAX8 - 1) & num
                 @overflow = true
@@ -122,8 +126,8 @@ module Z80
             else
                 @byte_value = num
             end
-            @carry = (prev_bits[7] == '1' && !self.bit?(7))
-            @hc = (prev_bits[4] == '1' && !self.bit?(4))
+            @carry = (prev_bits[0] == '1' && !self.bit?(7))
+            @hc = (prev_bits[3] == '1' && !self.bit?(4))
         end
     end
 

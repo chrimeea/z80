@@ -36,9 +36,14 @@ module Z80
             reg.store(-129)
             assert_equal(127, reg.value)
             assert_equal(127, reg.byte_value)
+            reg.store(-128)
             reg.store(-256)
             assert_equal(0, reg.value)
             assert_equal(0, reg.byte_value)
+            assert_true(reg.overflow)
+            assert_false(reg.negative?)
+            assert_false(reg.hc)
+            assert_true(reg.carry)
         end
     end
 
@@ -52,4 +57,6 @@ module Z80
             assert_equal(0x020A, z80.bc.value)
         end
     end
+
+    #TODO: test add & sub with negative argument and check flags
 end
