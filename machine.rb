@@ -263,14 +263,21 @@ module Z80
     end
 
     class Memory
-        def initialize
-            @memory = Array.new(49152) { Register8.new }
+        def initialize size
+            @memory = Array.new(size) { Register8.new }
         end
 
         def load data
-            data.each_with_index do |v, i|
-                @memory[i].store(v)
-            end
+            fail if data.size && data.size > @memory.size
+            data.each_with_index { |v, i| @memory[i].store(v) }
+        end
+
+        def load_rom filename
+            f = File.new(filename)
+            fail unless filename.end_with?('.rom')
+            fail if f.size > @memory.size
+            self.load(f.each_byte)
+            f.close
         end
 
         def read8 reg16
@@ -303,7 +310,7 @@ module Z80
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
-            @memory = Memory.new
+            @memory = Memory.new(16384)
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
@@ -1453,9 +1460,9 @@ module Z80
             end
         end
     end
-
 end
 
 #TODO: what happens if an undefined opcode is found ?
-#z80 = Z80::Z80.new
+# z80 = Z80::Z80.new
+# z80.memory.load_rom('./roms/spectrum.rom')
 #z80.run
