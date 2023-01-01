@@ -14,28 +14,56 @@ module Z80
     MAX16 = 0x10000
     MAX = [MAX0, MAX1, MAX2, MAX3, MAX4, MAX5, MAX6, MAX7]
 
-    class Register8
+    class GeneralRegister
+        def initialize n
+            @size = n
+        end
+
+        def to_s base = 16
+            if base == 2
+                "%0#{@size}b" % self.byte_value
+            else
+                "%0#{@size / 4}X" % self.byte_value
+            end
+        end
+
+        def max_value
+            2 ** @size
+        end
+
+        def value
+            max = max_value
+            bv = self.byte_value
+            if bv >= max / 2
+                bv - max
+            else
+                bv
+            end
+        end
+
+        def store(num)
+            max = max_value
+            if num >= max / 2 || num < -(max / 2)
+                num = (max - 1) & num
+                @overflow = true
+            else
+                @overflow = false
+            end
+            if num.negative?
+                self.store_byte_value(num + max)
+            else
+                self.store_byte_value(num)
+            end
+        end
+    end
+
+    class Register8 < GeneralRegister
         attr_reader :byte_value, :overflow, :hc, :carry
 
         def initialize
             @byte_value = 0
             @overflow, @hc, @carry = false, false, false
-        end
-
-        def to_s base = 16
-            if base == 2
-                "%08b" % @byte_value
-            else
-                "%02X" % self.value
-            end
-        end
-
-        def value
-            if @byte_value >= MAX7
-                @byte_value - MAX8
-            else
-                @byte_value
-            end
+            super(8)
         end
 
         def negative?
@@ -112,20 +140,6 @@ module Z80
 
         def copy reg8
             @byte_value = reg8.byte_value
-        end
-
-        def store(num)
-            if num >= MAX7 || num < -MAX7
-                num = (MAX8 - 1) & num
-                @overflow = true
-            else
-                @overflow = false
-            end
-            if num.negative?
-                self.store_byte_value(num + MAX8)
-            else
-                self.store_byte_value(num)
-            end
         end
 
         def store_byte_value bv
@@ -218,29 +232,17 @@ module Z80
         end
     end
 
-    class Register16
+    class Register16 < GeneralRegister
         attr_reader :high, :low, :overflow, :hc, :carry
 
         def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
             @overflow, @hc, @carry = false, false, false
-        end
-
-        def to_s
-            "%04X" % value
+            super(16)
         end
 
         def byte_value
             @high.byte_value * MAX8 + @low.byte_value
-        end
-
-        def value
-            bv = self.byte_value
-            if bv >= MAX15
-                bv - MAX16
-            else
-                bv
-            end
         end
 
         def copy reg16
@@ -253,18 +255,7 @@ module Z80
             @high.exchange(reg16.high)
         end
 
-        def store(num)
-            if num >= MAX15 || num < -MAX15
-                num = (MAX16 - 1) & num
-                @overflow = true
-            else
-                @overflow = false
-            end
-            if num.negative?
-                bv = num + MAX16
-            else
-                bv = num
-            end
+        def store_byte_value bv
             h, l = bv.divmod MAX8
             @high.store_byte_value(h)
             @low.store_byte_value(l)
