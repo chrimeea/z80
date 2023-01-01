@@ -310,7 +310,7 @@ module Z80
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
-            @memory = Memory.new(16384)
+            @memory = Memory.new(49152)
             @state_duration, @t_states = 1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
