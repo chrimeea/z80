@@ -114,7 +114,7 @@ module Z80
         end
 
         def store(num)
-            prev_bits = self.to_s(2)
+            prev_bits = self.to_s(2).reverse
             if num >= MAX7 || num < -MAX7
                 num = (MAX8 - 1) & num
                 @overflow = true
@@ -126,8 +126,8 @@ module Z80
             else
                 @byte_value = num
             end
-            @carry = (prev_bits[0] == '1' && !self.bit?(7))
-            @hc = (prev_bits[3] == '1' && !self.bit?(4))
+            @carry = (prev_bits[7] == '1' && !self.bit?(7))
+            @hc = (prev_bits[4] == '1' && !self.bit?(4))
         end
     end
 
