@@ -137,39 +137,60 @@ module Z80
     end
 
     class Flag8 < Register8
-        attr_accessor :flag_c, :flag_n, :flag_pv, :flag_hc, :flag_z, :flag_s
-
-        def initialize
-            @flag_c, @flag_n, @flag_pv, @flag_hc, @flag_z, @flag_s = [false] * 6
-        end
-
         def to_s
             "S #{@flag_s}, Z #{@flag_z}, HC #{@flag_hc}, PV #{@flag_pv}, N #{@flag_n}, C #{@flag_c}"
         end
 
-        def value
-            v = 0
-            v += MAX0 if @flag_c
-            v += MAX1 if @flag_n
-            v += MAX2 if @flag_pv
-            v += MAX4 if @flag_hc
-            v += MAX6 if @flag_z
-            v -= MAX8 if @flag_s
-            v
+        def flag_c
+            self.bit?(0)
         end
 
-        def store(num)
-            v = num.to_s(2)
-            @flag_c = (v[0] == '1')
-            @flag_n = (v[1] == '1')
-            @flag_pc = (v[2] == '1')
-            @flag_hc = (v[4] == '1')
-            @flag_z = (v[6] == '1')
-            @flag_s = (v[8] == '1')
+        def flag_c=
+            self.set_bit(0)
+        end
+
+        def flag_n
+            self.bit?(1)
+        end
+
+        def flag_n=
+            self.set_bit(1)
+        end
+
+        def flag_pv
+            self.bit?(2)
+        end
+
+        def flag_pv=
+            self.set_bit(2)
+        end
+
+        def flag_hc
+            self.bit?(4)
+        end
+
+        def flag_hc=
+            self.set_bit(4)
+        end
+
+        def flag_z
+            self.bit?(6)
+        end
+
+        def flag_z=
+            self.set_bit(6)
+        end
+
+        def flag_s
+            self.bit?(7)
+        end
+
+        def flag_s=
+            self.set_bit(7)
         end
 
         def parity reg
-            @flag_pv = reg.value.to_s(2).count(1).even?
+            @flag_pv = reg.to_s(2).count(1).even?
         end
 
         def s_z_p reg
@@ -189,13 +210,11 @@ module Z80
         end
 
         def flags_shift reg
-            @flag_n, @flag_hc = false, false
-            @flag_c = reg.carry
+            @flag_n, @flag_hc, @flag_c = false, false, reg.carry
         end
 
         def flags_math reg
-            @flag_hc = reg.hc
-            @flag_c = reg.overflow
+            @flag_hc, @flag_c = reg.hc, reg.carry
         end
     end
 
