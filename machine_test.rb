@@ -47,6 +47,20 @@ module Z80
         end
     end
 
+    class Register16Test < Test::Unit::TestCase
+        def test_store
+            reg = Register16.new
+            reg.store(25638)
+            assert_equal(25638, reg.value)
+            assert_equal(100, reg.high.value)
+            assert_equal(38, reg.low.value)
+            reg.store(-19053)
+            assert_equal(-19053, reg.value)
+            assert_equal(-74, reg.high.value)
+            assert_equal(109, reg.low.value)
+        end
+    end
+
     class Z80Test < Test::Unit::TestCase
         def test_execute_ld_bc_hhll
             z80 = Z80.new

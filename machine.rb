@@ -11,6 +11,7 @@ module Z80
     MAX7 = 0x80
     MAX8 = 0x100
     MAX15 = 0x8000
+    MAX16 = 0x10000
     MAX = [MAX0, MAX1, MAX2, MAX3, MAX4, MAX5, MAX6, MAX7]
 
     class Register8
@@ -23,9 +24,9 @@ module Z80
 
         def to_s base = 16
             if base == 2
-                "%08b" % byte_value
+                "%08b" % @byte_value
             else
-                "%02X" % value
+                "%02X" % self.value
             end
         end
 
@@ -114,7 +115,6 @@ module Z80
         end
 
         def store(num)
-            prev_bits = self.to_s(2).reverse
             if num >= MAX7 || num < -MAX7
                 num = (MAX8 - 1) & num
                 @overflow = true
@@ -122,10 +122,15 @@ module Z80
                 @overflow = false
             end
             if num.negative?
-                @byte_value = num + MAX8
+                self.store_byte_value(num + MAX8)
             else
-                @byte_value = num
+                self.store_byte_value(num)
             end
+        end
+
+        def store_byte_value bv
+            prev_bits = self.to_s(2).reverse
+            @byte_value = bv
             @carry = (prev_bits[7] == '1' && !self.bit?(7))
             @hc = (prev_bits[4] == '1' && !self.bit?(4))
         end
@@ -206,17 +211,17 @@ module Z80
             "%04X" % value
         end
 
+        def byte_value
+            @high.byte_value * MAX8 + @low.byte_value
+        end
+
         def value
-            @high.value * MAX8 + @low.value
-        end
-
-        def to_8_bit_pair_reg
-            [@high, @low]
-        end
-
-        def store_8_bit_pair_reg(high8, low8)
-            @high.copy(high8)
-            @low.copy(low8)
+            bv = self.byte_value
+            if bv >= MAX15
+                bv - MAX16
+            else
+                bv
+            end
         end
 
         def copy reg16
@@ -225,24 +230,26 @@ module Z80
         end
 
         def exchange reg16
-            low.exchange(reg16.low)
-            high.exchange(reg16.high)
+            @low.exchange(reg16.low)
+            @high.exchange(reg16.high)
         end
 
         def store(num)
-            @overflow = false
-            if num >= MAX15
-                num = MAX15 - num
+            if num >= MAX15 || num < -MAX15
+                num = (MAX16 - 1) & num
                 @overflow = true
-            elsif num < -MAX15
-                num = -MAX15 - num
-                @overflow = true
+            else
+                @overflow = false
             end
-            q, r = num.divmod MAX8
-            @high.store(q)
-            @low.store(r)
-            @carry = @high.carry
-            @hc = @high.hc
+            if num.negative?
+                bv = num + MAX16
+            else
+                bv = num
+            end
+            h, l = bv.divmod MAX8
+            @high.store_byte_value(h)
+            @low.store_byte_value(l)
+            @carry, @hc = @high.carry, @high.hc
         end
     end
 
@@ -752,7 +759,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 @t_states = 11
-                @address_bus.store_8_bit_pair_reg(@a, self.next8)
+                @address_bus.copy(new Register16(@a, self.next8))
                 @data_bus.copy(@a)
                 #TODO: write one byte from data_bus to device in address_bus
             when 0xD4 #CALL NC,HHLL
@@ -793,7 +800,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
                 @t_states = 11
-                @address_bus.store_8_bit_pair_reg(@a, self.next8)
+                @address_bus.copy(new Register16(@a, self.next8))
                 #TODO: read one byte from device in address_bus to data_bus
                 @a.copy(@data_bus)
             when 0xDC #CALL C,HHLL
@@ -1133,7 +1140,7 @@ module Z80
                     end
                 when 0xA2, 0xB2 #INI & INIR
                     @t_states = 16
-                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @address_bus.copy(@bc)
                     #TODO: read one byte from device in address_bus to data_bus
                     @address_bus.copy(@hl)
                     @memory.read8(@hl).copy(@data_bus)
@@ -1148,7 +1155,7 @@ module Z80
                 when 0xA3, 0xB3 #OUTI & OTIR
                     @t_states = 16
                     @b.store(@b.value - 1)
-                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @address_bus.copy(@bc)
                     @data_bus.copy(@memory.read8(@hl))
                     #TODO: write one byte from address_bus to device
                     @hl.store(@hl.value + 1)
@@ -1185,7 +1192,7 @@ module Z80
                     end
                 when 0xAA, 0xBA #IND & INDR
                     @t_states = 16
-                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @address_bus.copy(@bc)
                     #TODO: read one byte from device in address_bus to data_bus
                     @address_bus.copy(@hl)
                     @memory.read8(@hl).copy(@data_bus)
@@ -1200,7 +1207,7 @@ module Z80
                 when 0xAB, 0xBB #OUTD & OTDR
                     @t_states = 16
                     @b.store(@b.value - 1)
-                    @address_bus.store_8_bit_pair_reg(@b, @c)
+                    @address_bus.copy(@bc)
                     @data_bus.copy(@memory.read8(@hl))
                     #TODO: write one byte from address_bus to device
                     @hl.store(@hl.value - 1)
@@ -1441,7 +1448,5 @@ module Z80
 end
 
 #TODO: what happens if an undefined opcode is found ?
-#TODO: how to set carry and hc (for example on ADD A,A) ??
-#TODO: unify register classes into one class on n bytes (n = 8, 16, etc)
 #z80 = Z80::Z80.new
 #z80.run
