@@ -50,6 +50,10 @@ module Z80
     class Register16Test < Test::Unit::TestCase
         def test_store
             reg = Register16.new
+            reg.store(1)
+            assert_equal(1, reg.value)
+            assert_equal(0, reg.high.value)
+            assert_equal(1, reg.low.value)
             reg.store(25638)
             assert_equal(25638, reg.value)
             assert_equal(100, reg.high.value)
@@ -68,11 +72,26 @@ module Z80
     class Z80Test < Test::Unit::TestCase
         def test_execute_ld_bc_hhll
             z80 = Z80.new
-            z80.memory.load([0x0A, 0x02])
-            reg = Register8.new
-            reg.store(0x01)
-            z80.execute reg
-            assert_equal(0x020A, z80.bc.value)
+            z80.memory.load([0x01, 0x0A, 0x02, 0x01, 0xFF, 0xFF])
+            z80.execute z80.next8
+            assert_equal(0x020A, z80.bc.byte_value)
+            z80.execute z80.next8
+            assert_equal(0xFFFF, z80.bc.byte_value)
+        end
+
+        def test_execute_inc_b
+            z80 = Z80.new
+            z80.memory.load([0x04])
+            z80.execute z80.next8
+            assert_equal(0x01, z80.bc.high.byte_value)
+            assert_equal(0x00, z80.af.low.byte_value)
+        end
+
+        def test_execute_inc_bc
+            z80 = Z80.new
+            z80.memory.load([0x03])
+            z80.execute z80.next8
+            assert_equal(0x0001, z80.bc.byte_value)
         end
     end
 

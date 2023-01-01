@@ -83,14 +83,17 @@ module Z80
             self.to_s(2).reverse[b] == '1'
         end
 
-        def set_bit(b)
+        def set_bit(b, value = true)
             fail if b < 0 || b > 7
-            @byte_value &= MAX[b]
+            if value
+                @byte_value &= MAX[b]
+            else
+                @byte_value &= ~(MAX[b] + MAX8)
+            end
         end
 
         def reset_bit(b)
-            fail if b < 0 || b > 7
-            @byte_value &= ~(MAX[b] + MAX8)
+            set_bit(b, false)
         end
 
         def negate
@@ -151,56 +154,52 @@ module Z80
     end
 
     class Flag8 < Register8
-        def to_s
-            "S #{@flag_s}, Z #{@flag_z}, HC #{@flag_hc}, PV #{@flag_pv}, N #{@flag_n}, C #{@flag_c}"
-        end
-
         def flag_c
             self.bit?(0)
         end
 
-        def flag_c=
-            self.set_bit(0)
+        def flag_c= value
+            self.set_bit?(0, value)
         end
 
         def flag_n
             self.bit?(1)
         end
 
-        def flag_n=
-            self.set_bit(1)
+        def flag_n= value
+            self.set_bit(1, value)
         end
 
         def flag_pv
             self.bit?(2)
         end
 
-        def flag_pv=
-            self.set_bit(2)
+        def flag_pv= value
+            self.set_bit(2, value)
         end
 
         def flag_hc
             self.bit?(4)
         end
 
-        def flag_hc=
-            self.set_bit(4)
+        def flag_hc= value
+            self.set_bit(4, value)
         end
 
         def flag_z
             self.bit?(6)
         end
 
-        def flag_z=
-            self.set_bit(6)
+        def flag_z= value
+            self.set_bit(6, value)
         end
 
         def flag_s
             self.bit?(7)
         end
 
-        def flag_s=
-            self.set_bit(7)
+        def flag_s= value
+            self.set_bit(7, value)
         end
 
         def parity reg
@@ -413,7 +412,7 @@ module Z80
             when 0x03, 0x13, 0x23, 0x33 #INC ss
                 @t_states = 6
                 reg = self.decode_register16(opcode)
-                @reg.store(@reg.value + 1)
+                reg.store(reg.value + 1)
             when 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x3C #INC r
                 reg = self.decode_register8(opcode, 0x38, 7)
                 reg.store(reg.value + 1)
@@ -421,9 +420,9 @@ module Z80
                 @f.s_z_v_hc(reg)
             when 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35, 0x3D #DEC r
                 reg = self.decode_register8(opcode, 0x38, 7)
-                @reg.store(@reg.value - 1)
+                reg.store(reg.value - 1)
                 @f.flag_n = true
-                @f.s_z_v_hc(@reg)
+                @f.s_z_v_hc(reg)
             when 0x06 #LD B,NN
                 @t_states = 7
                 @b.copy(self.next8)
@@ -445,7 +444,7 @@ module Z80
             when 0x0B, 0x1B, 0x2B, 0x3B #DEC ss
                 @t_states = 6
                 reg = self.decode_register16(opcode)
-                @reg.store(@reg.value - 1)
+                reg.store(reg.value - 1)
             when 0x0E #LD C,NN
                 @t_states = 7
                 @c.copy(self.next8)
@@ -898,23 +897,23 @@ module Z80
                     when 0x06 #RLC (IX+d)	
                         @t_states = 23
                         reg.rotate_left
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x0E #RRC (IX+d)
                         @t_states = 23
                         reg.rotate_right
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x16 #RL (IX+d)
                         @t_states = 23
                         reg.rotate_left_trough_carry
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x1E #RR (IX+d)
                         @t_states = 23
                         reg.rotate_right_trough_carry
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x26 #SLA (IX+d)
                         @t_states = 23
                         reg.shift_left
@@ -1372,23 +1371,23 @@ module Z80
                     when 0x06 #RLC (IY+d)	
                         @t_states = 23
                         reg.rotate_left
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x0E #RRC (IY+d)
                         @t_states = 23
                         reg.rotate_right
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x16 #RL (IY+d)
                         @t_states = 23
                         reg.rotate_left_trough_carry
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x1E #RR (IY+d)
                         @t_states = 23
                         reg.rotate_right_trough_carry
-                        @f.s_z_p(@reg)
-                        @f.flags_shift(@reg)
+                        @f.s_z_p(reg)
+                        @f.flags_shift(reg)
                     when 0x26 #SLA (IY+d)
                         @t_states = 23
                         reg.shift_left
