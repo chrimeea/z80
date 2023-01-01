@@ -54,10 +54,14 @@ module Z80
             assert_equal(25638, reg.value)
             assert_equal(100, reg.high.value)
             assert_equal(38, reg.low.value)
+            reg.store(-1)
+            assert_equal(-1, reg.value)
+            assert_equal(255, reg.high.byte_value)
+            assert_equal(255, reg.low.byte_value)
             reg.store(-19053)
             assert_equal(-19053, reg.value)
-            assert_equal(-74, reg.high.value)
-            assert_equal(109, reg.low.value)
+            assert_equal(181, reg.high.byte_value)
+            assert_equal(147, reg.low.byte_value)
         end
     end
 
