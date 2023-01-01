@@ -1449,5 +1449,5 @@ module Z80
 end
 
 # z80 = Z80::Z80.new
-# z80.memory.load_rom('./roms/spectrum.rom')
+# z80.memory.load_rom('./roms/hc90.rom')
 #z80.run
