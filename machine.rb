@@ -1474,16 +1474,16 @@ module Z80
         end
 
         def draw
-            reg_address, reg_y, reg_x = Register16.new, Register8.new, Register8.new
+            reg_address, reg_y = Register16.new, Register8.new
             reg_address.store(0x4000)
             192.times do
+                x = 0
                 32.times do
                     reg_bitmap = @z80.memory.read8(reg_address)
                     reg_address.store(reg_address.value + 1)
-                    reg_x.store(reg_x.value + 1)
+                    x += 1
                 end
                 reg_y.store(reg_y.value + 1)
-                reg_x.store(0)
                 reg_address.set_bit(5, reg_y.bit?(3))
                 reg_address.set_bit(6, reg_y.bit?(4))
                 reg_address.set_bit(7, reg_y.bit?(5))
