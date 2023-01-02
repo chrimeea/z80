@@ -1480,6 +1480,7 @@ module Z80
                 x = 0
                 32.times do
                     reg_bitmap = @z80.memory.read8(reg_address)
+                    #TODO: draw reg_bitmap.byte_value at line y and character x
                     reg_address.store(reg_address.value + 1)
                     x += 1
                 end
