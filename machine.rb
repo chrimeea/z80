@@ -29,8 +29,13 @@ module Z80
             end
         end
 
-        def max_value
-            2 ** @size
+        def bit?(b)
+            fail if b < 0 || b >= @size
+            self.to_s(2).reverse[b] == '1'
+        end
+
+        def max_value(n = @size)
+            2 ** n
         end
 
         def value
@@ -79,10 +84,6 @@ module Z80
         def store_4_bit_pair(high4, low4)
             fail if high4 < 0 || high4 >= MAX4 || low4 < 0 || low4 >= MAX4
             @byte_value = high4 * MAX4 + low4
-        end
-
-        def bit?(b)
-            self.to_s(2).reverse[b] == '1'
         end
 
         def set_bit(b, value = true)
@@ -246,6 +247,15 @@ module Z80
             @high.byte_value * MAX8 + @low.byte_value
         end
 
+        def set_bit(b, value = true)
+            fail if b < 0 || b > 15
+            if b < 8
+                @low.set_bit(b, value)
+            else
+                @high.set_bit(b - 8, value)
+            end
+        end
+
         def copy reg16
             @high.copy(reg16.high)
             @low.copy(reg16.low)
@@ -313,7 +323,7 @@ module Z80
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
             @memory = Memory.new(49152)
-            @state_duration, @t_states = 1, 4
+            @state_duration, @t_states = 0.1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
             @address_bus = Register16.new
@@ -1456,12 +1466,34 @@ module Z80
                 place('height' => 256, 'width' => 256, 'x' => 0, 'y' => 0)
             end
             canvas.pack
+            @z80 = Z80.new
+            @z80.memory.load_rom('./roms/hc90.rom')
+            Thread.new { @z80.run }
+            TkAfter.new(500, -1, proc { draw }).start
             Tk.mainloop
+        end
+
+        def draw
+            reg_address, reg_y, reg_x = Register16.new, Register8.new, Register8.new
+            reg_address.store(0x4000)
+            192.times do
+                32.times do
+                    reg_bitmap = @z80.memory.read8(reg_address)
+                    reg_address.store(reg_address.value + 1)
+                    reg_x.store(reg_x.value + 1)
+                end
+                reg_y.store(reg_y.value + 1)
+                reg_x.store(0)
+                reg_address.set_bit(5, reg_y.bit?(3))
+                reg_address.set_bit(6, reg_y.bit?(4))
+                reg_address.set_bit(7, reg_y.bit?(5))
+                reg_address.set_bit(8, reg_y.bit?(0))
+                reg_address.set_bit(9, reg_y.bit?(1))
+                reg_address.set_bit(10, reg_y.bit?(2))
+                reg_address.set_bit(11, reg_y.bit?(6))
+                reg_address.set_bit(12, reg_y.bit?(7))
+            end
         end
     end
 end
 
-# z80 = Z80::Z80.new
-# z80.memory.load_rom('./roms/hc90.rom')
-#z80.run
-Z80::Hardware.new.boot
