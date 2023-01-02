@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'tk'
+
 module Z80
     MAX0 = 0x01
     MAX1 = 0x02
@@ -1446,8 +1448,20 @@ module Z80
             end
         end
     end
+
+    class Hardware
+        def boot
+            root = TkRoot.new { title 'Cristian Mocanu Z80' }
+            canvas = TkCanvas.new(root) do
+                place('height' => 256, 'width' => 256, 'x' => 0, 'y' => 0)
+            end
+            canvas.pack
+            Tk.mainloop
+        end
+    end
 end
 
 # z80 = Z80::Z80.new
 # z80.memory.load_rom('./roms/hc90.rom')
 #z80.run
+Z80::Hardware.new.boot
