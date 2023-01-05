@@ -408,14 +408,14 @@ module Z80
             end
         end
 
-        def decode_register8 code, pos = 0x38, t = 3
-            v = code.value & pos
+        def decode_register8 code, pos = 3, t = 3
+            v = code.value >> pos & 0x07
             @t_states += t if v == 0x06
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
-        def decode_register16 code, pos = 0x30
-            [@bc, @de, @hl, @sp][code.value & 0x30]
+        def decode_register16 code, pos = 4
+            [@bc, @de, @hl, @sp][code.value >> pos & 0x03]
         end
 
         def execute opcode
@@ -433,12 +433,12 @@ module Z80
                 reg = self.decode_register16(opcode)
                 reg.store(reg.value + 1)
             when 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x3C #INC r
-                reg = self.decode_register8(opcode, 0x38, 7)
+                reg = self.decode_register8(opcode, 3, 7)
                 reg.store(reg.value + 1)
                 @f.flag_n = false
                 @f.s_z_v_hc(reg)
             when 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35, 0x3D #DEC r
-                reg = self.decode_register8(opcode, 0x38, 7)
+                reg = self.decode_register8(opcode, 3, 7)
                 reg.store(reg.value - 1)
                 @f.flag_n = true
                 @f.s_z_v_hc(reg)
@@ -629,7 +629,7 @@ module Z80
                 @f.flag_c = !@f.flag_c
                 @f.flag_n = false
             when 0x40..0x49, 0x4A..0x4F, 0x50..0x59, 0x5A..0x5F, 0x60..0x69, 0x6A..0x6F, 0x70..0x75, 0x77..0x79, 0x7A..0x7F #LD r,r
-                self.decode_register8(opcode).copy(self.decode_register8(opcode, 0x07))
+                self.decode_register8(opcode).copy(self.decode_register8(opcode, 0))
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
                 @a.store(@a.value + self.decode_register8(opcode).value)
                 @f.flag_n, @f.flag_c = false, @a.carry
@@ -716,7 +716,7 @@ module Z80
                 opcode = self.next8.value
                 case opcode
                 when 0x00..0x3F
-                    reg = self.decode_register8(opcode, 0x38, 7)
+                    reg = self.decode_register8(opcode, 3, 7)
                     case opcode
                     when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                         reg.rotate_left
@@ -743,12 +743,12 @@ module Z80
                     @f.flags_shift(reg)
                     @f.s_z_p(reg)
                 when 0x40..0x7F #BIT b,r
-                    @f.flag_z = !(self.decode_register8(opcode).bit?(opcode & 0x38))
+                    @f.flag_z = !(self.decode_register8(opcode).bit?(opcode >> 3 & 0x07))
                     @f.flag_hc, @f.flag_n = true, false
                 when 0x80..0xBF #RES b,r
-                    self.decode_register8(opcode, 0x38, 7).reset_bit(opcode & 0x38)
+                    self.decode_register8(opcode, 3, 7).reset_bit(opcode >> 3 & 0x07)
                 when 0xC0..0xFF #SET b,r
-                    self.decode_register8(opcode, 0x38, 7).set_bit(opcode & 0x38)
+                    self.decode_register8(opcode, 3, 7).set_bit(opcode >> 3 & 0x07)
                 end
                 @t_states += 4
             when 0xCC #CALL Z,HHLL
@@ -956,14 +956,14 @@ module Z80
                         @f.flags_shift(reg)
                     when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IX+d)
                         @t_states = 20
-                        @f.flag_z = !(reg.bit?(opcode & 0x38))
+                        @f.flag_z = !(reg.bit?(opcode >> 3 & 0x07))
                         @f.flag_hc, @f.flag_n = true, false
                     when 0x86, 0x8E, 0x96, 0x9E, 0xA6, 0xAE, 0xB6, 0xBE #RES b,(IX+d)
                         @t_states = 23
-                        reg.reset_bit(opcode & 0x38)
+                        reg.reset_bit(opcode >> 3 & 0x07)
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IX+d)
                         @t_states = 20
-                        reg.set_bit(opcode & 0x38)
+                        reg.set_bit(opcode >> 3 & 0x07)
                     end
                 when 0xE1 #POP IX
                     @t_states = 19
@@ -1348,7 +1348,7 @@ module Z80
                     reg1.copy(@memory.read8_indexed(@iy, self.next8))
                 when 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77 #LD (IY+d),r
                     @t_states = 19
-                    reg1 = self.decode_register8(opcode, 0x07)
+                    reg1 = self.decode_register8(opcode, 0)
                     @memory.read8_indexed(@iy, self.next8).copy(reg1)
                 when 0x86, 0x8E #ADD A,(IY+d) & ADC A,(IY+d)
                     @t_states = 19
@@ -1424,14 +1424,14 @@ module Z80
                         @f.flags_shift(reg)
                     when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IY+d)
                         @t_states = 20
-                        @f.flag_z = !(reg.bit?(opcode & 0x38))
+                        @f.flag_z = !(reg.bit?(opcode >> 3 & 0x07))
                         @f.flag_hc, @f.flag_n = true, false
                     when 0x86, 0x8E, 0x96, 0x9E, 0xA6, 0xAE, 0xB6, 0xBE #RES b,(IY+d)
                         @t_states = 23
-                        reg.reset_bit(opcode & 0x38)
+                        reg.reset_bit(opcode >> 3 & 0x07)
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IY+d)
                         @t_states = 20
-                        reg.set_bit(opcode & 0x38)
+                        reg.set_bit(opcode >> 3 & 0x07)
                     end
                 when 0xE1 #POP IY
                     @t_states = 14
