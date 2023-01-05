@@ -1462,27 +1462,31 @@ module Z80
     class Hardware
         def boot
             root = TkRoot.new { title 'Cristian Mocanu Z80' }
-            canvas = TkCanvas.new(root) do
+            @canvas = TkCanvas.new(root) do
                 place('height' => 256, 'width' => 256, 'x' => 0, 'y' => 0)
             end
-            canvas.pack
+            @canvas.pack
             @z80 = Z80.new
             @z80.memory.load_rom('./roms/hc90.rom')
             Thread.new { @z80.run }
-            TkAfter.new(500, -1, proc { draw }).start
+            TkAfter.new(5000, -1, proc { draw_screen }).start
             Tk.mainloop
         end
 
-        def draw
+        def point(x, y)
+            TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1')
+        end
+
+        def draw_screen
             reg_address, reg_y = Register16.new, Register8.new
             reg_address.store(0x4000)
             192.times do
                 x = 0
                 32.times do
                     reg_bitmap = @z80.memory.read8(reg_address)
-                    #TODO: draw reg_bitmap.byte_value at line y and character x
+                    7.times.each { |b| self.point(x + b, reg_y.value) if reg_bitmap.bit?(b) }
                     reg_address.store(reg_address.value + 1)
-                    x += 1
+                    x += 8
                 end
                 reg_y.store(reg_y.value + 1)
                 reg_address.set_bit(5, reg_y.bit?(3))
