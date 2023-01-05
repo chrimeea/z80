@@ -1478,25 +1478,32 @@ module Z80
         end
 
         def draw_screen
-            reg_address, reg_y = Register16.new, Register8.new
+            reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
             reg_address.store(0x4000)
             192.times do
                 x = 0
                 32.times do
-                    reg_bitmap = @z80.memory.read8(reg_address)
+                    reg_bitmap = @z80.memory.read8(reg_bitmap_addr)
+                    reg_attrib_address.store(0x5800 + 32 * reg_y.value / 8 + x / 8)
+                    reg_attrib = @z80.memory.read8(reg_attrib_address)
+                    ink = reg_attrib.value & 7
+                    paper = reg_attrib.value & 38
+                    flash = reg_attrib.bit?(7)
+                    brightness = reg_attrib.bit?(6)
+                    #TODO: use the colors from reg_attrib
                     7.times.each { |b| self.point(x + b, reg_y.value) if reg_bitmap.bit?(b) }
-                    reg_address.store(reg_address.value + 1)
+                    reg_bitmap_addr.store(reg_bitmap_addr.value + 1)
                     x += 8
                 end
                 reg_y.store(reg_y.value + 1)
-                reg_address.set_bit(5, reg_y.bit?(3))
-                reg_address.set_bit(6, reg_y.bit?(4))
-                reg_address.set_bit(7, reg_y.bit?(5))
-                reg_address.set_bit(8, reg_y.bit?(0))
-                reg_address.set_bit(9, reg_y.bit?(1))
-                reg_address.set_bit(10, reg_y.bit?(2))
-                reg_address.set_bit(11, reg_y.bit?(6))
-                reg_address.set_bit(12, reg_y.bit?(7))
+                reg_bitmap_addr.set_bit(5, reg_y.bit?(3))
+                reg_bitmap_addr.set_bit(6, reg_y.bit?(4))
+                reg_bitmap_addr.set_bit(7, reg_y.bit?(5))
+                reg_bitmap_addr.set_bit(8, reg_y.bit?(0))
+                reg_bitmap_addr.set_bit(9, reg_y.bit?(1))
+                reg_bitmap_addr.set_bit(10, reg_y.bit?(2))
+                reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
+                reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
             end
         end
     end
