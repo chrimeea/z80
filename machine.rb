@@ -89,7 +89,7 @@ module Z80
         def set_bit(b, value = true)
             fail if b < 0 || b > 7
             if value
-                @byte_value &= MAX[b]
+                @byte_value |= MAX[b]
             else
                 @byte_value &= ~(MAX[b] + MAX8)
             end
@@ -162,7 +162,7 @@ module Z80
         end
 
         def flag_c= value
-            self.set_bit?(0, value)
+            self.set_bit(0, value)
         end
 
         def flag_n
@@ -206,7 +206,7 @@ module Z80
         end
 
         def parity reg
-            @flag_pv = reg.to_s(2).count(1).even?
+            @flag_pv = reg.to_s(2).count('1').even?
         end
 
         def s_z_p reg
@@ -332,7 +332,7 @@ module Z80
         end
 
         def to_s
-            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, F [#{@f}], M #{@mode}, IFF1 #{@iff1}"
+            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, M #{@mode}, IFF1 #{@iff1}"
         end
 
         def memory_refresh
@@ -344,14 +344,12 @@ module Z80
         def next8
             val = @memory.read8(@pc)
             @pc.store(@pc.value + 1)
-            memory_refresh
             val
         end
 
         def next16
             val = @memory.read16(@pc)
             @pc.store(@pc.value + 2)
-            memory_refresh
             val
         end
 
@@ -420,7 +418,8 @@ module Z80
 
         def execute opcode
             @t_states = 4
-            case opcode.value
+            memory_refresh
+            case opcode.byte_value
             when 0x00 #NOP
             when 0x01, 0x11, 0x21, 0x31 #LD dd,nn
                 @t_states = 10
@@ -659,7 +658,12 @@ module Z80
                 @f.s_z(@a)
                 @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
             when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF #CP A,r
-                @f.flag_z = (@a.value == self.decode_register8(opcode).value)
+                reg = Register8.new
+                reg.copy(@a)
+                reg.store(@a.value - self.decode_register8(opcode).value)
+                @f.s_z_v_hc(reg)
+                @f.flags_math(reg)
+                @f.flag_n = true
             when 0xC0 #RET NZ
                 if @f.flag_z
                     @t_states = 11
@@ -713,11 +717,11 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_z
             when 0xCB #CB
-                opcode = self.next8.value
+                opcode = self.next8.byte_value
                 case opcode
                 when 0x00..0x3F
                     reg = self.decode_register8(opcode, 3, 7)
-                    case opcode
+                    case opcode.byte_value
                     when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                         reg.rotate_left
                     when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
@@ -785,7 +789,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 @t_states = 11
-                @address_bus.copy(new Register16(@a, self.next8))
+                @address_bus.copy(Register16.new(@a, self.next8))
                 @data_bus.copy(@a)
                 #TODO: write one byte from data_bus to device in address_bus
             when 0xD4 #CALL NC,HHLL
@@ -826,7 +830,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
                 @t_states = 11
-                @address_bus.copy(new Register16(@a, self.next8))
+                @address_bus.copy(Register16.new(@a, self.next8))
                 #TODO: read one byte from device in address_bus to data_bus
                 @a.copy(@data_bus)
             when 0xDC #CALL C,HHLL
@@ -839,7 +843,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #DD
-                opcode = self.next8.value
+                opcode = self.next8.byte_value
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @t_states = 15
@@ -908,7 +912,7 @@ module Z80
                     @t_states = 19
                     @f.flag_z = (@a.value == @memory.read8_indexed(@ix, self.next8).value)
                 when 0xCB #DDCB
-                    opcode = self.next8.value
+                    opcode = self.next8.byte_value
                     reg = @memory.read8_indexed(@ix, self.next8)
                     case opcode
                     when 0x06 #RLC (IX+d)	
@@ -1045,7 +1049,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xED #ED
-                opcode = self.next8.value
+                opcode = self.next8.byte_value
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
@@ -1150,6 +1154,7 @@ module Z80
                 when 0xA1, 0xB1 #CPI & CPIR
                     @t_states = 16
                     reg = Register8.new
+                    reg.copy(@a)
                     reg.store(@a.value - @memory.read8(@hl).value)
                     @hl.store(@hl.value + 1)
                     @bc.store(@bc.value - 1)
@@ -1202,6 +1207,7 @@ module Z80
                 when 0xA9, 0xB9 #CPD & CPDR
                     @t_states = 16
                     reg = Register8.new
+                    reg.copy(@a)
                     reg.store(@a.value - @memory.read8(@hl).value)
                     @hl.store(@hl.value - 1)
                     @bc.store(@bc.value - 1)
@@ -1305,7 +1311,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #FD
-                opcode = self.next8.value
+                opcode = self.next8.byte_value
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
                     @t_states = 15
@@ -1377,7 +1383,7 @@ module Z80
                     @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
                 when 0xCB #FDCB
                     reg = @memory.read8_indexed(@iy, self.next8)
-                    opcode = self.next8.value
+                    opcode = self.next8.byte_value
                     case opcode
                     when 0x06 #RLC (IY+d)	
                         @t_states = 23
@@ -1508,4 +1514,3 @@ module Z80
         end
     end
 end
-
