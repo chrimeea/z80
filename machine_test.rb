@@ -44,6 +44,10 @@ module Z80
             assert_false(reg.negative?)
             assert_false(reg.hc)
             assert_true(reg.carry)
+            reg.store(63)
+            reg.store(-192)
+            assert_true(reg.carry)
+
         end
     end
 

@@ -407,13 +407,13 @@ module Z80
         end
 
         def decode_register8 code, pos = 3, t = 3
-            v = code.value >> pos & 0x07
+            v = code.byte_value >> pos & 0x07
             @t_states += t if v == 0x06
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
         def decode_register16 code, pos = 4
-            [@bc, @de, @hl, @sp][code.value >> pos & 0x03]
+            [@bc, @de, @hl, @sp][code.byte_value >> pos & 0x03]
         end
 
         def execute opcode
@@ -718,6 +718,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_z
             when 0xCB #CB
                 opcode = self.next8.byte_value
+                memory_refresh
                 case opcode
                 when 0x00..0x3F
                     reg = self.decode_register8(opcode, 3, 7)
@@ -844,6 +845,7 @@ module Z80
                 end
             when 0xDD #DD
                 opcode = self.next8.byte_value
+                memory_refresh
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @t_states = 15
@@ -910,9 +912,15 @@ module Z80
                     @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, false
                 when 0xBE #CP A,(IX+d)
                     @t_states = 19
-                    @f.flag_z = (@a.value == @memory.read8_indexed(@ix, self.next8).value)
+                    reg = Register8.new
+                    reg.copy(@a)
+                    reg.store(@a.value - @memory.read8_indexed(@ix, self.next8).value)
+                    @f.s_z_v_hc(reg)
+                    @f.flags_math(reg)
+                    @f.flag_n = true    
                 when 0xCB #DDCB
                     opcode = self.next8.byte_value
+                    memory_refresh
                     reg = @memory.read8_indexed(@ix, self.next8)
                     case opcode
                     when 0x06 #RLC (IX+d)	
@@ -1050,6 +1058,7 @@ module Z80
                 end
             when 0xED #ED
                 opcode = self.next8.byte_value
+                memory_refresh
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
@@ -1312,6 +1321,7 @@ module Z80
                 end
             when 0xDD #FD
                 opcode = self.next8.byte_value
+                memory_refresh
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
                     @t_states = 15
@@ -1384,6 +1394,7 @@ module Z80
                 when 0xCB #FDCB
                     reg = @memory.read8_indexed(@iy, self.next8)
                     opcode = self.next8.byte_value
+                    memory_refresh
                     case opcode
                     when 0x06 #RLC (IY+d)	
                         @t_states = 23
@@ -1456,7 +1467,12 @@ module Z80
                     @sp.copy(@iy)
                 end
             when 0xFE #CP A,NN
-                @f.flag_z = (@a.value == self.next8.value)
+                reg = Register8.new
+                reg.copy(@a)
+                reg.store(@a.value - self.next8.value)
+                @f.s_z_v_hc(reg)
+                @f.flags_math(reg)
+                @f.flag_n = true
             when 0xFF #RST 38
                 @t_states = 11
                 self.push16.copy(@pc)
