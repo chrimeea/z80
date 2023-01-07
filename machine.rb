@@ -341,6 +341,11 @@ module Z80
             @r.store(val)
         end
 
+        def fetch_opcode
+            memory_refresh
+            self.next8.byte_value
+        end
+
         def next8
             val = @memory.read8(@pc)
             @pc.store(@pc.value + 1)
@@ -374,7 +379,7 @@ module Z80
                     @maskable_interrupt_flag = false
                     maskable_interrupt
                 elsif @can_execute
-                    execute self.next8
+                    execute self.fetch_opcode
                 end
                 sleep(t + @t_states * @state_duration - Time.now) / 1000.0
             end
@@ -391,7 +396,8 @@ module Z80
             case @mode
             when 0
                 #TODO: wait 2 cycles for interrupting device to write to data_bus
-                execute @data_bus
+                memory_refresh
+                execute @data_bus.byte_value
                 @t_states += 2
             when 1
                 @t_states = 13
@@ -407,19 +413,18 @@ module Z80
         end
 
         def decode_register8 code, pos = 3, t = 3
-            v = code.byte_value >> pos & 0x07
+            v = code >> pos & 0x07
             @t_states += t if v == 0x06
             [@b, @c, @d, @e, @h, @l, @memory.read8(@hl), @a][v]
         end
 
         def decode_register16 code, pos = 4
-            [@bc, @de, @hl, @sp][code.byte_value >> pos & 0x03]
+            [@bc, @de, @hl, @sp][code >> pos & 0x03]
         end
 
         def execute opcode
             @t_states = 4
-            memory_refresh
-            case opcode.byte_value
+            case opcode
             when 0x00 #NOP
             when 0x01, 0x11, 0x21, 0x31 #LD dd,nn
                 @t_states = 10
@@ -717,12 +722,11 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_z
             when 0xCB #CB
-                opcode = self.next8.byte_value
-                memory_refresh
+                opcode = self.fetch_opcode
                 case opcode
                 when 0x00..0x3F
                     reg = self.decode_register8(opcode, 3, 7)
-                    case opcode.byte_value
+                    case opcode
                     when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                         reg.rotate_left
                     when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
@@ -844,8 +848,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #DD
-                opcode = self.next8.byte_value
-                memory_refresh
+                opcode = self.fetch_opcode
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @t_states = 15
@@ -919,8 +922,7 @@ module Z80
                     @f.flags_math(reg)
                     @f.flag_n = true    
                 when 0xCB #DDCB
-                    opcode = self.next8.byte_value
-                    memory_refresh
+                    opcode = self.fetch_opcode
                     reg = @memory.read8_indexed(@ix, self.next8)
                     case opcode
                     when 0x06 #RLC (IX+d)	
@@ -1057,8 +1059,7 @@ module Z80
                     @t_states = 10
                 end
             when 0xED #ED
-                opcode = self.next8.byte_value
-                memory_refresh
+                opcode = self.fetch_opcode
                 case opcode
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
@@ -1320,12 +1321,11 @@ module Z80
                     @t_states = 10
                 end
             when 0xDD #FD
-                opcode = self.next8.byte_value
-                memory_refresh
+                opcode = self.fetch_opcode
                 case opcode
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
                     @t_states = 15
-                    @iy.store(@iy.value + [@bc, @de, @iy, @sp][code & 0x30].value)
+                    @iy.store(@iy.value + [@bc, @de, @iy, @sp][opcode & 0x30].value)
                     @f.flags_math(@iy)
                     @f.flag_n = false
                 when 0x21 #LD IY,nn
@@ -1393,8 +1393,7 @@ module Z80
                     @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
                 when 0xCB #FDCB
                     reg = @memory.read8_indexed(@iy, self.next8)
-                    opcode = self.next8.byte_value
-                    memory_refresh
+                    opcode = self.fetch_opcode
                     case opcode
                     when 0x06 #RLC (IY+d)	
                         @t_states = 23

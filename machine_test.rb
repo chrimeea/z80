@@ -77,16 +77,16 @@ module Z80
         def test_execute_ld_bc_hhll
             z80 = Z80.new
             z80.memory.load([0x01, 0x0A, 0x02, 0x01, 0xFF, 0xFF])
-            z80.execute z80.next8
+            z80.execute z80.fetch_opcode
             assert_equal(0x020A, z80.bc.byte_value)
-            z80.execute z80.next8
+            z80.execute z80.fetch_opcode
             assert_equal(0xFFFF, z80.bc.byte_value)
         end
 
         def test_execute_inc_b
             z80 = Z80.new
             z80.memory.load([0x04])
-            z80.execute z80.next8
+            z80.execute z80.fetch_opcode
             assert_equal(0x01, z80.bc.high.byte_value)
             assert_equal(0x00, z80.af.low.byte_value)
         end
@@ -94,7 +94,7 @@ module Z80
         def test_execute_inc_bc
             z80 = Z80.new
             z80.memory.load([0x03])
-            z80.execute z80.next8
+            z80.execute z80.fetch_opcode
             assert_equal(0x0001, z80.bc.byte_value)
         end
     end
