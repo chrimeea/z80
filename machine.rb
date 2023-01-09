@@ -1209,7 +1209,7 @@ module Z80
                     @t_states = 16
                     reg = Register8.new
                     reg.copy(@a)
-                    reg.store(@a.two_complement - @memory.read8(@hl).two_complement)
+                    reg.substract(@memory.read8(@hl))
                     @hl.increase
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
@@ -1237,11 +1237,11 @@ module Z80
                     end
                 when 0xA3, 0xB3 #OUTI & OTIR
                     @t_states = 16
-                    @b.store(@b.two_complement - 1)
+                    @b.decrease
                     @address_bus.copy(@bc)
                     @data_bus.copy(@memory.read8(@hl))
                     #TODO: write one byte from address_bus to device
-                    @hl.store(@hl.two_complement + 1)
+                    @hl.increase
                     @f.flag_z(@b)
                     @f.flag_n = true
                     if opcode == 0xB3 && @f.flag_z
@@ -1266,7 +1266,7 @@ module Z80
                     @t_states = 16
                     reg = Register8.new
                     reg.copy(@a)
-                    reg.store(@a.two_complement - @memory.read8(@hl).two_complement)
+                    reg.substract(@memory.read8(@hl))
                     @hl.decrease
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
