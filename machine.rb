@@ -424,7 +424,8 @@ module Z80
         end
 
         def push16
-            @sp.substract(2)
+            @sp.decrease
+            @sp.decrease
             @memory.read16(@sp)
         end
 
@@ -541,7 +542,7 @@ module Z80
                 reg = self.next8
                 @b.decrease
                 if @b.nonzero?
-                    @pc.add(reg)
+                    @pc.add(Register16.new(Register8.new, reg))
                     @t_states = 13
                 else
                     @t_states = 8
@@ -558,7 +559,7 @@ module Z80
                 @f.flags_shift(@a)
             when 0x18 #JR NN
                 @t_states = 12
-                @pc.add(self.next8)
+                @pc.add(Register16.new(Register8.new, self.next8))
             when 0x19 #ADD HL,DE
                 @t_states = 11
                 @hl.add(@bc)
@@ -578,7 +579,7 @@ module Z80
                 if @f.flag_z
                     @t_states = 7
                 else
-                    @pc.add(reg)
+                    @pc.add(Register16.new(Register8.new, reg))
                     @t_states = 12
                 end
             when 0x22 #LD (HHLL),HL
@@ -635,7 +636,7 @@ module Z80
             when 0x28 #JR Z,NN
                 reg = self.next8
                 if @f.flag_z
-                    @pc.add(reg)
+                    @pc.add(Register16.new(Register8.new, reg))
                     @t_states = 12
                 else
                     @t_states = 7
@@ -658,7 +659,7 @@ module Z80
                 if @f.flag_c
                     @t_states = 7
                 else
-                    @pc.add(reg)
+                    @pc.add(Register16.new(Register8.new, reg))
                     @t_states = 12
                 end
             when 0x32 #LD (HHLL),A
@@ -673,7 +674,7 @@ module Z80
             when 0x38 #JR C,NN
                 reg = self.next8
                 if @f.flag_c
-                    @pc.add(reg)
+                    @pc.add(Register16.new(Register8.new, reg))
                     @t_states = 12
                 else
                     @t_states = 7
