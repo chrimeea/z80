@@ -93,22 +93,25 @@ module Z80
 
         def test_execute_inc_b
             z80 = Z80.new
-            z80.execute 0x04
+            z80.memory.load([0x04])
+            z80.execute z80.fetch_opcode
             assert_equal(0x01, z80.bc.high.byte_value)
             assert_equal(0x00, z80.af.low.byte_value)
         end
 
         def test_execute_inc_bc
             z80 = Z80.new
-            z80.execute 0x03
+            z80.memory.load([0x03])
+            z80.execute z80.fetch_opcode
             assert_equal(0x0001, z80.bc.byte_value)
         end
 
         def test_execute_xor_a_a
             z80 = Z80.new
+            z80.memory.load([0xAF])
             z80.af.high.store_byte_value(255)
-            z80.execute 0xAF
-            assert_equal(0x0044, z80.af.byte_value)
+            z80.execute z80.fetch_opcode
+            assert_equal(0x006C, z80.af.byte_value)
         end
     end
 
