@@ -227,7 +227,7 @@ module Z80
         end
 
         def parity reg
-            @flag_pv = reg.to_s(2).count('1').even?
+            self.flag_pv = reg.to_s(2).count('1').even?
         end
 
         def s_z_p reg
@@ -236,23 +236,23 @@ module Z80
         end
 
         def s_z reg
-            @flag_s = reg.negative?
-            @flag_z = reg.two_complement.zero?
+            self.flag_s = reg.negative?
+            self.flag_z = reg.two_complement.zero?
         end
 
         def s_z_v_hc_n reg
-            @flag_pv = reg.overflow
-            @flag_hc = reg.hc
-            @flag_n = reg.n
+            self.flag_pv = reg.overflow
+            self.flag_hc = reg.hc
+            self.flag_n = reg.n
             self.s_z(reg)
         end
 
         def flags_shift reg
-            @flag_n, @flag_hc, @flag_c = false, false, reg.carry
+            self.flag_n, self.flag_hc, self.flag_c = false, false, reg.carry
         end
 
         def flags_math reg
-            @flag_hc, @flag_c, @flag_n = reg.hc, reg.carry, reg.n
+            self.flag_hc, self.flag_c, self.flag_n = reg.hc, reg.carry, reg.n
         end
     end
 
@@ -369,7 +369,7 @@ module Z80
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
-            @memory = Memory.new(49152)
+            @memory = Memory.new(MAX16)
             @state_duration, @t_states = 0.1, 4
             @iff1, @iff2, @can_execute = false, false, true
             @mode = 0
@@ -677,39 +677,39 @@ module Z80
             when 0x40..0x49, 0x4A..0x4F, 0x50..0x59, 0x5A..0x5F, 0x60..0x69, 0x6A..0x6F, 0x70..0x75, 0x77..0x79, 0x7A..0x7F #LD r,r
                 self.decode_register8(opcode).copy(self.decode_register8(opcode, 0))
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
-                @a.add(self.decode_register8(opcode))
+                @a.add(self.decode_register8(opcode, 0))
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
             when 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F #ADC A,r
-                @a.add(self.decode_register8(opcode))
+                @a.add(self.decode_register8(opcode, 0))
                 @a.increase if @f.flag_c
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
             when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97 #SUB A,r
-                @a.substract(self.decode_register8(opcode))
+                @a.substract(self.decode_register8(opcode, 0))
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
             when 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F #SBC A,r
-                @a.substract(self.decode_register8(opcode))
+                @a.substract(self.decode_register8(opcode, 0))
                 @a.decrease if @f.flag_c
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
             when 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7 #AND A,r
-                @a.store(@a.byte_value & self.decode_register8(opcode).byte_value)
+                @a.store(@a.byte_value & self.decode_register8(opcode, 0).byte_value)
                 @f.s_z(@a)
                 @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
             when 0xA8, 0xA9,0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF #XOR A,r
-                @a.store(@a.byte_value ^ self.decode_register8(opcode).byte_value)
+                @a.store(@a.byte_value ^ self.decode_register8(opcode, 0).byte_value)
                 @f.s_z_p(@a)
                 @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
             when 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7 #OR A,r
-                @a.store(@a.byte_value | self.decode_register8(opcode).byte_value)
+                @a.store(@a.byte_value | self.decode_register8(opcode, 0).byte_value)
                 @f.s_z(@a)
                 @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
             when 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF #CP A,r
                 reg = Register8.new
                 reg.copy(@a)
-                reg.substract(self.decode_register8(opcode))
+                reg.substract(self.decode_register8(opcode, 0))
                 @f.s_z_v_hc_n(reg)
                 @f.flags_math(reg)
             when 0xC0 #RET NZ
@@ -795,12 +795,12 @@ module Z80
                     @f.flags_shift(reg)
                     @f.s_z_p(reg)
                 when 0x40..0x7F #BIT b,r
-                    @f.flag_z = !(self.decode_register8(opcode).bit?(opcode >> 3 & 0x07))
+                    @f.flag_z = !(self.decode_register8(opcode, 0).bit?(opcode >> 3 & 0x07))
                     @f.flag_hc, @f.flag_n = true, false
                 when 0x80..0xBF #RES b,r
-                    self.decode_register8(opcode, 3, 7).reset_bit(opcode >> 3 & 0x07)
+                    self.decode_register8(opcode, 0, 7).reset_bit(opcode >> 3 & 0x07)
                 when 0xC0..0xFF #SET b,r
-                    self.decode_register8(opcode, 3, 7).set_bit(opcode >> 3 & 0x07)
+                    self.decode_register8(opcode, 0, 7).set_bit(opcode >> 3 & 0x07)
                 end
                 @t_states += 4
             when 0xCC #CALL Z,HHLL

@@ -5,12 +5,10 @@ require_relative 'machine'
 
 module Z80
     class Register8Test < Test::Unit::TestCase
-        def test_store
+        def test_increase
             reg = Register8.new
-            reg.store(10)
-            assert_equal(10, reg.two_complement)
-            reg.store(-99)
-            assert_equal(-99, reg.two_complement)
+            reg.increase
+            assert_equal(1, reg.two_complement)
             reg.store(127)
             reg.increase
             assert_equal(-128, reg.two_complement)
@@ -19,23 +17,15 @@ module Z80
             assert_true(reg.negative?)
             assert_true(reg.hc)
             assert_false(reg.carry)
-            reg.store(129)
-            assert_equal(-127, reg.two_complement)
-            assert_equal(129, reg.byte_value)
-            reg.store(255)
-            assert_equal(-1, reg.two_complement)
-            assert_equal(255, reg.byte_value)
             reg.store(-1)
             reg.increase
             assert_true(reg.hc)
             assert_false(reg.overflow)
             assert_true(reg.carry)
-            reg.store(-128)
-            assert_equal(-128, reg.two_complement)
-            assert_equal(128, reg.byte_value)
-            reg.store(-129)
-            assert_equal(127, reg.two_complement)
-            assert_equal(127, reg.byte_value)
+        end
+
+        def test_add
+            reg = Register8.new
             reg.store(-128)
             alt_reg = Register8.new
             alt_reg.store(-128)
@@ -46,6 +36,26 @@ module Z80
             assert_false(reg.negative?)
             assert_false(reg.hc)
             assert_true(reg.carry)
+        end
+
+        def test_store
+            reg = Register8.new
+            reg.store(10)
+            assert_equal(10, reg.two_complement)
+            reg.store(-99)
+            assert_equal(-99, reg.two_complement)
+            reg.store(129)
+            assert_equal(-127, reg.two_complement)
+            assert_equal(129, reg.byte_value)
+            reg.store(255)
+            assert_equal(-1, reg.two_complement)
+            assert_equal(255, reg.byte_value)
+            reg.store(-128)
+            assert_equal(-128, reg.two_complement)
+            assert_equal(128, reg.byte_value)
+            reg.store(-129)
+            assert_equal(127, reg.two_complement)
+            assert_equal(127, reg.byte_value)
         end
     end
 
@@ -83,17 +93,22 @@ module Z80
 
         def test_execute_inc_b
             z80 = Z80.new
-            z80.memory.load([0x04])
-            z80.execute z80.fetch_opcode
+            z80.execute 0x04
             assert_equal(0x01, z80.bc.high.byte_value)
             assert_equal(0x00, z80.af.low.byte_value)
         end
 
         def test_execute_inc_bc
             z80 = Z80.new
-            z80.memory.load([0x03])
-            z80.execute z80.fetch_opcode
+            z80.execute 0x03
             assert_equal(0x0001, z80.bc.byte_value)
+        end
+
+        def test_execute_xor_a_a
+            z80 = Z80.new
+            z80.af.high.store_byte_value(255)
+            z80.execute 0xAF
+            assert_equal(0x0044, z80.af.byte_value)
         end
     end
 
