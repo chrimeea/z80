@@ -178,12 +178,20 @@ module Z80
     end
 
     class Flag8 < Register8
+        attr_writer :opcode
+
+        def set_flags_3_5
+            self.set_bit(3, @opcode.bit?(3))
+            self.set_bit(5, @opcode.bit?(5))
+        end
+
         def flag_c
             self.bit?(0)
         end
 
         def flag_c= value
             self.set_bit(0, value)
+            self.set_flags_3_5
         end
 
         def flag_n
@@ -192,6 +200,7 @@ module Z80
 
         def flag_n= value
             self.set_bit(1, value)
+            self.set_flags_3_5
         end
 
         def flag_pv
@@ -200,6 +209,7 @@ module Z80
 
         def flag_pv= value
             self.set_bit(2, value)
+            self.set_flags_3_5
         end
 
         def flag_hc
@@ -208,6 +218,7 @@ module Z80
 
         def flag_hc= value
             self.set_bit(4, value)
+            self.set_flags_3_5
         end
 
         def flag_z
@@ -216,6 +227,7 @@ module Z80
 
         def flag_z= value
             self.set_bit(6, value)
+            self.set_flags_3_5
         end
 
         def flag_s
@@ -224,6 +236,7 @@ module Z80
 
         def flag_s= value
             self.set_bit(7, value)
+            self.set_flags_3_5
         end
 
         def parity reg
@@ -394,7 +407,9 @@ module Z80
 
         def fetch_opcode
             memory_refresh
-            self.next8.byte_value
+            reg = self.next8
+            @f.opcode = reg
+            reg.byte_value
         end
 
         def next8
