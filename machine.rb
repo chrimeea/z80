@@ -178,20 +178,12 @@ module Z80
     end
 
     class Flag8 < Register8
-        attr_writer :opcode
-
-        def set_flags_3_5
-            self.set_bit(3, @opcode.bit?(3))
-            self.set_bit(5, @opcode.bit?(5))
-        end
-
         def flag_c
             self.bit?(0)
         end
 
         def flag_c= value
             self.set_bit(0, value)
-            self.set_flags_3_5
         end
 
         def flag_n
@@ -200,7 +192,6 @@ module Z80
 
         def flag_n= value
             self.set_bit(1, value)
-            self.set_flags_3_5
         end
 
         def flag_pv
@@ -209,7 +200,6 @@ module Z80
 
         def flag_pv= value
             self.set_bit(2, value)
-            self.set_flags_3_5
         end
 
         def flag_hc
@@ -218,7 +208,6 @@ module Z80
 
         def flag_hc= value
             self.set_bit(4, value)
-            self.set_flags_3_5
         end
 
         def flag_z
@@ -227,7 +216,6 @@ module Z80
 
         def flag_z= value
             self.set_bit(6, value)
-            self.set_flags_3_5
         end
 
         def flag_s
@@ -236,7 +224,6 @@ module Z80
 
         def flag_s= value
             self.set_bit(7, value)
-            self.set_flags_3_5
         end
 
         def parity reg
@@ -271,6 +258,11 @@ module Z80
 
         def flags_shift reg
             self.flag_n, self.flag_hc, self.flag_c = false, false, reg.carry
+        end
+
+        def flags_3_5 reg
+            self.set_bit(3, reg.bit?(3))
+            self.set_bit(5, reg.bit?(5))
         end
     end
 
@@ -407,7 +399,7 @@ module Z80
 
         def fetch_opcode
             memory_refresh
-            @f.opcode = self.next8
+            self.next8
         end
 
         def next8
@@ -671,6 +663,7 @@ module Z80
             when 0x37 #SCF
                 @f.flag_c = true
                 @f.flag_n, @f.flag_hc = false, false
+                @f.flags_3_5(opcode)
             when 0x38 #JR C,NN
                 reg = self.next8
                 if @f.flag_c
@@ -693,6 +686,7 @@ module Z80
                 @f.flag_hc = @f.flag_c
                 @f.flag_c = !@f.flag_c
                 @f.flag_n = false
+                @f.flags_3_5(opcode)
             when 0x40..0x49, 0x4A..0x4F, 0x50..0x59, 0x5A..0x5F, 0x60..0x69, 0x6A..0x6F, 0x70..0x75, 0x77..0x79, 0x7A..0x7F #LD r,r
                 self.decode_register8(opcode).copy(self.decode_register8(opcode, 0))
             when 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87 #ADD A,r
@@ -730,6 +724,7 @@ module Z80
                 reg.copy(@a)
                 reg.substract(self.decode_register8(opcode, 0))
                 @f.s_z_v_hc_n_c(reg)
+                @f.flags_3_5(opcode)
             when 0xC0 #RET NZ
                 if @f.flag_z
                     @t_states = 11
@@ -978,6 +973,7 @@ module Z80
                     reg.copy(@a)
                     reg.substract(@memory.read8_indexed(@ix, self.next8))
                     @f.s_z_v_hc_n_c(reg)
+                    @f.flags_3_5(opcode)
                 when 0xCB #DDCB
                     opcode = self.fetch_opcode
                     reg = @memory.read8_indexed(@ix, self.next8)
@@ -1533,6 +1529,7 @@ module Z80
                 reg.copy(@a)
                 reg.substract(self.next8)
                 @f.s_z_v_hc_n_c(reg)
+                @f.flags_3_5(opcode)
             when 0xFF #RST 38
                 @t_states = 11
                 self.push16.copy(@pc)

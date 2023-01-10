@@ -111,9 +111,7 @@ module Z80
             z80.memory.load([0xAF])
             z80.af.high.store_byte_value(255)
             z80.execute z80.fetch_opcode
-            assert_equal(0x006C, z80.af.byte_value)
+            assert_equal(0x0044, z80.af.byte_value)
         end
     end
-
-    #TODO: test add & sub with negative argument and check flags
 end
