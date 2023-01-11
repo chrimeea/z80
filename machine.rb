@@ -378,6 +378,7 @@ module Z80
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
+            @sp.store_byte_value(0xFFFF)
             @x = @y = 0
             @memory = Memory.new(MAX16)
             @state_duration, @t_states = 0.1, 4
