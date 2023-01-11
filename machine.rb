@@ -355,7 +355,7 @@ module Z80
 
         def read8_indexed reg16, reg8
             reg = Register16.new
-            reg.store(reg16.two_complement + reg8.two_complement)
+            reg.store(reg16.byte_value + reg8.two_complement)
             self.read8(reg)
         end
 
@@ -534,7 +534,7 @@ module Z80
                 reg = self.next8
                 @b.decrease
                 if @b.nonzero?
-                    @pc.add(Register16.new(Register8.new, reg))
+                    @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 13
                 else
                     @t_states = 8
@@ -551,7 +551,7 @@ module Z80
                 @f.flags_shift(@a)
             when 0x18 #JR NN
                 @t_states = 12
-                @pc.add(Register16.new(Register8.new, self.next8))
+                @pc.store(@pc.byte_value + self.next8.two_complement)
             when 0x19 #ADD HL,DE
                 @t_states = 11
                 @hl.add(@bc)
@@ -571,7 +571,7 @@ module Z80
                 if @f.flag_z
                     @t_states = 7
                 else
-                    @pc.add(Register16.new(Register8.new, reg))
+                    @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 12
                 end
             when 0x22 #LD (HHLL),HL
@@ -628,7 +628,7 @@ module Z80
             when 0x28 #JR Z,NN
                 reg = self.next8
                 if @f.flag_z
-                    @pc.add(Register16.new(Register8.new, reg))
+                    @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 12
                 else
                     @t_states = 7
@@ -651,7 +651,7 @@ module Z80
                 if @f.flag_c
                     @t_states = 7
                 else
-                    @pc.add(Register16.new(Register8.new, reg))
+                    @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 12
                 end
             when 0x32 #LD (HHLL),A
@@ -667,7 +667,7 @@ module Z80
             when 0x38 #JR C,NN
                 reg = self.next8
                 if @f.flag_c
-                    @pc.add(Register16.new(Register8.new, reg))
+                    @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 12
                 else
                     @t_states = 7
