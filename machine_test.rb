@@ -78,6 +78,14 @@ module Z80
             assert_equal(-19053, reg.two_complement)
             assert_equal(181, reg.high.byte_value)
             assert_equal(147, reg.low.byte_value)
+            reg.store(0x0100)
+            assert_equal(0x0100, reg.two_complement)
+            assert_equal(0x01, reg.high.byte_value)
+            assert_equal(0x00, reg.low.byte_value)
+            reg.decrease
+            assert_equal(0xFF, reg.two_complement)
+            assert_equal(0x00, reg.high.byte_value)
+            assert_equal(0xFF, reg.low.byte_value)
         end
     end
 
@@ -109,9 +117,18 @@ module Z80
         def test_execute_xor_a_a
             z80 = Z80.new
             z80.memory.load([0xAF])
-            z80.af.high.store_byte_value(255)
+            z80.af.high.store_byte_value(0xFF)
             z80.execute z80.fetch_opcode
             assert_equal(0x0044, z80.af.byte_value)
+        end
+
+        def test_cp_a_h
+            z80 = Z80.new
+            z80.memory.load([0xBC])
+            z80.af.high.store_byte_value(0x3F)
+            z80.hl.high.store_byte_value(0x3F)
+            z80.execute z80.fetch_opcode
+            assert_equal(0x6A, z80.af.low.byte_value)
         end
     end
 end

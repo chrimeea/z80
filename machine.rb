@@ -134,11 +134,13 @@ module Z80
         end
 
         def exchange reg8
-            @byte_value, reg8.byte_value = reg8.byte_value, @byte_value
+            v = @byte_value
+            self.store_byte_value(reg8.byte_value)
+            reg8.store_byte_value(v)
         end
 
         def copy reg8
-            @byte_value = reg8.byte_value
+            self.store_byte_value(reg8.byte_value)
         end
 
         def store_byte_value bv
@@ -267,11 +269,11 @@ module Z80
     end
 
     class Register16 < GeneralRegister
-        attr_reader :high, :low, :overflow, :hc, :carry
+        attr_reader :high, :low, :overflow, :hc, :carry, :n
 
         def initialize h = Register8.new, l = Register8.new
             @high, @low = h, l
-            @overflow, @hc, @carry = false, false, false
+            @overflow, @hc, @carry, @n = false, false, false, false
             super(16)
         end
 
@@ -296,6 +298,10 @@ module Z80
         def exchange reg16
             @low.exchange(reg16.low)
             @high.exchange(reg16.high)
+        end
+
+        def negative?
+            @high.negative?
         end
 
         def store_byte_value bv
@@ -483,7 +489,6 @@ module Z80
         end
 
         def execute opcode
-            puts @pc
             @t_states = 4
             case opcode.byte_value
             when 0x00 #NOP
@@ -535,7 +540,7 @@ module Z80
             when 0x10 #DJNZ NN
                 reg = self.next8
                 @b.decrease
-                if @b.nonzero?
+                if @b.byte_value.nonzero?
                     @pc.store(@pc.byte_value + reg.two_complement)
                     @t_states = 13
                 else
@@ -834,7 +839,7 @@ module Z80
                 @pc.copy(reg)
             when 0xCE #ADC A,NN
                 @t_states = 7
-                @a.add(self.next8.two_complement)
+                @a.add(self.next8)
                 @a.increase if @f.flag_c
             when 0xCF #RST 08
                 @t_states = 11
@@ -1143,7 +1148,7 @@ module Z80
                     @t_states = 8
                     @a.negate
                     @f.s_z_v_hc_n(@a)
-                    @f.flag_c = @a.two_complement.nonzero?
+                    @f.flag_c = @a.byte_value.nonzero?
                 when 0x45 #RETN
                     @t_states = 14
                     @pc.copy(self.pop16)
@@ -1210,7 +1215,7 @@ module Z80
                     @de.increase
                     @hl.increase
                     @bc.decrease
-                    @f.flag_pv = @bc.nonzero?
+                    @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
                     if opcode == 0xB0 && @f.flag_pv
                         @t_states = 21
@@ -1225,7 +1230,7 @@ module Z80
                     @hl.increase
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
-                    @f.flag_pv = @bc.nonzero?
+                    @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_n = true
                     if opcode == 0xB1 && @f.flag_pv
                         @t_states = 21
@@ -1267,7 +1272,7 @@ module Z80
                     @de.decrease
                     @hl.decrease
                     @bc.decrease
-                    @f.flag_pv = @bc.two_complement.nonzero?
+                    @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
                     if opcode == 0xB8 && @f.flag_pv
                         @t_states = 21
@@ -1282,7 +1287,7 @@ module Z80
                     @hl.decrease
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
-                    @f.flag_pv = @bc.nonzero?
+                    @f.flag_pv = @bc.byte_value.nonzero?
                     if opcode == 0xB9 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
