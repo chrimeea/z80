@@ -441,7 +441,7 @@ module Z80
                 elsif @can_execute
                     execute self.fetch_opcode
                 end
-                sleep(t + @t_states * @state_duration - Time.now) / 1000.0
+                sleep([t + @t_states * @state_duration - Time.now, 0].max) / 1000.0
             end
         end
 
@@ -483,6 +483,7 @@ module Z80
         end
 
         def execute opcode
+            puts @pc
             @t_states = 4
             case opcode.byte_value
             when 0x00 #NOP
