@@ -87,6 +87,17 @@ module Z80
             assert_equal(0x00, reg.high.byte_value)
             assert_equal(0xFF, reg.low.byte_value)
         end
+
+        def test_add
+            reg = Register16.new
+            reg.store(0x4000)
+            alt = Register16.new
+            alt.store(0xFFFF)
+            reg.add(alt)
+            assert_equal(0x3FFF, reg.byte_value)
+            assert_true(reg.carry)
+            assert_false(reg.hc)
+        end
     end
 
     class Z80Test < Test::Unit::TestCase
