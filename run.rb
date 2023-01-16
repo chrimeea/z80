@@ -10,7 +10,7 @@ z80.memory.load_rom('./roms/hc90.rom')
 196624.times do
     z80.execute z80.fetch_opcode
 end
-5.times do
+20.times do
     puts z80.pc
     reg = z80.fetch_opcode
     puts reg
@@ -19,4 +19,4 @@ end
 end
 
 #TODO: UART, sound, tape, video attributes
-#TODO: fix 3 & 5 flags
+
