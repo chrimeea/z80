@@ -1383,7 +1383,7 @@ module Z80
                 else
                     @t_states = 10
                 end
-            when 0xDD #FD
+            when 0xFD #FD
                 opcode = self.fetch_opcode
                 case opcode.byte_value
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
