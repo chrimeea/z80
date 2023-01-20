@@ -57,6 +57,16 @@ module Z80
             assert_equal(127, reg.two_complement)
             assert_equal(127, reg.byte_value)
         end
+
+        def test_exchange
+            reg = Register8.new
+            reg.store_byte_value(1)
+            alt = Register8.new
+            alt.store_byte_value(2)
+            reg.exchange(alt)
+            assert_equal(2, reg.byte_value)
+            assert_equal(1, alt.byte_value)
+        end
     end
 
     class Register16Test < Test::Unit::TestCase
@@ -97,6 +107,16 @@ module Z80
             assert_equal(0x3FFF, reg.byte_value)
             assert_true(reg.carry)
             assert_false(reg.hc)
+        end
+
+        def test_exchange
+            reg = Register16.new
+            reg.store_byte_value(0xABCD)
+            alt = Register16.new
+            alt.store_byte_value(0x1234)
+            reg.exchange(alt)
+            assert_equal(0x1234, reg.byte_value)
+            assert_equal(0xABCD, alt.byte_value)
         end
     end
 
@@ -140,6 +160,20 @@ module Z80
             z80.hl.high.store_byte_value(0x3F)
             z80.execute z80.fetch_opcode
             assert_equal(0x6A, z80.af.low.byte_value)
+        end
+
+        def test_lddr
+            z80 = Z80.new
+            z80.memory.load([0xED, 0xB8])
+            z80.af.store_byte_value(0x3F00)
+            z80.bc.store_byte_value(0x00A8)
+            z80.de.store_byte_value(0xFFFF)
+            z80.hl.store_byte_value(0x3EAF)
+            z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0002
+            assert_equal(0x3F28, z80.af.byte_value)
+            assert_equal(0x00, z80.bc.byte_value)
+            assert_equal(0xFF57, z80.de.byte_value)
+            assert_equal(0x3E07, z80.hl.byte_value)
         end
     end
 end

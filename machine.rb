@@ -955,12 +955,12 @@ module Z80
                 when 0x86, 0x8E #ADD/ADC A,(IX+d)
                     @t_states = 19
                     @a.add(@memory.read8_indexed(@ix, self.next8))
-                    @a.increase if opcode == 0x8E && @f.flag_c
+                    @a.increase if opcode.byte_value == 0x8E && @f.flag_c
                     @f.s_z_v_hc_n_c(@a)
                 when 0x96, 0x9E #SUB/SBC A,(IX+d)
                     @t_states = 19
                     @a.substract(@memory.read8_indexed(@ix, self.next8))
-                    @a.decrease if opcode == 0x9E && @f.flag_c
+                    @a.decrease if opcode.byte_value == 0x9E && @f.flag_c
                     @f.s_z_v_hc_n_c(@a)
                 when 0xA6 #AND A,(IX+d)
                     @t_states = 19
@@ -1213,7 +1213,7 @@ module Z80
                     @bc.decrease
                     @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
-                    if opcode == 0xB0 && @f.flag_pv
+                    if opcode.byte_value == 0xB0 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1228,7 +1228,7 @@ module Z80
                     @f.s_z_v_hc_n(reg)
                     @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_n = true
-                    if opcode == 0xB1 && @f.flag_pv
+                    if opcode.byte_value == 0xB1 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1243,7 +1243,7 @@ module Z80
                     @hl.increase
                     @f.flag_z(@b)
                     @f.flag_n = true
-                    if opcode == 0xB2 && @f.flag_z
+                    if opcode.byte_value == 0xB2 && @f.flag_z
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1257,20 +1257,20 @@ module Z80
                     @hl.increase
                     @f.flag_z(@b)
                     @f.flag_n = true
-                    if opcode == 0xB3 && @f.flag_z
+                    if opcode.byte_value == 0xB3 && @f.flag_z
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
                     end
                 when 0xA8, 0xB8 #LDD & LDDR
                     @t_states = 16
-                    @de.copy(@hl)
+                    @memory.read8(@de).copy(@memory.read8(@hl))
                     @de.decrease
                     @hl.decrease
                     @bc.decrease
                     @f.flag_pv = @bc.byte_value.nonzero?
                     @f.flag_hc, @f.flag_n = false, false
-                    if opcode == 0xB8 && @f.flag_pv
+                    if opcode.byte_value == 0xB8 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1284,7 +1284,7 @@ module Z80
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
                     @f.flag_pv = @bc.byte_value.nonzero?
-                    if opcode == 0xB9 && @f.flag_pv
+                    if opcode.byte_value == 0xB9 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1299,7 +1299,7 @@ module Z80
                     @hl.decrease
                     @f.flag_z(@b)
                     @f.flag_n = true
-                    if opcode == 0xBA && @f.flag_z
+                    if opcode.byte_value == 0xBA && @f.flag_z
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1313,7 +1313,7 @@ module Z80
                     @hl.decrease
                     @f.flag_z(@b)
                     @f.flag_n = true
-                    if opcode == 0xB3 && @f.flag_z
+                    if opcode.byte_value == 0xB3 && @f.flag_z
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
@@ -1429,13 +1429,13 @@ module Z80
                 when 0x86, 0x8E #ADD A,(IY+d) & ADC A,(IY+d)
                     @t_states = 19
                     @a.add(@memory.read8_indexed(@iy, self.next8))
-                    @a.increase if opcode == 0x8E && @f.flag_c
+                    @a.increase if opcode.byte_value == 0x8E && @f.flag_c
                     @f.flag_c = @a.carry
                     @f.s_z_v_hc_n(@a)
                 when 0x96, 0x9E #SUB A,(IY+d) & SBC A,(IY+d)
                     @t_states = 19
                     @a.substract(@memory.read8_indexed(@iy, self.next8))
-                    @a.decrease if opcode == 0x9E && @f.flag_c
+                    @a.decrease if opcode.byte_value == 0x9E && @f.flag_c
                     @f.flag_c = @a.carry
                     @f.s_z_v_hc_n(@a)
                 when 0xA6 #AND A,(IY+d)
