@@ -557,7 +557,7 @@ module Z80
                 @memory.read8(@de).copy(@a)
             when 0x16 #LD D,NN
                 @t_states = 7
-                @d.store(self.next8)
+                @d.copy(self.next8)
             when 0x17 #RLA
                 @a.carry = @f.flag_c
                 @a.rotate_left_trough_carry
@@ -985,7 +985,7 @@ module Z80
                     @f.s_z_v_hc_n_c(reg)
                     @f.flags_3_5(@a)
                 when 0xCB #DDCB
-                    opcode = self.fetch_opcode
+                    opcode = self.next8
                     reg = @memory.read8_indexed(@ix, self.next8)
                     case opcode.byte_value
                     when 0x06 #RLC (IX+d)	
@@ -1417,7 +1417,7 @@ module Z80
                     @f.s_z_v_hc_n(reg)
                 when 0x36 #LD (IY+d),n
                     @t_states = 19
-                    @memory.read8_indexed(@iy, self.next8).store(self.next8)
+                    @memory.read8_indexed(@iy, self.next8).copy(self.next8)
                 when 0x46, 0x56, 0x66, 0x4E, 0x5E, 0x6E, 0x7E #LD r,(IY+d)
                     @t_states = 19
                     reg1 = self.decode_register8(opcode)
@@ -1455,7 +1455,7 @@ module Z80
                     @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
                 when 0xCB #FDCB
                     reg = @memory.read8_indexed(@iy, self.next8)
-                    opcode = self.fetch_opcode
+                    opcode = self.next8
                     case opcode.byte_value
                     when 0x06 #RLC (IY+d)	
                         @t_states = 23

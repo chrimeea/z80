@@ -7,8 +7,8 @@ require_relative 'machine'
 z80 = Z80::Z80.new
 z80.state_duration = 0
 z80.memory.load_rom('./roms/hc90.rom')
-z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x120C
-20.times do
+z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x1292
+50.times do
     puts z80.pc
     reg = z80.fetch_opcode
     puts reg
