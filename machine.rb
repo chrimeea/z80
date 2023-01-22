@@ -39,7 +39,7 @@ module Z80
 
         def bit?(b)
             fail if b < 0 || b >= @size
-            self.to_s(2).reverse[b] == '1'
+            (self.byte_value & MAX[b]).nonzero?
         end
 
         def two_complement
