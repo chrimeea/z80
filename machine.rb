@@ -56,6 +56,10 @@ module Z80
             end
             self.store_byte_value(num.negative? ? num + MAX[@size] : num)
         end
+
+        def parity_even?
+            (((self.byte_value * 0x0101010101010101) & 0x8040201008040201) % 0x1FF) & 1 == 0
+        end
     end
 
     class Register8 < GeneralRegister
@@ -240,7 +244,7 @@ module Z80
 
         def s_z_p reg
             self.s_z(reg)
-            self.parity(reg)
+            self.flag_pv = reg.parity_even?
         end
 
         def s_z_v_hc_n reg
@@ -258,10 +262,6 @@ module Z80
         def s_z_p_hc_n_c reg
             self.s_z_p(reg)
             self.hc_n_c(reg)
-        end
-
-        def parity reg
-            self.flag_pv = reg.to_s(2).count('1').even?
         end
 
         def hc_n_c reg
