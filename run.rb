@@ -7,7 +7,9 @@ require_relative 'machine'
 z80 = Z80::Z80.new
 z80.state_duration = 0
 z80.memory.load_rom('./roms/hc90.rom')
-z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x1292
+# t = Time.now
+z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x162B
+# puts Time.now - t
 50.times do
     puts z80.pc
     reg = z80.fetch_opcode
@@ -17,5 +19,5 @@ z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x1292
 end
 
 #TODO: UART, sound, tape, video attributes
-#TODO: 3 5 flags not set for LDDR
+#TODO: 3 5 flags not set for LDDR, ADD HL,DE
 

@@ -566,7 +566,7 @@ module Z80
                 @f.hc_n_c(@a)
             when 0x18 #JR NN
                 @t_states = 12
-                @pc.store(@pc.byte_value + self.next8.two_complement)
+                @pc.store(@pc.byte_value + 1 + self.next8.two_complement)
             when 0x19 #ADD HL,DE
                 @t_states = 11
                 @hl.add(@de)
@@ -747,7 +747,7 @@ module Z80
                 end
             when 0xC1, 0xD1, 0xE1, 0xF1 #POP qq
                 @t_states = 10
-                [@bc, @de, @hl, @af][opcode & 0x30].copy(self.pop16)
+                [@bc, @de, @hl, @af][opcode.byte_value & 0x30].copy(self.pop16)
             when 0xC2 #JP NZ,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -766,7 +766,7 @@ module Z80
                 end
             when 0xC5, 0xD5, 0xE5, 0xF5 #PUSH qq
                 @t_states = 10
-                self.push16.copy([@bc, @de, @hl, @af][opcode & 0x30])
+                self.push16.copy([@bc, @de, @hl, @af][opcode.byte_value & 0x30])
             when 0xC6 #ADD A,NN
                 @t_states = 7
                 @a.add(self.next8)
@@ -1100,8 +1100,8 @@ module Z80
                 else
                     @t_states = 11
                 end
-            when 0xE9 #JP (HL)
-                @pc.copy(@memory.read16(@hl))
+            when 0xE9 #JP HL
+                @pc.copy(@hl)
             when 0xEA #JP PE,HHLL
                 @t_states = 10
                 reg = self.next16
