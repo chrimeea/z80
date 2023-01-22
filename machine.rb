@@ -12,12 +12,20 @@ module Z80
     MAX6 = 0x40
     MAX7 = 0x80
     MAX8 = 0x100
+    MAX9 = 0x200
+    MAX10 = 0x400
+    MAX11 = 0x800
+    MAX12 = 0x1000
+    MAX13 = 0x2000
+    MAX14 = 0x4000
     MAX15 = 0x8000
     MAX16 = 0x10000
-    MAX = [MAX0, MAX1, MAX2, MAX3, MAX4, MAX5, MAX6, MAX7]
+    MAX = [MAX0, MAX1, MAX2, MAX3, MAX4, MAX5, MAX6, MAX7, MAX8,
+        MAX9, MAX10, MAX11, MAX12, MAX13, MAX14, MAX15, MAX16]
 
     class GeneralRegister
         def initialize n
+            fail if n < 0 || n > 16
             @size = n
         end
 
@@ -34,25 +42,19 @@ module Z80
             self.to_s(2).reverse[b] == '1'
         end
 
-        def max_byte_value(n = @size)
-            2 ** n
-        end
-
         def two_complement
-            max = max_byte_value
             bv = self.byte_value
-            bv >= max / 2 ? bv - max : bv
+            bv >= MAX[@size - 1] ? bv - MAX[@size] : bv
         end
 
         def store(num)
-            max = max_byte_value
-            if num >= max / 2 || num < -(max / 2)
-                num = (max - 1) & num
+            if num >= MAX[@size - 1] || num < -(MAX[@size - 1])
+                num = (MAX[@size] - 1) & num
                 @overflow = true
             else
                 @overflow = false
             end
-            self.store_byte_value(num.negative? ? num + max : num)
+            self.store_byte_value(num.negative? ? num + MAX[@size] : num)
         end
     end
 
@@ -163,10 +165,10 @@ module Z80
         end
 
         def add(reg8)
-            @carry = (self.byte_value + reg8.byte_value >= max_byte_value)
+            @carry = (self.byte_value + reg8.byte_value >= MAX8)
             h1, l1 = self.to_4_bit_pair
             h2, l2 = reg8.to_4_bit_pair
-            @hc = (l1 + l2 >= max_byte_value(4))
+            @hc = (l1 + l2 >= MAX4)
             @n = false
             self.store(self.two_complement + reg8.two_complement)
         end
