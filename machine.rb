@@ -747,7 +747,7 @@ module Z80
                 end
             when 0xC1, 0xD1, 0xE1, 0xF1 #POP qq
                 @t_states = 10
-                [@bc, @de, @hl, @af][opcode.byte_value & 0x30].copy(self.pop16)
+                [@bc, @de, @hl, @af][opcode.byte_value >> 4 & 0x03].copy(self.pop16)
             when 0xC2 #JP NZ,HHLL
                 @t_states = 10
                 reg = self.next16
@@ -766,7 +766,7 @@ module Z80
                 end
             when 0xC5, 0xD5, 0xE5, 0xF5 #PUSH qq
                 @t_states = 10
-                self.push16.copy([@bc, @de, @hl, @af][opcode.byte_value & 0x30])
+                self.push16.copy([@bc, @de, @hl, @af][opcode.byte_value >> 4 & 0x03])
             when 0xC6 #ADD A,NN
                 @t_states = 7
                 @a.add(self.next8)
@@ -921,7 +921,7 @@ module Z80
                 case opcode.byte_value
                 when 0x09, 0x19, 0x29, 0x39 #ADD IX,pp
                     @t_states = 15
-                    @ix.add([@bc, @de, @ix, @sp][opcode.byte_value & 0x30])
+                    @ix.add([@bc, @de, @ix, @sp][opcode.byte_value >> 4 & 0x03])
                     @f.hc_n_c(@ix)
                 when 0x21 #LD IX,nn
                     @t_states = 14
@@ -1390,7 +1390,7 @@ module Z80
                 case opcode.byte_value
                 when 0x09, 0x19, 0x29, 0x39 #ADD IY,rr
                     @t_states = 15
-                    @iy.add([@bc, @de, @iy, @sp][opcode.byte_value & 0x30])
+                    @iy.add([@bc, @de, @iy, @sp][opcode.byte_value >> 4 & 0x03])
                     @f.hc_n_c(@iy)
                 when 0x21 #LD IY,nn
                     @t_states = 14
