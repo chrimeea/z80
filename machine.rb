@@ -404,7 +404,7 @@ module Z80
         end
 
         def to_s
-            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, IM #{@imode}, IFF1 #{@iff1}"
+            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, IM #{@imode}, IFF1 #{@iff1}, SZ5H3PNC #{@f.to_s(2)}"
         end
 
         def memory_refresh
