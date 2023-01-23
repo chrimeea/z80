@@ -1355,8 +1355,8 @@ module Z80
             when 0xF6 #OR A,NN
                 @t_states = 7
                 @a.store(@a.two_complement | self.next8.two_complement)
-                @f.s_z(@a)
-                @f.flag_pv, @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false, false
+                @f.s_z_p(@a)
+                @f.flag_hc, @f.flag_n, @f.flag_c = false, false, false
             when 0xF7 #RST 30
                 @t_states = 11
                 self.push16.copy(@pc)
