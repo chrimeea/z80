@@ -153,6 +153,13 @@ module Z80
             assert_equal(0x0044, z80.af.byte_value)
         end
 
+        def test_execute_and_a
+            z80 = Z80.new
+            z80.memory.load([0xE6, 0x55])
+            z80.execute z80.fetch_opcode
+            assert_equal(0x0054, z80.af.byte_value)
+        end
+
         def test_cp_a_h
             z80 = Z80.new
             z80.memory.load([0xBC])

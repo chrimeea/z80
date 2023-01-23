@@ -397,14 +397,14 @@ module Z80
             @memory = Memory.new(MAX16)
             @state_duration, @t_states = 0.1, 4
             @iff1, @iff2, @can_execute = false, false, true
-            @mode = 0
+            @imode = 0
             @address_bus = Register16.new
             @data_bus = Register8.new
             @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false, false
         end
 
         def to_s
-            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, M #{@mode}, IFF1 #{@iff1}"
+            "BC #{@bc}, DE #{@de}, HL #{@hl}, AF #{@af}, PC #{@pc}, SP #{@sp}, IX #{@ix}, IY #{@iy}, I #{@i}, R #{@r}, IM #{@imode}, IFF1 #{@iff1}"
         end
 
         def memory_refresh
@@ -467,7 +467,7 @@ module Z80
         end
 
         def maskable_interrupt
-            case @mode
+            case @imode
             when 0
                 #TODO: wait 2 cycles for interrupting device to write to data_bus
                 memory_refresh
@@ -1087,8 +1087,8 @@ module Z80
             when 0xE6 #AND A,NN
                 @t_states = 7
                 @a.store(@a.two_complement & self.next8.two_complement)
-                @f.s_z(@a)
-                @f.flag_pv, @f.flag_n, @f.flag_c, @f.flag_hc = false, false, false, true
+                @f.s_z_p(@a)
+                @f.flag_n, @f.flag_c, @f.flag_hc = false, false, true
             when 0xE7 #RST 20
                 @t_states = 11
                 self.push16.copy(@pc)
@@ -1153,7 +1153,7 @@ module Z80
                     @iff1 = @iff2
                 when 0x46 #IM 0
                     @t_states = 8
-                    @mode = 0
+                    @imode = 0
                 when 0x47 #LD I,A
                     @t_states = 9
                     @i.copy(@a)
@@ -1173,7 +1173,7 @@ module Z80
                     @r.copy(@a)
                 when 0x56 #IM 1
                     @t_states = 8
-                    @mode = 1
+                    @imode = 1
                 when 0x57 #LD A,I
                     @t_states = 9
                     @a.copy(@i)
@@ -1181,7 +1181,7 @@ module Z80
                     @f.flag_pv, @f.flag_n = @iff2, false
                 when 0x5E #IM 2
                     @t_states = 8
-                    @mode = 2
+                    @imode = 2
                 when 0x5F #LD A,R
                     @t_states = 9
                     @a.copy(@r)
