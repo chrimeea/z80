@@ -395,7 +395,7 @@ module Z80
             @sp.store_byte_value(0xFFFF)
             @x = @y = 0
             @memory = Memory.new(MAX16)
-            @state_duration, @t_states = 0.1, 4
+            @state_duration, @t_states = 0.0001, 4
             @iff1, @iff2, @can_execute = false, false, true
             @imode = 0
             @address_bus = Register16.new
