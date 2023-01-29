@@ -39,7 +39,7 @@ module Z80
 
         def bit?(b)
             fail if b < 0 || b >= @size
-            (self.byte_value & MAX[b]).nonzero?
+            self.byte_value[b] == 1
         end
 
         def two_complement
@@ -89,7 +89,7 @@ module Z80
             if value
                 @byte_value |= MAX[b]
             else
-                @byte_value &= ~(MAX[b] + MAX8)
+                @byte_value &= ~(MAX[b] | -MAX8)
             end
         end
 
@@ -98,7 +98,7 @@ module Z80
         end
 
         def negate
-            @byte_value = ~(@byte_value + MAX8)
+            @byte_value = ~(@byte_value | -MAX8)
             @n = true
         end
 

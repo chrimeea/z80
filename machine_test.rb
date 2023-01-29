@@ -67,6 +67,24 @@ module Z80
             assert_equal(2, reg.byte_value)
             assert_equal(1, alt.byte_value)
         end
+
+        def test_negate
+            reg = Register8.new
+            reg.negate
+            assert_equal(0xFF, reg.byte_value)
+            reg.negate
+            assert_equal(0, reg.byte_value)
+        end
+
+        def test_set_bit
+            reg = Register8.new
+            reg.set_bit(4)
+            assert_equal(0x10, reg.byte_value)
+            assert_true(reg.bit?(4))
+            reg.set_bit(4, false)
+            assert_equal(0, reg.byte_value)
+            assert_false(reg.bit?(4))
+        end
     end
 
     class Register16Test < Test::Unit::TestCase
