@@ -392,15 +392,21 @@ module Z80
             @hl = Register16.new(@h, @l)
             @af = Register16.new(@a, @f)
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
-            @sp.store_byte_value(0xFFFF)
             @x = @y = 0
             @memory = Memory.new(MAX16)
             @state_duration, @t_states = 0.0001, 4
-            @iff1, @iff2, @can_execute = false, false, true
-            @imode = 0
             @address_bus = Register16.new
             @data_bus = Register8.new
+        end
+
+        def reset
             @nonmaskable_interrupt_flag, @maskable_interrupt_flag = false, false
+            @iff1, @iff2, @can_execute = false, false, true
+            @imode = 0
+            @af.store_byte_value(0xFFFF)
+            @sp.store_byte_value(0xFFFF)
+            @pc.store_byte_value(0)
+            self.run
         end
 
         def to_s
@@ -467,6 +473,7 @@ module Z80
         end
 
         def maskable_interrupt
+            @iff1, @iff2 = false, false
             case @imode
             when 0
                 #TODO: wait 2 cycles for interrupting device to write to data_bus
@@ -1375,7 +1382,7 @@ module Z80
                 reg = self.next16
                 @pc.copy(reg) if @f.flag_s
             when 0xFB #EI
-                @iff1, @iff2 = true
+                @iff1, @iff2 = true, true
             when 0xFC #CALL M,HHLL
                 reg = self.next16
                 if @f.flag_s
