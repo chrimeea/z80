@@ -533,17 +533,16 @@ module Z80
             when 0x08 #EX AF,AF’
                 @a.exchange(@a’)
                 @f.exchange(@f’)
-            when 0x09 #ADD HL,BC
+            when 0x09, 0x19, 0x29, 0x39 #ADD HL,ss
                 @t_states = 11
-                @hl.add(@bc)
+                @hl.add(self.decode_register16(opcode))
                 @f.hc_n_c(@hl)
             when 0x0A #LD A,(BC)
                 @t_states = 7
                 @a.copy(@memory.read8(@bc))
             when 0x0B, 0x1B, 0x2B, 0x3B #DEC ss
                 @t_states = 6
-                reg = self.decode_register16(opcode)
-                reg.decrease
+                self.decode_register16(opcode).decrease
             when 0x0E #LD C,NN
                 @t_states = 7
                 @c.copy(self.next8)
@@ -571,10 +570,6 @@ module Z80
             when 0x18 #JR NN
                 @t_states = 12
                 @pc.store(@pc.byte_value + 1 + self.next8.two_complement)
-            when 0x19 #ADD HL,DE
-                @t_states = 11
-                @hl.add(@de)
-                @f.hc_n_c(@hl)
             when 0x1A #LD A,(DE)
                 @t_states = 7
                 @a.copy(@memory.read8(@de))
@@ -651,10 +646,6 @@ module Z80
                 else
                     @t_states = 7
                 end
-            when 0x29 #ADD HL,HL
-                @t_states = 11
-                @hl.add(@hl)
-                @f.hc_n_c(@hl)
             when 0x2A #LD HL,(HHLL)
                 @t_states = 16
                 @hl.copy(@memory.read16(self.next16))
@@ -689,10 +680,6 @@ module Z80
                 else
                     @t_states = 7
                 end
-            when 0x39 #ADD HL,SP
-                @t_states = 11
-                @hl.add(@sp)
-                @f.hc_n_c(@hl)
             when 0x3A #LD A,(HHLL)
                 @t_states = 13
                 @a.copy(@memory.read8(self.next16))
