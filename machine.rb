@@ -663,7 +663,7 @@ module Z80
                 @l.copy(self.next8)
             when 0x2F #CPL
                 @a.negate
-                @f.flag_n, @f.flag_hc = true
+                @f.flag_n, @f.flag_hc = true, true
                 @f.flags_3_5(@a)
             when 0x30 #JR NC,NN
                 reg = self.next8
