@@ -76,12 +76,12 @@ module Z80
         end
 
         def to_4_bit_pair
-            @byte_value.divmod MAX4
+            [@byte_value & 0xF0, @byte_value & (MAX4 - 1)]
         end
 
         def store_4_bit_pair(high4, low4)
             fail if high4 < 0 || high4 >= MAX4 || low4 < 0 || low4 >= MAX4
-            @byte_value = high4 * MAX4 + low4
+            @byte_value = high4 << 4 | low4
         end
 
         def set_bit(b, value = true)
@@ -329,7 +329,7 @@ module Z80
 
         def add(reg16)
             @carry = (self.byte_value + reg16.byte_value >= MAX16)
-            @hc = (@low.byte_value + reg16.low.byte_value >= MAX8)
+            @hc = (self.byte_value & (MAX12 - 1) + reg16.byte_value & (MAX12 - 1) >= MAX12)
             @n = false
             self.store(self.two_complement + reg16.two_complement)
         end
