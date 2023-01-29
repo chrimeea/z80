@@ -124,8 +124,7 @@ module Z80
             @byte_value += 1 if @carry
         end
 
-        def rotate_left_trough_carry
-            v = @carry
+        def rotate_left_trough_carry(v = @carry)
             self.shift_left
             @byte_value += 1 if v
         end
@@ -135,10 +134,9 @@ module Z80
             self.set_bit(7) if @carry
         end
 
-        def rotate_right_trough_carry
-            v = @carry
+        def rotate_right_trough_carry(v = @carry)
             self.shift_right
-            self.set_bit(7) if @carry
+            self.set_bit(7) if v
         end
 
         def exchange reg8
@@ -568,8 +566,7 @@ module Z80
                 @t_states = 7
                 @d.copy(self.next8)
             when 0x17 #RLA
-                @a.carry = @f.flag_c
-                @a.rotate_left_trough_carry
+                @a.rotate_left_trough_carry(@f.flag_c)
                 @f.hc_n_c(@a)
             when 0x18 #JR NN
                 @t_states = 12
@@ -585,8 +582,7 @@ module Z80
                 @t_states = 7
                 @e.copy(self.next8)
             when 0x1F #RRA
-                @a.carry = @f.flag_c
-                @a.rotate_right_trough_carry
+                @a.rotate_right_trough_carry(@f.flag_c)
                 @f.hc_n_c(@a)
             when 0x20 #JR NZ,NN
                 reg = self.next8
@@ -808,22 +804,17 @@ module Z80
                     when 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F #RRC r
                         reg.rotate_right
                     when 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 #RL r
-                        reg.carry = @f.flag_c
-                        reg.rotate_left_trough_carry
+                        reg.rotate_left_trough_carry(@f.flag_c)
                     when 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F #RR r
-                        reg.carry = @f.flag_c
-                        reg.rotate_right_trough_carry
+                        reg.rotate_right_trough_carry(@f.flag_c)
                     when 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27 #SLA r
                         reg.shift_left
                     when 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F #SRA r
-                        reg.carry = reg.negative?
-                        reg.rotate_right_trough_carry
+                        reg.rotate_right_trough_carry(reg.negative?)
                     when 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37 #SLL r
-                        reg.carry = true
-                        reg.rotate_left_trough_carry
+                        reg.rotate_left_trough_carry(true)
                     when 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F #SRL r
-                        reg.carry = false
-                        reg.rotate_right_trough_carry
+                        reg.rotate_right_trough_carry(false)
                     end
                     @f.s_z_p_hc_n_c(reg)
                 when 0x40..0x7F #BIT b,r
@@ -1019,18 +1010,15 @@ module Z80
                         @f.s_z_p_hc_n_c(reg)
                     when 0x2E #SRA (IX+d)
                         @t_states = 23
-                        reg.carry = reg.negative?
-                        reg.rotate_right_trough_carry                    
+                        reg.rotate_right_trough_carry(reg.negative?)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x36 #SLL (IX+d)
                         @t_states = 23
-                        reg.carry = true
-                        reg.rotate_left_trough_carry                    
+                        reg.rotate_left_trough_carry(true)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x3E #SRL (IX+d)
                         @t_states = 23
-                        reg.carry = false
-                        reg.rotate_right_trough_carry                    
+                        reg.rotate_right_trough_carry(false)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IX+d)
                         @t_states = 20
@@ -1488,18 +1476,15 @@ module Z80
                         @f.s_z_p_hc_n_c(reg)
                     when 0x2E #SRA (IY+d)
                         @t_states = 23
-                        reg.carry = reg.negative?
-                        reg.rotate_right_trough_carry                    
+                        reg.rotate_right_trough_carry(reg.negative?)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x36 #SLL (IY+d)
                         @t_states = 23
-                        reg.carry = true
-                        reg.rotate_left_trough_carry                    
+                        reg.rotate_left_trough_carry(true)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x3E #SRL (IY+d)
                         @t_states = 23
-                        reg.carry = false
-                        reg.rotate_right_trough_carry                    
+                        reg.rotate_right_trough_carry(false)
                         @f.s_z_p_hc_n_c(reg)
                     when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x76, 0x7E #BIT b,(IY+d)
                         @t_states = 20
