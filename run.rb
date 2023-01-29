@@ -8,9 +8,13 @@ z80 = Z80::Z80.new
 z80.state_duration = 0
 z80.memory.load_rom('./roms/hc90.rom')
 # t = Time.now
+32.times do
+    z80.execute z80.fetch_opcode
+    z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0E5E
+end
 # z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0E5E
 # puts Time.now - t
-z80.pc.store_byte_value(0x38)
+# z80.pc.store_byte_value(0x38)
 30.times do
     puts z80.pc
     reg = z80.fetch_opcode

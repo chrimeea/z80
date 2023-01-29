@@ -125,6 +125,12 @@ module Z80
             assert_equal(0x3FFF, reg.byte_value)
             assert_true(reg.carry)
             assert_false(reg.hc)
+            reg.store(0x57FF)
+            alt.store(0x0701)
+            reg.add(alt)
+            assert_equal(0x5F00, reg.byte_value)
+            assert_false(reg.carry)
+            assert_false(reg.hc)
         end
 
         def test_exchange
