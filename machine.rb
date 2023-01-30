@@ -935,7 +935,7 @@ module Z80
                     @f.s_z_v_hc_n(reg)
                 when 0x36 #LD (IX+d),n
                     @t_states = 19
-                    @memory.read8_indexed(@ix, self.next8).store(self.next8)
+                    @memory.read8_indexed(@ix, self.next8).copy(self.next8)
                 when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     @t_states = 19
                     self.decode_register8(opcode).copy(@memory.read8_indexed(@ix, self.next8))
@@ -1146,7 +1146,7 @@ module Z80
                     @f.s_z_v_hc_n_c(@hl)
                 when 0x4B, 0x5B, 0x6B, 0x7B #LD dd,(nn)
                     @t_states = 20
-                    @memory.read16(self.decode_register16(opcode)).store(self.next16)
+                    @memory.read16(self.decode_register16(opcode)).copy(self.next16)
                 when 0x4D #RETI
                     @t_states = 14
                     @pc.copy(self.pop16)
