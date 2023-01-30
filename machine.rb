@@ -336,7 +336,7 @@ module Z80
 
         def substract(reg16)
             @carry = (reg16.byte_value > self.byte_value)
-            @hc = (reg16.low.byte_value > @low.byte_value)
+            @hc = (reg16.byte_value & (MAX12 - 1) > self.byte_value & (MAX12 - 1))
             @n = true
             self.store(self.two_complement - reg16.two_complement)
         end
