@@ -12,7 +12,7 @@ z80.memory.load_rom('./roms/hc90.rom')
     z80.execute z80.fetch_opcode
     z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0E5E
 end
-z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0EA0
+z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0B94
 # puts Time.now - t
 # z80.pc.store_byte_value(0x38)
 100.times do

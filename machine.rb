@@ -1146,7 +1146,7 @@ module Z80
                     @f.s_z_v_hc_n_c(@hl)
                 when 0x4B, 0x5B, 0x6B, 0x7B #LD dd,(nn)
                     @t_states = 20
-                    @memory.read16(self.decode_register16(opcode)).copy(self.next16)
+                    self.decode_register16(opcode).copy(@memory.read16(self.next16))
                 when 0x4D #RETI
                     @t_states = 14
                     @pc.copy(self.pop16)
