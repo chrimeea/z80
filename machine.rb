@@ -379,7 +379,7 @@ module Z80
 
     class Z80
         attr_reader :memory, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
-        attr_accessor :state_duration
+        attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag
 
         def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
@@ -395,6 +395,7 @@ module Z80
             @state_duration, @t_states = 0.0001, 4
             @address_bus = Register16.new
             @data_bus = Register8.new
+            self.reset
         end
 
         def reset
@@ -404,7 +405,7 @@ module Z80
             @af.store_byte_value(0xFFFF)
             @sp.store_byte_value(0xFFFF)
             @pc.store_byte_value(0)
-            self.run
+            @r.store_byte_value(0)
         end
 
         def to_s
@@ -1533,15 +1534,15 @@ module Z80
         end
 
         def draw_screen
-            @z80.maskable_interrupt_flag = true
+            # @z80.maskable_interrupt_flag = true
             reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
-            reg_address.store_byte_value(0x4000)
+            reg_bitmap_addr.store_byte_value(0x4000)
             192.times do
                 x = 0
                 32.times do
                     reg_bitmap = @z80.memory.read8(reg_bitmap_addr)
-                    reg_attrib_address.store_byte_value(0x5800 + 32 * reg_y.byte_value / 8 + x / 8)
-                    reg_attrib = @z80.memory.read8(reg_attrib_address)
+                    reg_attrib_addr.store_byte_value(0x5800 + 32 * reg_y.byte_value / 8 + x / 8)
+                    reg_attrib = @z80.memory.read8(reg_attrib_addr)
                     ink = reg_attrib.byte_value & 7
                     paper = reg_attrib.byte_value & 38
                     flash = reg_attrib.bit?(7)
