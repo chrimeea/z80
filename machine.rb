@@ -450,7 +450,7 @@ module Z80
 
         def run
             loop do
-                t = Time.now
+                # t = Time.now
                 if @nonmaskable_interrupt_flag
                     @nonmaskable_interrupt_flag = false
                     nonmaskable_interrupt
@@ -460,7 +460,7 @@ module Z80
                 elsif @can_execute
                     execute self.fetch_opcode
                 end
-                sleep([t + @t_states * @state_duration - Time.now, 0].max) / 1000.0
+                # sleep([t + @t_states * @state_duration - Time.now, 0].max) / 1000.0
             end
         end
 
@@ -1529,8 +1529,8 @@ module Z80
             Tk.mainloop
         end
 
-        def point(x, y)
-            TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1')
+        def point(x, y, b)
+            TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => b ? 'black' : 'white')
         end
 
         def draw_screen
@@ -1548,7 +1548,7 @@ module Z80
                     flash = reg_attrib.bit?(7)
                     brightness = reg_attrib.bit?(6)
                     #TODO: use the colors from reg_attrib
-                    7.times.each { |b| self.point(x + b, reg_y.byte_value) if reg_bitmap.bit?(b) }
+                    7.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(b)) }
                     reg_bitmap_addr.increase
                     x += 8
                 end
