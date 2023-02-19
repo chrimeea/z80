@@ -1529,8 +1529,9 @@ module Z80
             Tk.mainloop
         end
 
-        def point(x, y, b)
-            TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => b ? 'black' : 'white')
+        def point(x, y, c)
+            colors = ['black', 'blue', 'red', 'purple', 'green', 'cyan', 'yellow', 'white']
+            TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => colors[c])
         end
 
         def draw_screen
@@ -1539,17 +1540,17 @@ module Z80
             reg_bitmap_addr.store_byte_value(0x4000)
             192.times do
                 x = 0
+                reg_attrib_addr.store_byte_value(0x5800 + reg_y.byte_value / 8 * 32)
                 32.times do
                     reg_bitmap = @z80.memory.read8(reg_bitmap_addr)
-                    reg_attrib_addr.store_byte_value(0x5800 + 32 * reg_y.byte_value / 8 + x / 8)
                     reg_attrib = @z80.memory.read8(reg_attrib_addr)
                     ink = reg_attrib.byte_value & 7
-                    paper = reg_attrib.byte_value & 38
+                    paper = reg_attrib.byte_value >> 3 & 7
                     flash = reg_attrib.bit?(7)
                     brightness = reg_attrib.bit?(6)
-                    #TODO: use the colors from reg_attrib
-                    8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b)) }
+                    8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b) ? ink : paper) }
                     reg_bitmap_addr.increase
+                    reg_attrib_addr.increase
                     x += 8
                 end
                 reg_y.increase
