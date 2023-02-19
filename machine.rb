@@ -1518,9 +1518,9 @@ module Z80
     class Hardware
         def boot
             root = TkRoot.new { title 'Cristian Mocanu Z80' }
-            root.geometry("256x192")
+            root.geometry("304x240")
             @canvas = TkCanvas.new(root) do
-                place('height' => 192, 'width' => 256, 'x' => 0, 'y' => 0)
+                place('height' => 240, 'width' => 304, 'x' => 0, 'y' => 0)
             end
             @canvas.pack
             @z80 = Z80.new
@@ -1532,6 +1532,7 @@ module Z80
         end
 
         def point(x, y, c, b)
+            x, y = x + 24, y + 24
             colors = ['black', 'blue', 'red', 'purple', 'light green', 'light cyan', 'light yellow', 'light gray']
             bright_colors = ['black', 'blue', 'dark red', 'purple1', 'green', 'cyan', 'yellow', 'white']
             TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => b ? bright_colors[c] : colors[c])
