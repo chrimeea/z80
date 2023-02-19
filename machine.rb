@@ -1518,8 +1518,9 @@ module Z80
     class Hardware
         def boot
             root = TkRoot.new { title 'Cristian Mocanu Z80' }
+            root.geometry("256x192")
             @canvas = TkCanvas.new(root) do
-                place('height' => 256, 'width' => 256, 'x' => 0, 'y' => 0)
+                place('height' => 192, 'width' => 256, 'x' => 0, 'y' => 0)
             end
             @canvas.pack
             @z80 = Z80.new
