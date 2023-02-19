@@ -1524,6 +1524,7 @@ module Z80
             @canvas.pack
             @z80 = Z80.new
             @z80.memory.load_rom('./roms/hc90.rom')
+            @draw_counter = 0
             Thread.new { @z80.run }
             TkAfter.new(10000, -1, proc { draw_screen }).start
             Tk.mainloop
@@ -1536,7 +1537,7 @@ module Z80
         end
 
         def draw_screen
-            # @z80.maskable_interrupt_flag = true
+            @z80.maskable_interrupt_flag = true
             reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
             reg_bitmap_addr.store_byte_value(0x4000)
             192.times do
@@ -1548,6 +1549,7 @@ module Z80
                     ink = reg_attrib.byte_value & 7
                     paper = reg_attrib.byte_value >> 3 & 7
                     flash = reg_attrib.bit?(7)
+                    ink, paper = paper, ink if flash && @draw_counter.zero?
                     brightness = reg_attrib.bit?(6)
                     8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b) ? ink : paper, brightness) }
                     reg_bitmap_addr.increase
@@ -1564,6 +1566,7 @@ module Z80
                 reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
                 reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
             end
+            @draw_counter = 1 - @draw_counter
         end
     end
 end
