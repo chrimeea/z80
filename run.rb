@@ -21,6 +21,5 @@ Z80::Hardware.new.boot
 # end
 
 #TODO: keyboard, boder, UART, sound, tape
-#TODO: flash changes after 16 frames
 #TODO: 3 5 flags not set for LDDR, ADD HL,DE, SET, RES, BIT
 
