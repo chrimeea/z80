@@ -1568,7 +1568,8 @@ module Z80
                 reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
                 reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
             end
-            @draw_counter = 1 - @draw_counter
+            @draw_counter += 1
+            @draw_counter = 0 if @draw_counter == 16
         end
     end
 end
