@@ -1548,7 +1548,7 @@ module Z80
                     flash = reg_attrib.bit?(7)
                     brightness = reg_attrib.bit?(6)
                     #TODO: use the colors from reg_attrib
-                    7.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(b)) }
+                    8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b)) }
                     reg_bitmap_addr.increase
                     x += 8
                 end
