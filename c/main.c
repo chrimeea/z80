@@ -4,14 +4,47 @@
 #include <stdio.h>
 #include <pthread.h>
 
-void *run(void *args) {
+#define MAX0 0x01
+#define MAX1 0x02
+#define MAX2 0x04
+#define MAX3 0x08
+#define MAX4 0x10
+#define MAX5 0x20
+#define MAX6 0x40
+#define MAX7 0x80
+#define MAX8 0x100
+#define MAX9 0x200
+#define MAX10 0x400
+#define MAX11 0x800
+#define MAX12 0x1000
+#define MAX13 0x2000
+#define MAX14 0x4000
+#define MAX15 0x8000
+#define MAX16 0x10000
+
+unsigned char *z80_memory;
+unsigned int z80_memory_size = MAX16;
+
+void z80_memory_load_rom(char *filename) {
+    int n, remaining = z80_memory_size;
+    unsigned char *m = z80_memory;
+    FILE *f = fopen(filename, "rb");
+    do {
+        n = fread(m, 1, remaining, f);
+        m += n;
+        remaining -= n;
+    } while (n != 0);
+    fclose(f);
+}
+
+void *z80_run(void *args) {
     return NULL;
 }
 
-void renderScene(int value) {
+void ula_draw_screen(int value) {
     glClear(GL_COLOR_BUFFER_BIT);
     glutSwapBuffers();
-    glutTimerFunc(1000, renderScene, 0);
+    glutTimerFunc(1000, ula_draw_screen, 0);
 }
 
 int main(int argc, char** argv) {
@@ -27,15 +60,14 @@ int main(int argc, char** argv) {
     // int x = 200;
     // int y = 100;
     // glutInitWindowPosition(x, y);
-    int win = glutCreateWindow("Tutorial 01");
-    printf("window id: %d\n", win);
+    glutCreateWindow("Cristian Mocanu Z80");
 
     GLclampf Red = 0.0f, Green = 0.0f, Blue = 0.0f, Alpha = 0.0f;
     glClearColor(Red, Green, Blue, Alpha);
 
     // glutDisplayFunc(renderScene);
-    pthread_create(&run_id, NULL, run, NULL);
-    glutTimerFunc(100, renderScene, 0);
+    pthread_create(&run_id, NULL, z80_run, NULL);
+    glutTimerFunc(100, ula_draw_screen, 0);
     glutMainLoop();
 
     return 0;
