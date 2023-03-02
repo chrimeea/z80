@@ -22,12 +22,26 @@
 #define MAX15 0x8000
 #define MAX16 0x10000
 
-unsigned char *z80_memory;
-unsigned int z80_memory_size = MAX16;
+typedef union {
+    unsigned char byte_value;
+    char value;
+} REG8;
+
+typedef union {
+    struct {
+        REG8 low;
+        REG8 high;
+    } bytes;
+    unsigned short byte_value;
+    short value;
+} REG16;
+
+REG8 *z80_memory;
+int z80_memory_size = MAX16;
 
 void z80_memory_load_rom(char *filename) {
     int n, remaining = z80_memory_size;
-    unsigned char *m = z80_memory;
+    REG8 *m = z80_memory;
     FILE *f = fopen(filename, "rb");
     do {
         n = fread(m, 1, remaining, f);
@@ -35,6 +49,24 @@ void z80_memory_load_rom(char *filename) {
         remaining -= n;
     } while (n != 0);
     fclose(f);
+}
+
+REG8 z80_memory_read8(REG16 reg) {
+    return z80_memory[reg.byte_value];
+}
+
+REG8 z80_memory_read8_indexed(REG16 reg16, REG8 reg8) {
+    REG16 alt;
+    alt.byte_value = reg16.byte_value + reg8.value;
+    return z80_memory_read8(alt);
+}
+
+REG16 z80_memory_read16(REG16 reg) {
+    REG16 alt;
+    alt.bytes.low = z80_memory_read8(reg);
+    reg.value += 1;
+    alt.bytes.high = z80_memory_read8(reg);
+    return alt;
 }
 
 void *z80_run(void *args) {
