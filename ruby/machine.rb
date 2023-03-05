@@ -1524,7 +1524,7 @@ module Z80
             end
             @canvas.pack
             @z80 = Z80.new
-            @z80.memory.load_rom('./roms/hc90.rom')
+            @z80.memory.load_rom('../roms/hc90.rom')
             @draw_counter = 0
             Thread.new { @z80.run }
             TkAfter.new(10000, -1, proc { draw_screen }).start
