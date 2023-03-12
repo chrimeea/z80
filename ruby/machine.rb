@@ -379,131 +379,141 @@ module Z80
 
     class Ports
         def initialize size
-            @ports = Array.new(size)
+            @ports_read = Array.new(size)
+            @ports_write = Array.new(size)
         end
 
-        def register ports, handler
-            ports.each do |p|
-                @ports[p] = handler
-            end
+        def register_read port, handler
+            @ports_read[port] = handler
+        end
+
+        def register_write port, handler
+            @ports_write[port] = handler
         end
 
         def read8 reg16
-            handler = @ports[reg16.byte_value]
-            handler.read8(reg16) if handler
+            handler = @ports_read[reg16.low.byte_value]
+            if handler
+                reg = handler.read8(reg16)
+            else
+                reg = Register8.new
+                reg.store_byte_value(0xFF)
+            end
+            reg
         end
 
         def write8 reg16, reg8
-            handler = @ports[reg16.byte_value]
+            handler = @ports_write[reg16.low.byte_value]
             handler.write8(reg16, reg8) if handler
         end
     end
 
     class Keyboard
-        def initialize ports
-            port_list = [0xFEFE, 0xFDFE, 0xFBFE, 0xF7FE, 0xEFFE, 0xDFFE, 0xBFFE, 0x7FFE]
-            ports.register(port_list, self)
-            @data = {}
-            port_list.each do |p|
+        def initialize
+            @data = 8.times.map do
                 reg = Register8.new
                 reg.store_byte_value(0x0F)
-                @data[p] = reg
+                reg
             end
         end
 
         def read8 reg16
             reg = Register8.new
-            reg.copy(@data[reg16.byte_value])
-            @data[reg16.byte_value].store_byte_value(0x0F)
+            reg.store_byte_value(
+                8.times.reduce(0x0F) do |v, b|
+                    if reg16.high.bit?(b)
+                        v
+                    else
+                        v & @data[b].byte_value
+                    end
+                end
+            )
             reg
         end
 
-        def write8 reg16, reg8
-        end
-
-        def key k
+        def key_press k, v
             reg = Register16.new
             case k
             when 'Caps_Lock'
-                @data[0xFEFE].reset_bit(0)
+                @data[0].set_bit(0, v)
             when 'z', 'Z'
-                @data[0xFEFE].reset_bit(1)
+                @data[0].set_bit(1, v)
             when 'x', 'X'
-                @data[0xFEFE].reset_bit(2)                
+                @data[0].set_bit(2, v)
             when 'c', 'C'
-                @data[0xFEFE].reset_bit(3)
+                @data[0].set_bit(3, v)
             when 'v', 'V'
-                @data[0xFEFE].reset_bit(4)
+                @data[0].set_bit(4, v)
             when 'a', 'A'
-                @data[0xFDFE].reset_bit(0)
+                @data[1].set_bit(0, v)
             when 's', 'S'
-                @data[0xFDFE].reset_bit(1)
+                @data[1].set_bit(1, v)
             when 'd', 'D'
-                @data[0xFDFE].reset_bit(2)
+                @data[1].set_bit(2, v)
             when 'f', 'F'
-                @data[0xFDFE].reset_bit(3)
+                @data[1].set_bit(3, v)
             when 'g', 'G'
-                @data[0xFDFE].reset_bit(4)
+                @data[1].set_bit(4, v)
             when 'q', 'Q'
-                @data[0xFBFE].reset_bit(0)
+                @data[2].set_bit(0, v)
             when 'w', 'W'
-                @data[0xFBFE].reset_bit(1)
+                @data[2].set_bit(1, v)
             when 'e', 'E'
-                @data[0xFBFE].reset_bit(2)
+                @data[2].set_bit(2, v)
             when 'r', 'R'
-                @data[0xFBFE].reset_bit(3)
+                @data[2].set_bit(3, v)
             when 't', 'T'
-                @data[0xFBFE].reset_bit(4)
+                @data[2].set_bit(4, v)
             when '1'
-                @data[0xF7FE].reset_bit(0)
+                @data[3].set_bit(0, v)
             when '2'
-                @data[0xF7FE].reset_bit(1)
+                @data[3].set_bit(1, v)
             when '3'
-                @data[0xF7FE].reset_bit(2)
+                @data[3].set_bit(2, v)
             when '4'
-                @data[0xF7FE].reset_bit(3)
+                @data[3].set_bit(3, v)
             when '5'
-                @data[0xF7FE].reset_bit(4)
+                @data[3].set_bit(4, v)
             when '0'
-                @data[0xEFFE].reset_bit(0)
+                @data[4].set_bit(0, v)
             when '9'
-                @data[0xEFFE].reset_bit(1)
+                @data[4].set_bit(1, v)
             when '8'
-                @data[0xEFFE].reset_bit(2)
+                @data[4].set_bit(2, v)
             when '7'
-                @data[0xEFFE].reset_bit(3)
+                @data[4].set_bit(3, v)
             when '6'
-                @data[0xEFFE].reset_bit(4)
+                @data[4].set_bit(4, v)
             when 'p', 'P'
-                @data[0xDFFE].reset_bit(0)
+                @data[5].set_bit(0, v)
             when 'o', 'O'
-                @data[0xDFFE].reset_bit(1)
+                @data[5].set_bit(1, v)
             when 'i', 'I'
-                @data[0xDFFE].reset_bit(2)
+                @data[5].set_bit(2, v)
             when 'u', 'U'
-                @data[0xDFFE].reset_bit(3)
+                @data[5].set_bit(3, v)
             when 'y', 'Y'
-                @data[0xDFFE].reset_bit(4)
+                @data[5].set_bit(4, v)
             when 'Return', 'KP_Enter'
-                @data[0xBFFE].reset_bit(0)
+                @data[6].set_bit(0, v)
             when 'l', 'L'
-                @data[0xBFFE].reset_bit(1)
+                @data[6].set_bit(1, v)
             when 'k', 'K'
-                @data[0xBFFE].reset_bit(2)
+                @data[6].set_bit(2, v)
             when 'j', 'J'
-                @data[0xBFFE].reset_bit(3)
+                @data[6].set_bit(3, v)
             when 'h', 'H'
-                @data[0xBFFE].reset_bit(4)
+                @data[6].set_bit(4, v)
             when 'space'
-                @data[0x7FFE].reset_bit(0)
+                @data[7].set_bit(0, v)
             when 'Shift_L', 'Shift_R'
-                @data[0x7FFE].reset_bit(1)
+                @data[7].set_bit(1, v)
             when 'm', 'M'
-                @data[0x7FFE].reset_bit(2)
+                @data[7].set_bit(2, v)
             when 'n', 'N'
-                @data[0x7FFE].reset_bit(3)
+                @data[7].set_bit(3, v)
             when 'b', 'B'
-                @data[0x7FFE].reset_bit(4)
+                @data[7].set_bit(4, v)
             end
         end
     end
@@ -523,8 +533,9 @@ module Z80
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
             @memory = Memory.new(MAX16)
-            @ports = Ports.new(MAX16)
-            @keyboard = Keyboard.new(@ports)
+            @ports = Ports.new(MAX8)
+            @keyboard = Keyboard.new
+            @ports.register_read(0xFE, @keyboard)
             @state_duration, @t_states = 0.0001, 4
             self.reset
         end
@@ -1638,7 +1649,8 @@ module Z80
             @z80 = Z80.new
             @z80.memory.load_rom('../roms/hc90.rom')
             @draw_counter = 0
-            root.bind("Key", proc { |k| @z80.keyboard.key(k.keysym) })
+            root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
+            root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
             Thread.new { @z80.run }
             TkAfter.new(10000, -1, proc { draw_screen }).start
             Tk.mainloop
