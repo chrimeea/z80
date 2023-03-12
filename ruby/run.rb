@@ -20,6 +20,6 @@ Z80::Hardware.new.boot
 #     puts z80
 # end
 
-#TODO: keyboard, boder, UART, sound, tape
+#TODO: boder, UART, sound, tape
 #TODO: 3 5 flags not set for LDDR, ADD HL,DE, SET, RES, BIT
 

@@ -377,8 +377,156 @@ module Z80
         end
     end
 
+    class Ports
+        def initialize size
+            @ports = Array.new(size) { Register8.new }
+        end
+
+        def read8 reg16
+            reg = self.copy8(reg16)
+            @ports[reg16.byte_value] = Register8.new
+            reg
+        end
+
+        def copy8 reg16
+            @ports[reg16.byte_value]
+        end
+    end
+
+    class Keyboard
+        def initialize ports
+            @ports = ports
+        end
+
+        def key k
+            reg = Register16.new
+            case k
+            when 'Caps_Lock'
+                reg.store_byte_value(0xFEFE)
+                @ports.copy8(reg).set_bit(0)
+            when 'z', 'Z'
+                reg.store_byte_value(0xFEFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'x', 'X'
+                reg.store_byte_value(0xFEFE)
+                @ports.copy8(reg).set_bit(2)                
+            when 'c', 'C'
+                reg.store_byte_value(0xFEFE)
+                @ports.copy8(reg).set_bit(3)
+            when 'v', 'V'
+                reg.store_byte_value(0xFEFE)
+                @ports.copy8(reg).set_bit(4)
+            when 'a', 'A'
+                reg.store_byte_value(0xFDFE)
+                @ports.copy8(reg).set_bit(0)
+            when 's', 'S'
+                reg.store_byte_value(0xFDFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'd', 'D'
+                reg.store_byte_value(0xFDFE)
+                @ports.copy8(reg).set_bit(2)
+            when 'f', 'F'
+                reg.store_byte_value(0xFDFE)
+                @ports.copy8(reg).set_bit(3)
+            when 'g', 'G'
+                reg.store_byte_value(0xFDFE)
+                @ports.copy8(reg).set_bit(4)
+            when 'q', 'Q'
+                reg.store_byte_value(0xFBFE)
+                @ports.copy8(reg).set_bit(0)
+            when 'w', 'W'
+                reg.store_byte_value(0xFBFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'e', 'E'
+                reg.store_byte_value(0xFBFE)
+                @ports.copy8(reg).set_bit(2)
+            when 'r', 'R'
+                reg.store_byte_value(0xFBFE)
+                @ports.copy8(reg).set_bit(3)
+            when 't', 'T'
+                reg.store_byte_value(0xFBFE)
+                @ports.copy8(reg).set_bit(4)
+            when '1'
+                reg.store_byte_value(0xF7FE)
+                @ports.copy8(reg).set_bit(0)
+            when '2'
+                reg.store_byte_value(0xF7FE)
+                @ports.copy8(reg).set_bit(1)
+            when '3'
+                reg.store_byte_value(0xF7FE)
+                @ports.copy8(reg).set_bit(2)
+            when '4'
+                reg.store_byte_value(0xF7FE)
+                @ports.copy8(reg).set_bit(3)
+            when '5'
+                reg.store_byte_value(0xF7FE)
+                @ports.copy8(reg).set_bit(4)
+            when '0'
+                reg.store_byte_value(0xEFFE)
+                @ports.copy8(reg).set_bit(0)
+            when '9'
+                reg.store_byte_value(0xEFFE)
+                @ports.copy8(reg).set_bit(1)
+            when '8'
+                reg.store_byte_value(0xEFFE)
+                @ports.copy8(reg).set_bit(2)
+            when '7'
+                reg.store_byte_value(0xEFFE)
+                @ports.copy8(reg).set_bit(3)
+            when '6'
+                reg.store_byte_value(0xEFFE)
+                @ports.copy8(reg).set_bit(4)
+            when 'p', 'P'
+                reg.store_byte_value(0xDFFE)
+                @ports.copy8(reg).set_bit(0)
+            when 'o', 'O'
+                reg.store_byte_value(0xDFFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'i', 'I'
+                reg.store_byte_value(0xDFFE)
+                @ports.copy8(reg).set_bit(2)
+            when 'u', 'U'
+                reg.store_byte_value(0xDFFE)
+                @ports.copy8(reg).set_bit(3)
+            when 'y', 'Y'
+                reg.store_byte_value(0xDFFE)
+                @ports.copy8(reg).set_bit(4)
+            when 'Return', 'KP_Enter'
+                reg.store_byte_value(0xBFFE)
+                @ports.copy8(reg).set_bit(0)
+            when 'l', 'L'
+                reg.store_byte_value(0xBFFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'k', 'K'
+                reg.store_byte_value(0xBFFE)
+                @ports.copy8(reg).set_bit(2)
+            when 'j', 'J'
+                reg.store_byte_value(0xBFFE)
+                @ports.copy8(reg).set_bit(3)
+            when 'h', 'H'
+                reg.store_byte_value(0xBFFE)
+                @ports.copy8(reg).set_bit(4)
+            when 'space'
+                reg.store_byte_value(0x7FFE)
+                @ports.copy8(reg).set_bit(0)
+            when 'Shift_L', 'Shift_R'
+                reg.store_byte_value(0x7FFE)
+                @ports.copy8(reg).set_bit(1)
+            when 'm', 'M'
+                reg.store_byte_value(0x7FFE)
+                @ports.copy8(reg).set_bit(2)
+            when 'n', 'N'
+                reg.store_byte_value(0x7FFE)
+                @ports.copy8(reg).set_bit(3)
+            when 'b', 'B'
+                reg.store_byte_value(0x7FFE)
+                @ports.copy8(reg).set_bit(4)
+            end
+        end
+    end
+
     class Z80
-        attr_reader :memory, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
+        attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
         attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag
 
         def initialize
@@ -392,9 +540,9 @@ module Z80
             @pc, @sp, @ix, @iy = Array.new(4) { Register16.new }
             @x = @y = 0
             @memory = Memory.new(MAX16)
+            @ports = Ports.new(MAX16)
+            @keyboard = Keyboard.new(@ports)
             @state_duration, @t_states = 0.0001, 4
-            @address_bus = Register16.new
-            @data_bus = Register8.new
             self.reset
         end
 
@@ -849,9 +997,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 @t_states = 11
-                @address_bus.copy(Register16.new(@a, self.next8))
-                @data_bus.copy(@a)
-                #TODO: write one byte from data_bus to device in address_bus
+                @ports.copy8(Register16.new(@a, self.next8)).copy(@a)
             when 0xD4 #CALL NC,HHLL
                 reg = self.next16
                 if @f.flag_c
@@ -890,9 +1036,7 @@ module Z80
                 @pc.copy(reg) if @f.flag_c
             when 0xDB #IN A,(NN)
                 @t_states = 11
-                @address_bus.copy(Register16.new(@a, self.next8))
-                #TODO: read one byte from device in address_bus to data_bus
-                @a.copy(@data_bus)
+                @a.copy(@ports.read8(Register16.new(@a, self.next8)))
             when 0xDC #CALL C,HHLL
                 reg = self.next16
                 if @f.flag_c
@@ -1106,17 +1250,12 @@ module Z80
                 when 0x40, 0x48, 0x50, 0x58, 0x60, 0x68, 0x78 #IN r,(C)
                     @t_states = 12
                     reg = self.decode_register8(opcode)
-                    @address_bus.copy(@bc)
-                    #TODO: read one byte from device in address_bus to data_bus
-                    reg.copy(@data_bus)
+                    reg.copy(@ports.read8(@bc))
                     @f.s_z_p(reg)
                     @f.flag_hc, @f.flag_n = false, false
                 when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
                     @t_states = 12
-                    reg = self.decode_register8(opcode)
-                    @address_bus.copy(@bc)
-                    @data_bus.copy(reg)
-                    #TODO: write one byte from data_bus to device in address_bus
+                    @ports.copy8(@bc).copy(self.decode_register8(opcode))
                 when 0x42, 0x52, 0x62, 0x72 #SBC HL,ss
                     @t_states = 15
                     @hl.substract(self.decode_register16(opcode))
@@ -1220,10 +1359,7 @@ module Z80
                     end
                 when 0xA2, 0xB2 #INI & INIR
                     @t_states = 16
-                    @address_bus.copy(@bc)
-                    #TODO: read one byte from device in address_bus to data_bus
-                    @address_bus.copy(@hl)
-                    @memory.read8(@hl).copy(@data_bus)
+                    @memory.read8(@hl).copy(@ports.read8(@bc))
                     @b.decrease
                     @hl.increase
                     @f.flag_z(@b)
@@ -1236,9 +1372,7 @@ module Z80
                 when 0xA3, 0xB3 #OUTI & OTIR
                     @t_states = 16
                     @b.decrease
-                    @address_bus.copy(@bc)
-                    @data_bus.copy(@memory.read8(@hl))
-                    #TODO: write one byte from address_bus to device
+                    @ports.copy8(@bc).copy(@memory.read8(@hl))
                     @hl.increase
                     @f.flag_z(@b)
                     @f.flag_n = true
@@ -1276,10 +1410,7 @@ module Z80
                     end
                 when 0xAA, 0xBA #IND & INDR
                     @t_states = 16
-                    @address_bus.copy(@bc)
-                    #TODO: read one byte from device in address_bus to data_bus
-                    @address_bus.copy(@hl)
-                    @memory.read8(@hl).copy(@data_bus)
+                    @memory.read8(@hl).copy(@ports.read8(@bc))
                     @b.decrease
                     @hl.decrease
                     @f.flag_z(@b)
@@ -1292,9 +1423,7 @@ module Z80
                 when 0xAB, 0xBB #OUTD & OTDR
                     @t_states = 16
                     @b.decrease
-                    @address_bus.copy(@bc)
-                    @data_bus.copy(@memory.read8(@hl))
-                    #TODO: write one byte from address_bus to device
+                    @ports.copy8(@bc).copy(@memory.read8(@hl))
                     @hl.decrease
                     @f.flag_z(@b)
                     @f.flag_n = true
@@ -1526,6 +1655,7 @@ module Z80
             @z80 = Z80.new
             @z80.memory.load_rom('../roms/hc90.rom')
             @draw_counter = 0
+            root.bind("Key", proc { |k| @z80.keyboard.key(k) })
             Thread.new { @z80.run }
             TkAfter.new(10000, -1, proc { draw_screen }).start
             Tk.mainloop
