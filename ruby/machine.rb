@@ -379,148 +379,131 @@ module Z80
 
     class Ports
         def initialize size
-            @ports = Array.new(size) { Register8.new }
+            @ports = Array.new(size)
+        end
+
+        def register ports, handler
+            ports.each do |p|
+                @ports[p] = handler
+            end
         end
 
         def read8 reg16
-            reg = self.copy8(reg16)
-            @ports[reg16.byte_value] = Register8.new
-            reg
+            handler = @ports[reg16.byte_value]
+            handler.read8(reg16) if handler
         end
 
-        def copy8 reg16
-            @ports[reg16.byte_value]
+        def write8 reg16, reg8
+            handler = @ports[reg16.byte_value]
+            handler.write8(reg16, reg8) if handler
         end
     end
 
     class Keyboard
         def initialize ports
-            @ports = ports
+            port_list = [0xFEFE, 0xFDFE, 0xFBFE, 0xF7FE, 0xEFFE, 0xDFFE, 0xBFFE, 0x7FFE]
+            ports.register(port_list, self)
+            @data = {}
+            port_list.each do |p|
+                reg = Register8.new
+                reg.store_byte_value(0x0F)
+                @data[p] = reg
+            end
+        end
+
+        def read8 reg16
+            reg = Register8.new
+            reg.copy(@data[reg16.byte_value])
+            @data[reg16.byte_value].store_byte_value(0x0F)
+            reg
+        end
+
+        def write8 reg16, reg8
         end
 
         def key k
             reg = Register16.new
             case k
             when 'Caps_Lock'
-                reg.store_byte_value(0xFEFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xFEFE].reset_bit(0)
             when 'z', 'Z'
-                reg.store_byte_value(0xFEFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xFEFE].reset_bit(1)
             when 'x', 'X'
-                reg.store_byte_value(0xFEFE)
-                @ports.copy8(reg).set_bit(2)                
+                @data[0xFEFE].reset_bit(2)                
             when 'c', 'C'
-                reg.store_byte_value(0xFEFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xFEFE].reset_bit(3)
             when 'v', 'V'
-                reg.store_byte_value(0xFEFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xFEFE].reset_bit(4)
             when 'a', 'A'
-                reg.store_byte_value(0xFDFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xFDFE].reset_bit(0)
             when 's', 'S'
-                reg.store_byte_value(0xFDFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xFDFE].reset_bit(1)
             when 'd', 'D'
-                reg.store_byte_value(0xFDFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xFDFE].reset_bit(2)
             when 'f', 'F'
-                reg.store_byte_value(0xFDFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xFDFE].reset_bit(3)
             when 'g', 'G'
-                reg.store_byte_value(0xFDFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xFDFE].reset_bit(4)
             when 'q', 'Q'
-                reg.store_byte_value(0xFBFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xFBFE].reset_bit(0)
             when 'w', 'W'
-                reg.store_byte_value(0xFBFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xFBFE].reset_bit(1)
             when 'e', 'E'
-                reg.store_byte_value(0xFBFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xFBFE].reset_bit(2)
             when 'r', 'R'
-                reg.store_byte_value(0xFBFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xFBFE].reset_bit(3)
             when 't', 'T'
-                reg.store_byte_value(0xFBFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xFBFE].reset_bit(4)
             when '1'
-                reg.store_byte_value(0xF7FE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xF7FE].reset_bit(0)
             when '2'
-                reg.store_byte_value(0xF7FE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xF7FE].reset_bit(1)
             when '3'
-                reg.store_byte_value(0xF7FE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xF7FE].reset_bit(2)
             when '4'
-                reg.store_byte_value(0xF7FE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xF7FE].reset_bit(3)
             when '5'
-                reg.store_byte_value(0xF7FE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xF7FE].reset_bit(4)
             when '0'
-                reg.store_byte_value(0xEFFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xEFFE].reset_bit(0)
             when '9'
-                reg.store_byte_value(0xEFFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xEFFE].reset_bit(1)
             when '8'
-                reg.store_byte_value(0xEFFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xEFFE].reset_bit(2)
             when '7'
-                reg.store_byte_value(0xEFFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xEFFE].reset_bit(3)
             when '6'
-                reg.store_byte_value(0xEFFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xEFFE].reset_bit(4)
             when 'p', 'P'
-                reg.store_byte_value(0xDFFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xDFFE].reset_bit(0)
             when 'o', 'O'
-                reg.store_byte_value(0xDFFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xDFFE].reset_bit(1)
             when 'i', 'I'
-                reg.store_byte_value(0xDFFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xDFFE].reset_bit(2)
             when 'u', 'U'
-                reg.store_byte_value(0xDFFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xDFFE].reset_bit(3)
             when 'y', 'Y'
-                reg.store_byte_value(0xDFFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xDFFE].reset_bit(4)
             when 'Return', 'KP_Enter'
-                reg.store_byte_value(0xBFFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0xBFFE].reset_bit(0)
             when 'l', 'L'
-                reg.store_byte_value(0xBFFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0xBFFE].reset_bit(1)
             when 'k', 'K'
-                reg.store_byte_value(0xBFFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0xBFFE].reset_bit(2)
             when 'j', 'J'
-                reg.store_byte_value(0xBFFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0xBFFE].reset_bit(3)
             when 'h', 'H'
-                reg.store_byte_value(0xBFFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0xBFFE].reset_bit(4)
             when 'space'
-                reg.store_byte_value(0x7FFE)
-                @ports.copy8(reg).set_bit(0)
+                @data[0x7FFE].reset_bit(0)
             when 'Shift_L', 'Shift_R'
-                reg.store_byte_value(0x7FFE)
-                @ports.copy8(reg).set_bit(1)
+                @data[0x7FFE].reset_bit(1)
             when 'm', 'M'
-                reg.store_byte_value(0x7FFE)
-                @ports.copy8(reg).set_bit(2)
+                @data[0x7FFE].reset_bit(2)
             when 'n', 'N'
-                reg.store_byte_value(0x7FFE)
-                @ports.copy8(reg).set_bit(3)
+                @data[0x7FFE].reset_bit(3)
             when 'b', 'B'
-                reg.store_byte_value(0x7FFE)
-                @ports.copy8(reg).set_bit(4)
+                @data[0x7FFE].reset_bit(4)
             end
         end
     end
@@ -997,7 +980,7 @@ module Z80
                 @pc.copy(reg) if !@f.flag_c
             when 0xD3 #OUT (NN),A
                 @t_states = 11
-                @ports.copy8(Register16.new(@a, self.next8)).copy(@a)
+                @ports.write8(Register16.new(@a, self.next8), @a)
             when 0xD4 #CALL NC,HHLL
                 reg = self.next16
                 if @f.flag_c
@@ -1255,7 +1238,7 @@ module Z80
                     @f.flag_hc, @f.flag_n = false, false
                 when 0x41, 0x49, 0x51, 0x59, 0x61, 0x69, 0x79 #OUT (C),r
                     @t_states = 12
-                    @ports.copy8(@bc).copy(self.decode_register8(opcode))
+                    @ports.write8(@bc, self.decode_register8(opcode))
                 when 0x42, 0x52, 0x62, 0x72 #SBC HL,ss
                     @t_states = 15
                     @hl.substract(self.decode_register16(opcode))
@@ -1372,7 +1355,7 @@ module Z80
                 when 0xA3, 0xB3 #OUTI & OTIR
                     @t_states = 16
                     @b.decrease
-                    @ports.copy8(@bc).copy(@memory.read8(@hl))
+                    @ports.write8(@bc, @memory.read8(@hl))
                     @hl.increase
                     @f.flag_z(@b)
                     @f.flag_n = true
@@ -1423,7 +1406,7 @@ module Z80
                 when 0xAB, 0xBB #OUTD & OTDR
                     @t_states = 16
                     @b.decrease
-                    @ports.copy8(@bc).copy(@memory.read8(@hl))
+                    @ports.write8(@bc, @memory.read8(@hl))
                     @hl.decrease
                     @f.flag_z(@b)
                     @f.flag_n = true
@@ -1655,7 +1638,7 @@ module Z80
             @z80 = Z80.new
             @z80.memory.load_rom('../roms/hc90.rom')
             @draw_counter = 0
-            root.bind("Key", proc { |k| @z80.keyboard.key(k) })
+            root.bind("Key", proc { |k| @z80.keyboard.key(k.keysym) })
             Thread.new { @z80.run }
             TkAfter.new(10000, -1, proc { draw_screen }).start
             Tk.mainloop
