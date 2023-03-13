@@ -76,7 +76,7 @@ module Z80
         end
 
         def to_4_bit_pair
-            [@byte_value & 0xF0, @byte_value & (MAX4 - 1)]
+            [@byte_value & 0xF0, @byte_value & 0x0F]
         end
 
         def store_4_bit_pair(high4, low4)
@@ -105,10 +105,10 @@ module Z80
         def shift_left
             if self.negative?
                 @carry = true
-                @byte_value = @byte_value << 1
+                @byte_value = @byte_value << 1 & 0xFF
             else
                 @carry = false
-                @byte_value = @byte_value << 1
+                @byte_value = @byte_value << 1 & 0xFF
             end
             @n, @hc = false, false
         end
@@ -329,14 +329,14 @@ module Z80
 
         def add(reg16)
             @carry = (self.byte_value + reg16.byte_value >= MAX16)
-            @hc = (self.byte_value & (MAX12 - 1) + reg16.byte_value & (MAX12 - 1) >= MAX12)
+            @hc = (self.byte_value & 0xFFF + reg16.byte_value & 0xFFF >= MAX12)
             @n = false
             self.store(self.two_complement + reg16.two_complement)
         end
 
         def substract(reg16)
             @carry = (reg16.byte_value > self.byte_value)
-            @hc = (reg16.byte_value & (MAX12 - 1) > self.byte_value & (MAX12 - 1))
+            @hc = (reg16.byte_value & 0xFFF > self.byte_value & 0xFFF)
             @n = true
             self.store(self.two_complement - reg16.two_complement)
         end
@@ -412,7 +412,7 @@ module Z80
         def initialize
             @data = 8.times.map do
                 reg = Register8.new
-                reg.store_byte_value(0x0F)
+                reg.store_byte_value(0x1F)
                 reg
             end
         end
@@ -420,7 +420,7 @@ module Z80
         def read8 reg16
             reg = Register8.new
             reg.store_byte_value(
-                8.times.reduce(0x0F) do |v, b|
+                8.times.reduce(0x1F) do |v, b|
                     if reg16.high.bit?(b)
                         v
                     else
@@ -521,6 +521,7 @@ module Z80
     class Z80
         attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
         attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag
+        attr_writer :debugger
 
         def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
@@ -927,7 +928,7 @@ module Z80
                 opcode = self.fetch_opcode
                 case opcode.byte_value
                 when 0x00..0x3F
-                    reg = self.decode_register8(opcode, 3, 7)
+                    reg = self.decode_register8(opcode, 0, 7)
                     case opcode.byte_value
                     when 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,0x06, 0x07 #RLC r
                         reg.rotate_left
@@ -1635,20 +1636,20 @@ module Z80
                 self.push16.copy(@pc)
                 @pc.store(0x38)
             end
+            @debugger.debug if @debugger
         end
     end
 
     class Hardware
-        def boot
+        def boot z80
             root = TkRoot.new { title 'Cristian Mocanu Z80' }
             root.geometry("304x240")
             @canvas = TkCanvas.new(root) do
                 place('height' => 240, 'width' => 304, 'x' => 0, 'y' => 0)
             end
             @canvas.pack
-            @z80 = Z80.new
-            @z80.memory.load_rom('../roms/hc90.rom')
             @draw_counter = 0
+            @z80 = z80
             root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
             root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
             Thread.new { @z80.run }

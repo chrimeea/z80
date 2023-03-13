@@ -3,23 +3,27 @@
 require 'test/unit'
 require_relative 'machine'
 
-Z80::Hardware.new.boot
-# z80 = Z80::Z80.new
-# z80.state_duration = 0
-# z80.memory.load_rom('./roms/hc90.rom')
-# 102.times do
-#     z80.execute z80.fetch_opcode
-#     z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x15FE
-# end
-# # z80.execute z80.fetch_opcode until z80.pc.byte_value == 0x0C3E
-# 100.times do
-#     puts z80.pc
-#     reg = z80.fetch_opcode
-#     puts reg
-#     z80.execute reg
-#     puts z80
+# class Debugger
+#     def initialize z80
+#         @z80 = z80
+#         @k1, @k2 = 0, 0
+#     end
+
+    # def debug
+        # @k1 += 1 if @z80.pc.byte_value == 0x0296
+        # if @k1 > 16 && @k2 < 24 && @k2 < 100
+            # @z80.keyboard.key_press('z', false) if @k2.zero?
+            # puts @z80
+            # @k2 += 1
+        # end
+    # end
 # end
 
-#TODO: boder, UART, sound, tape
+z80 = Z80::Z80.new
+# z80.debugger = Debugger.new(z80)
+z80.memory.load_rom('../roms/hc90.rom')
+Z80::Hardware.new.boot z80
+
+#TODO: border, UART, sound, tape
 #TODO: 3 5 flags not set for LDDR, ADD HL,DE, SET, RES, BIT
 

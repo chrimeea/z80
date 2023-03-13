@@ -85,6 +85,13 @@ module Z80
             assert_equal(0, reg.byte_value)
             assert_false(reg.bit?(4))
         end
+
+        def test_shift_left
+            reg = Register8.new
+            reg.store_byte_value(0xFE)
+            reg.shift_left
+            assert_equal(0xFC, reg.byte_value)
+        end
     end
 
     class Register16Test < Test::Unit::TestCase
