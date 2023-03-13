@@ -6,17 +6,27 @@ require_relative 'machine'
 # class Debugger
 #     def initialize z80
 #         @z80 = z80
-#         @k1, @k2 = 0, 0
+#         @k1 = 0
 #     end
 
-    # def debug
-        # @k1 += 1 if @z80.pc.byte_value == 0x0296
-        # if @k1 > 16 && @k2 < 24 && @k2 < 100
-            # @z80.keyboard.key_press('z', false) if @k2.zero?
-            # puts @z80
-            # @k2 += 1
-        # end
-    # end
+#     def debug
+#         @k1 += 1 if @z80.pc.byte_value == 0x0296
+#         if @k1 == 17
+#             puts 'p'
+#             @z80.keyboard.key_press('p', false)
+#         elsif @k1 == 25
+#             puts '1'
+#             @z80.keyboard.key_press('p', true)
+#             @z80.keyboard.key_press('1', false)
+#         elsif @k1 == 33
+#             puts 'ret'
+#             @z80.keyboard.key_press('1', true)
+#             @z80.keyboard.key_press('Return', false)
+#         elsif @k1 == 41
+#             puts 'fin'
+#             @z80.keyboard.key_press('Return', true)
+#         end
+#     end
 # end
 
 z80 = Z80::Z80.new
@@ -25,5 +35,4 @@ z80.memory.load_rom('../roms/hc90.rom')
 Z80::Hardware.new.boot z80
 
 #TODO: border, UART, sound, tape
-#TODO: 3 5 flags not set for LDDR, ADD HL,DE, SET, RES, BIT
 
