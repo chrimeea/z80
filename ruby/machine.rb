@@ -1309,9 +1309,8 @@ module Z80
                     reg = @memory.read8(@hl)
                     reg_high4, reg_low4 = reg.to_4_bit_pair
                     a_high4, a_low4 = @a.to_4_bit_pair
-                    temp4 = reg_low4
                     @a.store_4_bit_pair(a_high4, reg_low4)
-                    reg.store_4_bit_pair(temp, reg_high4)
+                    reg.store_4_bit_pair(a_low4, reg_high4)
                     @f.s_z_p(@a)
                     @f.flag_hc, @f.flag_n = false, false
                 when 0x6F #RLD
@@ -1319,9 +1318,8 @@ module Z80
                     reg = @memory.read8(@hl)
                     reg_high4, reg_low4 = reg.to_4_bit_pair
                     a_high4, a_low4 = @a.to_4_bit_pair
-                    temp4 = a_low4
                     @a.store_4_bit_pair(a_high4, reg_high4)
-                    reg.store_4_bit_pair(reg_low4, temp4)
+                    reg.store_4_bit_pair(reg_low4, a_low4)
                     @f.s_z_p(@a)
                     @f.flag_hc, @f.flag_n = false, false
                 when 0xA0, 0xB0 #LDI & LDIR
