@@ -76,7 +76,7 @@ module Z80
         end
 
         def to_4_bit_pair
-            [@byte_value & 0xF0, @byte_value & 0x0F]
+            [@byte_value >> 4 & 0x0F, @byte_value & 0x0F]
         end
 
         def store_4_bit_pair(high4, low4)

@@ -6,26 +6,40 @@ require_relative 'machine'
 # class Debugger
 #     def initialize z80
 #         @z80 = z80
-#         @k1 = 0
+#         @k1, @k2 = 0, 0
 #     end
 
 #     def debug
-#         @k1 += 1 if @z80.pc.byte_value == 0x0296
-#         if @k1 == 17
-#             puts 'p'
-#             @z80.keyboard.key_press('p', false)
-#         elsif @k1 == 25
-#             puts '1'
-#             @z80.keyboard.key_press('p', true)
-#             @z80.keyboard.key_press('1', false)
-#         elsif @k1 == 33
-#             puts 'ret'
-#             @z80.keyboard.key_press('1', true)
-#             @z80.keyboard.key_press('Return', false)
-#         elsif @k1 == 41
-#             puts 'fin'
-#             @z80.keyboard.key_press('Return', true)
-#         end
+        # @k1 += 1 if @z80.pc.byte_value == 0x0296
+        # if @k2 > 0 && @k2 < 1000
+        #     puts @z80
+        #     reg = Z80::Register16.new
+        #     p 16.times.map { |v|
+        #         reg.store_byte_value(0x5C30 + v)
+        #         @z80.memory.read8(reg).to_s
+        #     }
+        #     @k2 += 1
+        # end
+        # if @k1 == 17
+        #     puts 'p'
+        #     @z80.keyboard.key_press('p', false)
+        #     @k2 = 1
+        # elsif @k1 == 25
+        #     puts 'out'
+        #     @z80.keyboard.key_press('p', true)
+        # elsif @k1 == 41
+        #     puts '1'
+        #     @z80.keyboard.key_press('1', false)
+        # elsif @k1 == 49
+        #     puts 'out'
+        #     @z80.keyboard.key_press('1', true)
+        # elsif @k1 == 57
+        #     puts 'ret'
+        #     @z80.keyboard.key_press('Return', false)
+        # elsif @k1 == 65
+        #     puts 'out'
+        #     @z80.keyboard.key_press('Return', true)
+        # end
 #     end
 # end
 
