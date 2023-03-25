@@ -597,9 +597,9 @@ module Z80
                 if @nonmaskable_interrupt_flag
                     @nonmaskable_interrupt_flag = false
                     nonmaskable_interrupt
-                elsif @maskable_interrupt_flag && @iff1
+                elsif @maskable_interrupt_flag
                     @maskable_interrupt_flag = false
-                    maskable_interrupt
+                    maskable_interrupt if @iff1
                 elsif @can_execute
                     execute self.fetch_opcode
                 end
