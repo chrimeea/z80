@@ -189,6 +189,29 @@ module Z80
         end
     end
 
+    class KeyboardTest < Test::Unit::TestCase
+        def test_key_press
+            k = Keyboard.new
+            reg16 = Register16.new
+            reg16.store_byte_value(0xDFFE)
+            alt16 = Register16.new
+            alt16.store_byte_value(0xFEFE)
+            secalt16 = Register16.new
+            secalt16.store_byte_value(0xDEFE)
+            assert_equal(0x1F, k.read8(reg16).byte_value)
+            assert_equal(0x1F, k.read8(alt16).byte_value)
+            assert_equal(0x1F, k.read8(secalt16).byte_value)
+            k.key_press('p', false)
+            assert_equal(0x1E, k.read8(reg16).byte_value)
+            assert_equal(0x1F, k.read8(alt16).byte_value)
+            assert_equal(0x1E, k.read8(secalt16).byte_value)
+            k.key_press('p', true)
+            assert_equal(0x1F, k.read8(reg16).byte_value)
+            assert_equal(0x1F, k.read8(alt16).byte_value)
+            assert_equal(0x1F, k.read8(secalt16).byte_value)
+        end
+    end
+
     class Z80Test < Test::Unit::TestCase
         def test_execute_ld_bc_hhll
             z80 = Z80.new
