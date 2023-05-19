@@ -519,9 +519,8 @@ module Z80
     end
 
     class Z80
-        attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
-        attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag
-        attr_writer :debugger
+        attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy, :t_states_all
+        attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag, :running
 
         def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
@@ -537,7 +536,8 @@ module Z80
             @ports = Ports.new(MAX8)
             @keyboard = Keyboard.new
             @ports.register_read(0xFE, @keyboard)
-            @state_duration, @t_states = 0.0001, 4
+            @state_duration = 0.0035 #0.00000035 = 3.5MHz
+            @t_states = 4
             self.reset
         end
 
@@ -591,19 +591,30 @@ module Z80
             val
         end
 
+        def time_sync
+            nt = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            sleep [@start_time + @t_states_all * @state_duration - nt, 0].max
+        end
+
         def run
-            loop do
-                # t = Time.now
-                if @nonmaskable_interrupt_flag
-                    @nonmaskable_interrupt_flag = false
-                    nonmaskable_interrupt
-                elsif @maskable_interrupt_flag
-                    @maskable_interrupt_flag = false
-                    maskable_interrupt if @iff1
-                elsif @can_execute
-                    execute self.fetch_opcode
-                end
-                # sleep([t + @t_states * @state_duration - Time.now, 0].max) / 1000.0
+            @start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            @t_states_all = 0
+            while @running
+                self.run_one
+                @t_states_all += @t_states
+                self.time_sync
+            end
+        end
+
+        def run_one
+            if @nonmaskable_interrupt_flag
+                @nonmaskable_interrupt_flag = false
+                nonmaskable_interrupt
+            elsif @maskable_interrupt_flag
+                @maskable_interrupt_flag = false
+                maskable_interrupt if @iff1
+            elsif @can_execute
+                execute self.fetch_opcode
             end
         end
 
@@ -1634,7 +1645,6 @@ module Z80
                 self.push16.copy(@pc)
                 @pc.store(0x38)
             end
-            @debugger.debug if @debugger
         end
     end
 
@@ -1646,13 +1656,23 @@ module Z80
                 place('height' => 240, 'width' => 304, 'x' => 0, 'y' => 0)
             end
             @canvas.pack
-            @draw_counter = 0
+            @ula_draw_counter = 0
             @z80 = z80
             root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
             root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
-            Thread.new { @z80.run }
-            TkAfter.new(10000, -1, proc { draw_screen }).start
+            self.run
             Tk.mainloop
+        end
+
+        def run
+            @z80.running = true
+            @ula_t_states_all = 0
+            Thread.new { @z80.run }
+            Thread.new { self.ula_draw_screen }
+        end
+
+        def stop
+            @z80.running = false
         end
 
         def point(x, y, c, b)
@@ -1662,10 +1682,31 @@ module Z80
             TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => b ? bright_colors[c] : colors[c])
         end
 
-        def draw_screen
-            @z80.maskable_interrupt_flag = true
+        #TODO: in debugger this won't work because t_states_all are not incremented
+        #TODO: let the debugger run first z80 then draw_screen and synchronize them
+        #TODO: extract ula in a separate class
+        #TODO: extract time_sync in a separate class and use it from z80 and ula outside debug
+        def ula_time_sync
+            loop do
+                break if sleep([(@ula_t_states_all - @z80.t_states_all) * @z80.state_duration, 0].max).zero?
+            end
+        end
+
+        def ula_draw_screen
+            while @z80.running
+                @z80.maskable_interrupt_flag = true
+                self.ula_draw_screen_once
+            end
+        end
+
+        def ula_draw_screen_once
             reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
             reg_bitmap_addr.store_byte_value(0x4000)
+            t_states_per_line = 224
+            64.times do
+                @ula_t_states_all += t_states_per_line
+                self.ula_time_sync
+            end
             192.times do
                 x = 0
                 reg_attrib_addr.store_byte_value(0x5800 + reg_y.byte_value / 8 * 32)
@@ -1675,7 +1716,7 @@ module Z80
                     ink = reg_attrib.byte_value & 7
                     paper = reg_attrib.byte_value >> 3 & 7
                     flash = reg_attrib.bit?(7)
-                    ink, paper = paper, ink if flash && @draw_counter.zero?
+                    ink, paper = paper, ink if flash && @ula_draw_counter.zero?
                     brightness = reg_attrib.bit?(6)
                     8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b) ? ink : paper, brightness) }
                     reg_bitmap_addr.increase
@@ -1691,9 +1732,15 @@ module Z80
                 reg_bitmap_addr.set_bit(10, reg_y.bit?(2))
                 reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
                 reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
+                @ula_t_states_all += t_states_per_line
+                self.ula_time_sync
             end
-            @draw_counter += 1
-            @draw_counter = 0 if @draw_counter == 16
+            56.times do
+                @ula_t_states_all += t_states_per_line
+                self.ula_time_sync
+            end
+            @ula_draw_counter += 1
+            @ula_draw_counter = 0 if @ula_draw_counter == 16
         end
     end
 end
