@@ -537,7 +537,7 @@ module Z80
 
     class Z80
         attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
-        attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag, :running
+        attr_accessor :nonmaskable_interrupt_flag, :maskable_interrupt_flag, :running
 
         def initialize
             @a, @b, @c, @d, @e, @h, @l, @i, @r = Array.new(9) { Register8.new }
