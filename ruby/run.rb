@@ -4,8 +4,10 @@ require 'test/unit'
 require_relative 'machine'
 
 class Debugger
-    def initialize z80
-        @z80 = z80
+    def initialize
+        @z80 = Z80::Z80.new
+        @z80.memory.load_rom('../roms/hc90.rom')
+        @ula = Z80::ULA.new
         @k1, @k2, @k3 = -8, 0, 0
         @reg1 = Z80::Register16.new
         @reg1.store_byte_value(0x5C00)
@@ -22,6 +24,7 @@ class Debugger
     def main
         loop do
             @z80.run_one
+            @ula.draw_screen_once
             self.debug
         end
     end
@@ -102,10 +105,8 @@ class Debugger
     end
 end
 
-z80 = Z80::Z80.new
-# z80.debugger = Debugger.new(z80)
-z80.memory.load_rom('../roms/hc90.rom')
-Z80::Hardware.new.boot z80
+# z80.debugger = Debugger.new
+Z80::Hardware.new.boot('../roms/hc90.rom')
 
 #TODO: border, UART, sound, tape
-
+#TODO: let the debugger run first z80 then draw_screen and synchronize them

@@ -518,8 +518,25 @@ module Z80
         end
     end
 
+    class TimeSync
+        def initialize d = 0.0035
+            @state_duration = d #0.00000035 = 3.5MHz
+        end
+
+        def start
+            @start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            @t_states_all = 0
+        end
+
+        def time_sync t_states
+            @t_states_all += t_states
+            nt = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            sleep [@start_time + @t_states_all * @state_duration - nt, 0].max
+        end
+    end
+
     class Z80
-        attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy, :t_states_all
+        attr_reader :memory, :keyboard, :bc, :de, :hl, :af, :pc, :sp, :ix, :iy
         attr_accessor :state_duration, :nonmaskable_interrupt_flag, :maskable_interrupt_flag, :running
 
         def initialize
@@ -536,8 +553,8 @@ module Z80
             @ports = Ports.new(MAX8)
             @keyboard = Keyboard.new
             @ports.register_read(0xFE, @keyboard)
-            @state_duration = 0.0035 #0.00000035 = 3.5MHz
             @t_states = 4
+            @ts = TimeSync.new
             self.reset
         end
 
@@ -591,18 +608,11 @@ module Z80
             val
         end
 
-        def time_sync
-            nt = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-            sleep [@start_time + @t_states_all * @state_duration - nt, 0].max
-        end
-
         def run
-            @start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-            @t_states_all = 0
+            @ts.start
             while @running
                 self.run_one
-                @t_states_all += @t_states
-                self.time_sync
+                @ts.time_sync(@t_states)
             end
         end
 
@@ -1648,31 +1658,11 @@ module Z80
         end
     end
 
-    class Hardware
-        def boot z80
-            root = TkRoot.new { title 'Cristian Mocanu Z80' }
-            root.geometry("304x240")
-            @canvas = TkCanvas.new(root) do
-                place('height' => 240, 'width' => 304, 'x' => 0, 'y' => 0)
-            end
-            @canvas.pack
-            @ula_draw_counter = 0
-            @z80 = z80
-            root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
-            root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
-            self.run
-            Tk.mainloop
-        end
+    class ULA
 
-        def run
-            @z80.running = true
-            @ula_t_states_all = 0
-            Thread.new { @z80.run }
-            Thread.new { self.ula_draw_screen }
-        end
-
-        def stop
-            @z80.running = false
+        def initialize canvas
+            @canvas = canvas
+            @draw_counter = 0
         end
 
         def point(x, y, c, b)
@@ -1682,30 +1672,20 @@ module Z80
             TkcLine.new(@canvas, x, y, x + 1, y, 'width' => '1', 'fill' => b ? bright_colors[c] : colors[c])
         end
 
-        #TODO: in debugger this won't work because t_states_all are not incremented
-        #TODO: let the debugger run first z80 then draw_screen and synchronize them
-        #TODO: extract ula in a separate class
-        #TODO: extract time_sync in a separate class and use it from z80 and ula outside debug
-        def ula_time_sync
-            loop do
-                break if sleep([(@ula_t_states_all - @z80.t_states_all) * @z80.state_duration, 0].max).zero?
-            end
-        end
-
-        def ula_draw_screen
+        def draw_screen
+            @ts = TimeSync.new
             while @z80.running
                 @z80.maskable_interrupt_flag = true
-                self.ula_draw_screen_once
+                self.draw_screen_once
             end
         end
 
-        def ula_draw_screen_once
+        def draw_screen_once
             reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
             reg_bitmap_addr.store_byte_value(0x4000)
             t_states_per_line = 224
             64.times do
-                @ula_t_states_all += t_states_per_line
-                self.ula_time_sync
+                @ts.time_sync(t_states_per_line)
             end
             192.times do
                 x = 0
@@ -1716,7 +1696,7 @@ module Z80
                     ink = reg_attrib.byte_value & 7
                     paper = reg_attrib.byte_value >> 3 & 7
                     flash = reg_attrib.bit?(7)
-                    ink, paper = paper, ink if flash && @ula_draw_counter.zero?
+                    ink, paper = paper, ink if flash && @draw_counter.zero?
                     brightness = reg_attrib.bit?(6)
                     8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b) ? ink : paper, brightness) }
                     reg_bitmap_addr.increase
@@ -1732,15 +1712,41 @@ module Z80
                 reg_bitmap_addr.set_bit(10, reg_y.bit?(2))
                 reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
                 reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
-                @ula_t_states_all += t_states_per_line
-                self.ula_time_sync
+                @ts.time_sync(t_states_per_line)
             end
             56.times do
-                @ula_t_states_all += t_states_per_line
-                self.ula_time_sync
+                @ts.time_sync(t_states_per_line)
             end
-            @ula_draw_counter += 1
-            @ula_draw_counter = 0 if @ula_draw_counter == 16
+            @draw_counter += 1
+            @draw_counter = 0 if @draw_counter == 16
+        end
+    end
+
+    class Hardware
+        def boot rom
+            root = TkRoot.new { title 'Cristian Mocanu Z80' }
+            root.geometry("304x240")
+            canvas = TkCanvas.new(root) do
+                place('height' => 240, 'width' => 304, 'x' => 0, 'y' => 0)
+            end
+            canvas.pack
+            @z80 = Z80.new
+            @z80.memory.load_rom(rom)
+            @ula = ULA.new(canvas)
+            root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
+            root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
+            self.run
+            Tk.mainloop
+        end
+
+        def run
+            @z80.running = true
+            Thread.new { @z80.run }
+            Thread.new { @ula.draw_screen }
+        end
+
+        def stop
+            @z80.running = false
         end
     end
 end
