@@ -1662,7 +1662,7 @@ module Z80
 
         def initialize canvas
             @canvas = canvas
-            @draw_counter = 0
+            @t_states_per_line = 224
         end
 
         def point(x, y, c, b)
@@ -1674,6 +1674,7 @@ module Z80
 
         def draw_screen
             @ts = TimeSync.new
+            @draw_counter = 0
             while @z80.running
                 @z80.maskable_interrupt_flag = true
                 self.draw_screen_once
@@ -1683,9 +1684,8 @@ module Z80
         def draw_screen_once
             reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
             reg_bitmap_addr.store_byte_value(0x4000)
-            t_states_per_line = 224
             64.times do
-                @ts.time_sync(t_states_per_line)
+                @ts.time_sync(@t_states_per_line)
             end
             192.times do
                 x = 0
@@ -1712,10 +1712,10 @@ module Z80
                 reg_bitmap_addr.set_bit(10, reg_y.bit?(2))
                 reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
                 reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
-                @ts.time_sync(t_states_per_line)
+                @ts.time_sync(@t_states_per_line)
             end
             56.times do
-                @ts.time_sync(t_states_per_line)
+                @ts.time_sync(@t_states_per_line)
             end
             @draw_counter += 1
             @draw_counter = 0 if @draw_counter == 16
