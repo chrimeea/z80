@@ -7,7 +7,7 @@ class Debugger
     def initialize
         @z80 = Z80::Z80.new
         @z80.memory.load_rom('../roms/hc90.rom')
-        @ula = Z80::ULA.new
+        @ula = Z80::ULA.new(nil, @z80)
         @k1, @k2, @k3 = -8, 0, 0
         @reg1 = Z80::Register16.new
         @reg1.store_byte_value(0x5C00)
@@ -22,9 +22,13 @@ class Debugger
     end
 
     def main
+        z80_t_states_all = 0
+        ula_t_states_all = 0
         loop do
+            @ula.draw_screen_once if ula_t_states_all <= z80_t_states_all
             @z80.run_one
-            @ula.draw_screen_once
+            ula_t_states_all += 69888
+            z80_t_states_all += @z80.t_states
             self.debug
         end
     end
@@ -105,7 +109,7 @@ class Debugger
     end
 end
 
-# z80.debugger = Debugger.new
+# Debugger.new.main
 Z80::Hardware.new.boot('../roms/hc90.rom')
 
 #TODO: border, UART, sound, tape

@@ -554,7 +554,7 @@ module Z80
             @keyboard = Keyboard.new
             @ports.register_read(0xFE, @keyboard)
             @t_states = 4
-            @ts = TimeSync.new
+            @time_sync = TimeSync.new
             self.reset
         end
 
@@ -609,10 +609,10 @@ module Z80
         end
 
         def run
-            @ts.start
+            @time_sync.start
             while @running
                 self.run_one
-                @ts.time_sync(@t_states)
+                @time_sync.time_sync(@t_states)
             end
         end
 
@@ -1659,10 +1659,12 @@ module Z80
     end
 
     class ULA
-
-        def initialize canvas
+        def initialize canvas, z80
             @canvas = canvas
+            @z80 = z80
             @t_states_per_line = 224
+            @reg_bitmap_addr, @reg_attrib_addr, @reg_y = Register16.new, Register16.new, Register8.new
+            @time_sync = TimeSync.new
         end
 
         def point(x, y, c, b)
@@ -1673,52 +1675,63 @@ module Z80
         end
 
         def draw_screen
-            @ts = TimeSync.new
+            @time_sync.start
             @draw_counter = 0
             while @z80.running
                 @z80.maskable_interrupt_flag = true
                 self.draw_screen_once
+                @draw_counter += 1
+                @draw_counter = 0 if @draw_counter == 16
             end
         end
 
         def draw_screen_once
-            reg_bitmap_addr, reg_attrib_addr, reg_y = Register16.new, Register16.new, Register8.new
-            reg_bitmap_addr.store_byte_value(0x4000)
+            @reg_bitmap_addr.store_byte_value(0x4000)
+            i = 0
             64.times do
-                @ts.time_sync(@t_states_per_line)
+                self.draw_line i
+                @time_sync.time_sync(@t_states_per_line)
+                i += 1
             end
             192.times do
-                x = 0
-                reg_attrib_addr.store_byte_value(0x5800 + reg_y.byte_value / 8 * 32)
-                32.times do
-                    reg_bitmap = @z80.memory.read8(reg_bitmap_addr)
-                    reg_attrib = @z80.memory.read8(reg_attrib_addr)
-                    ink = reg_attrib.byte_value & 7
-                    paper = reg_attrib.byte_value >> 3 & 7
-                    flash = reg_attrib.bit?(7)
-                    ink, paper = paper, ink if flash && @draw_counter.zero?
-                    brightness = reg_attrib.bit?(6)
-                    8.times.each { |b| self.point(x + b, reg_y.byte_value, reg_bitmap.bit?(7 - b) ? ink : paper, brightness) }
-                    reg_bitmap_addr.increase
-                    reg_attrib_addr.increase
-                    x += 8
-                end
-                reg_y.increase
-                reg_bitmap_addr.set_bit(5, reg_y.bit?(3))
-                reg_bitmap_addr.set_bit(6, reg_y.bit?(4))
-                reg_bitmap_addr.set_bit(7, reg_y.bit?(5))
-                reg_bitmap_addr.set_bit(8, reg_y.bit?(0))
-                reg_bitmap_addr.set_bit(9, reg_y.bit?(1))
-                reg_bitmap_addr.set_bit(10, reg_y.bit?(2))
-                reg_bitmap_addr.set_bit(11, reg_y.bit?(6))
-                reg_bitmap_addr.set_bit(12, reg_y.bit?(7))
-                @ts.time_sync(@t_states_per_line)
+                self.draw_line i
+                @time_sync.time_sync(@t_states_per_line)
+                i += 1
             end
             56.times do
-                @ts.time_sync(@t_states_per_line)
+                self.draw_line i
+                @time_sync.time_sync(@t_states_per_line)
+                i += 1
             end
-            @draw_counter += 1
-            @draw_counter = 0 if @draw_counter == 16
+        end
+
+        def draw_line i
+            if i > 63 && i < 258
+                x = 0
+                @reg_attrib_addr.store_byte_value(0x5800 + @reg_y.byte_value / 8 * 32)
+                32.times do
+                    @reg_bitmap = @z80.memory.read8(@reg_bitmap_addr)
+                    @reg_attrib = @z80.memory.read8(@reg_attrib_addr)
+                    ink = @reg_attrib.byte_value & 7
+                    paper = @reg_attrib.byte_value >> 3 & 7
+                    flash = @reg_attrib.bit?(7)
+                    ink, paper = paper, ink if flash && @draw_counter.zero?
+                    brightness = @reg_attrib.bit?(6)
+                    8.times.each { |b| self.point(x + b, @reg_y.byte_value, @reg_bitmap.bit?(7 - b) ? ink : paper, brightness) }
+                    @reg_bitmap_addr.increase
+                    @reg_attrib_addr.increase
+                    x += 8
+                end
+                @reg_y.increase
+                @reg_bitmap_addr.set_bit(5, @reg_y.bit?(3))
+                @reg_bitmap_addr.set_bit(6, @reg_y.bit?(4))
+                @reg_bitmap_addr.set_bit(7, @reg_y.bit?(5))
+                @reg_bitmap_addr.set_bit(8, @reg_y.bit?(0))
+                @reg_bitmap_addr.set_bit(9, @reg_y.bit?(1))
+                @reg_bitmap_addr.set_bit(10, @reg_y.bit?(2))
+                @reg_bitmap_addr.set_bit(11, @reg_y.bit?(6))
+                @reg_bitmap_addr.set_bit(12, @reg_y.bit?(7))
+            end
         end
     end
 
@@ -1732,7 +1745,7 @@ module Z80
             canvas.pack
             @z80 = Z80.new
             @z80.memory.load_rom(rom)
-            @ula = ULA.new(canvas)
+            @ula = ULA.new(canvas, @z80)
             root.bind("KeyPress", proc { |k| @z80.keyboard.key_press(k.keysym, false) })
             root.bind("KeyRelease", proc { |k| @z80.keyboard.key_press(k.keysym, true) })
             self.run
