@@ -1706,7 +1706,7 @@ module Z80
         end
 
         def draw_line i
-            if i > 63 && i < 258
+            if i > 63 && i < 256
                 x = 0
                 @reg_attrib_addr.store_byte_value(0x5800 + @reg_y.byte_value / 8 * 32)
                 32.times do
