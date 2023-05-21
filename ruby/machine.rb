@@ -1663,7 +1663,6 @@ module Z80
             @canvas = canvas
             @z80 = z80
             @t_states_per_line = 224
-            @reg_bitmap_addr, @reg_attrib_addr, @reg_y = Register16.new, Register16.new, Register8.new
             @time_sync = TimeSync.new
         end
 
@@ -1686,6 +1685,7 @@ module Z80
         end
 
         def draw_screen_once
+            @reg_bitmap_addr, @reg_attrib_addr, @reg_y = Register16.new, Register16.new, Register8.new
             @reg_bitmap_addr.store_byte_value(0x4000)
             i = 0
             64.times do
