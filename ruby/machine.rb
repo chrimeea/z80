@@ -519,7 +519,7 @@ module Z80
     end
 
     class TimeSync
-        def initialize d = 0.0035
+        def initialize d = 0 #0.0035
             @state_duration = d #0.00000035 = 3.5MHz
         end
 
