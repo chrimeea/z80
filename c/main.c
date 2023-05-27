@@ -5,6 +5,8 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -43,6 +45,27 @@ REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}
     (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}};
 const int memory_size = MAX16;
+long double time_start, state_duration;
+unsigned long z80_t_states_all, ula_t_states_all;
+
+long double time_in_seconds() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return ts.tv_sec + ts.tv_nsec / 1000000000L;
+}
+
+void time_seconds_to_timespec(struct timespec *ts, long double s) {
+    long double temp;
+    ts->tv_nsec = modfl(s, &temp) * 1000000000;
+    ts->tv_sec = temp;
+}
+
+void time_sync(unsigned long* t_states_all, unsigned long t_states) {
+    *t_states_all += t_states;
+    struct timespec ts;
+    time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
+    nanosleep(&ts, &ts);
+}
 
 bool register_is_bit(REG8 reg, int b) {
     return reg.byte_value & (1 << b);
