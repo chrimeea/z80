@@ -36,12 +36,15 @@ typedef union {
     short value;
 } REG16;
 
-REG8 *z80_memory;
-int z80_memory_size = MAX16;
+REG8 memory[MAX16];
+REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
+    (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
+    (REG8){.value=0x1F}};
+const int memory_size = MAX16;
 
-void z80_memory_load_rom(char *filename) {
-    int n, remaining = z80_memory_size;
-    REG8 *m = z80_memory;
+void memory_load_rom(char *filename) {
+    int n, remaining = memory_size;
+    REG8 *m = memory;
     FILE *f = fopen(filename, "rb");
     do {
         n = fread(m, 1, remaining, f);
@@ -51,22 +54,38 @@ void z80_memory_load_rom(char *filename) {
     fclose(f);
 }
 
-REG8 z80_memory_read8(REG16 reg) {
-    return z80_memory[reg.byte_value];
+REG8 memory_read8(REG16 reg) {
+    return memory[reg.byte_value];
 }
 
-REG8 z80_memory_read8_indexed(REG16 reg16, REG8 reg8) {
+REG8 memory_read8_indexed(REG16 reg16, REG8 reg8) {
     REG16 alt;
     alt.byte_value = reg16.byte_value + reg8.value;
-    return z80_memory_read8(alt);
+    return memory_read8(alt);
 }
 
-REG16 z80_memory_read16(REG16 reg) {
+REG16 memory_read16(REG16 reg) {
     REG16 alt;
-    alt.bytes.low = z80_memory_read8(reg);
+    alt.bytes.low = memory_read8(reg);
     reg.value += 1;
-    alt.bytes.high = z80_memory_read8(reg);
+    alt.bytes.high = memory_read8(reg);
     return alt;
+}
+
+REG8 keyboard_read8(REG16 reg) {
+    REG8 alt;
+    return alt;
+}
+
+REG8 port_read8(REG16 reg) {
+    if (reg.byte_value == 0xFE) {
+        return keyboard_read8(reg);
+    } else {
+        return (REG8){.byte_value=0xFF};
+    }
+}
+
+void port_write8(REG16 reg, REG8 alt) {
 }
 
 void *z80_run(void *args) {
