@@ -44,11 +44,11 @@ REG8 memory[MAX16];
 REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}};
-const int memory_size = MAX16;
-const int ula_t_states_per_line = 224;
+const unsigned int memory_size = MAX16;
+const unsigned int ula_t_states_per_line = 224;
 long double time_start, state_duration = 0.00000035L;
-unsigned long z80_t_states_all, ula_t_states_all;
-int ula_draw_counter;
+unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
+unsigned int ula_draw_counter = 0;
 bool running = true, z80_maskable_interrupt_flag = false;
 
 long double time_in_seconds() {
@@ -63,7 +63,7 @@ void time_seconds_to_timespec(struct timespec *ts, long double s) {
     ts->tv_sec = temp;
 }
 
-void time_sync(unsigned long* t_states_all, unsigned long t_states) {
+void time_sync(unsigned long* t_states_all, unsigned int t_states) {
     *t_states_all += t_states;
     struct timespec ts;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
@@ -226,7 +226,14 @@ REG8 port_read8(const REG16 reg) {
 void port_write8(const REG16 reg, const REG8 alt) {
 }
 
+unsigned int z80_run_one() {
+    return 0;
+}
+
 void *z80_run(void *args) {
+    while (running) {
+        time_sync(&z80_t_states_all, z80_run_one());
+    }
     return NULL;
 }
 
@@ -242,8 +249,6 @@ void ula_draw_screen_once() {
 }
 
 void *ula_draw_screen(void *args) {
-    ula_t_states_all = 0;
-    ula_draw_counter = 0;
     while (running) {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
@@ -276,9 +281,10 @@ int main(int argc, char** argv) {
     // glutDisplayFunc(renderScene);
     glutKeyboardFunc(keyboard_press_down);
     glutKeyboardUpFunc(keyboard_press_up);
+    time_start = time_in_seconds();
     pthread_create(&z80_id, NULL, z80_run, NULL);
     pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
     glutMainLoop();
-
+    running = false;
     return 0;
 }
