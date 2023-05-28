@@ -45,8 +45,11 @@ REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}
     (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}};
 const int memory_size = MAX16;
-long double time_start, state_duration;
+const int ula_t_states_per_line = 224;
+long double time_start, state_duration = 0.00000035L;
 unsigned long z80_t_states_all, ula_t_states_all;
+int ula_draw_counter;
+bool running = true, z80_maskable_interrupt_flag = false;
 
 long double time_in_seconds() {
   struct timespec ts;
@@ -120,88 +123,96 @@ REG8 keyboard_read8(const REG16 reg) {
     return alt;
 }
 
-void keyboard_press(const char *key, const bool value) {
-    if (strcmp(key, "Caps_Lock") == 0) {
-        register_set_bit(keyboard[0], 0, value);
-    } else if (strcasecmp(key, "z") == 0) {
+void keyboard_press(unsigned char key, const bool value) {
+    // if (strcmp(key, "Caps_Lock") == 0) {
+    //     register_set_bit(keyboard[0], 0, value);
+    if (key == 'z' || key == 'Z') {
         register_set_bit(keyboard[0], 1, value);
-    } else if (strcasecmp(key, "x") == 0) {
+    } else if (key == 'x' || key == 'X') {
         register_set_bit(keyboard[0], 2, value);
-    } else if (strcasecmp(key, "c") == 0) {
+    } else if (key == 'c' || key == 'C') {
         register_set_bit(keyboard[0], 3, value);
-    } else if (strcasecmp(key, "v") == 0) {
+    } else if (key == 'v' || key == 'V') {
         register_set_bit(keyboard[0], 4, value);
-    } else if (strcasecmp(key, "a") == 0) {
+    } else if (key == 'a' || key == 'A') {
         register_set_bit(keyboard[1], 0, value);
-    } else if (strcasecmp(key, "s") == 0) {
+    } else if (key == 's' || key == 'S') {
         register_set_bit(keyboard[1], 1, value);
-    } else if (strcasecmp(key, "d") == 0) {
+    } else if (key == 'd' || key == 'D') {
         register_set_bit(keyboard[1], 2, value);
-    } else if (strcasecmp(key, "f") == 0) {
+    } else if (key == 'f' || key == 'F') {
         register_set_bit(keyboard[1], 3, value);
-    } else if (strcasecmp(key, "g") == 0) {
+    } else if (key == 'g' || key == 'G') {
         register_set_bit(keyboard[1], 4, value);
-    } else if (strcasecmp(key, "q") == 0) {
+    } else if (key == 'q' || key == 'Q') {
         register_set_bit(keyboard[2], 0, value);
-    } else if (strcasecmp(key, "w") == 0) {
+    } else if (key == 'w' || key == 'W') {
         register_set_bit(keyboard[2], 1, value);
-    } else if (strcasecmp(key, "e") == 0) {
+    } else if (key == 'e' || key == 'E') {
         register_set_bit(keyboard[2], 2, value);
-    } else if (strcasecmp(key, "r") == 0) {
+    } else if (key == 'r' || key == 'R') {
         register_set_bit(keyboard[2], 3, value);
-    } else if (strcasecmp(key, "t") == 0) {
+    } else if (key == 't' || key == 'T') {
         register_set_bit(keyboard[2], 4, value);
-    } else if (strcmp(key, "1") == 0) {
+    } else if (key == '1') {
         register_set_bit(keyboard[3], 0, value);
-    } else if (strcmp(key, "2") == 0) {
+    } else if (key == '2') {
         register_set_bit(keyboard[3], 1, value);
-    } else if (strcmp(key, "3") == 0) {
+    } else if (key == '3') {
         register_set_bit(keyboard[3], 2, value);
-    } else if (strcmp(key, "4") == 0) {
+    } else if (key == '4') {
         register_set_bit(keyboard[3], 3, value);
-    } else if (strcmp(key, "5") == 0) {
+    } else if (key == '5') {
         register_set_bit(keyboard[3], 4, value);
-    } else if (strcmp(key, "0") == 0) {
+    } else if (key == '0') {
         register_set_bit(keyboard[4], 0, value);
-    } else if (strcmp(key, "9") == 0) {
+    } else if (key == '9') {
         register_set_bit(keyboard[4], 1, value);
-    } else if (strcmp(key, "8") == 0) {
+    } else if (key == '8') {
         register_set_bit(keyboard[4], 2, value);
-    } else if (strcmp(key, "7") == 0) {
+    } else if (key == '7') {
         register_set_bit(keyboard[4], 3, value);
-    } else if (strcmp(key, "6") == 0) {
+    } else if (key == '6') {
         register_set_bit(keyboard[4], 4, value);
-    } else if (strcasecmp(key, "p") == 0) {
+    } else if (key == 'p' || key == 'P') {
         register_set_bit(keyboard[5], 0, value);
-    } else if (strcasecmp(key, "o") == 0) {
+    } else if (key == 'o' || key == 'O') {
         register_set_bit(keyboard[5], 1, value);
-    } else if (strcasecmp(key, "i") == 0) {
+    } else if (key == 'i' || key == 'I') {
         register_set_bit(keyboard[5], 2, value);
-    } else if (strcasecmp(key, "u") == 0) {
+    } else if (key == 'u' || key == 'U') {
         register_set_bit(keyboard[5], 3, value);
-    } else if (strcasecmp(key, "y") == 0) {
+    } else if (key == 'y' || key == 'Y') {
         register_set_bit(keyboard[5], 4, value);
-    } else if (strcmp(key, "Return") == 0 || strcmp(key, "KP_Enter") == 0) {
+    } else if (key == 13) {
         register_set_bit(keyboard[6], 0, value);
-    } else if (strcasecmp(key, "l") == 0) {
+    } else if (key == 'l' || key == 'L') {
         register_set_bit(keyboard[6], 1, value);
-    } else if (strcasecmp(key, "k") == 0) {
+    } else if (key == 'k' || key == 'K') {
         register_set_bit(keyboard[6], 2, value);
-    } else if (strcasecmp(key, "j") == 0) {
+    } else if (key == 'j' || key == 'J') {
         register_set_bit(keyboard[6], 3, value);
-    } else if (strcasecmp(key, "h") == 0) {
+    } else if (key == 'h' || key == 'H') {
         register_set_bit(keyboard[6], 4, value);
-    } else if (strcmp(key, "space") == 0) {
+    } else if (key == ' ') {
         register_set_bit(keyboard[7], 0, value);
-    } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
-        register_set_bit(keyboard[7], 1, value);
-    } else if (strcasecmp(key, "m") == 0) {
+    // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
+    //     register_set_bit(keyboard[7], 1, value);
+    } else if (key == 'm' || key == 'M') {
         register_set_bit(keyboard[7], 2, value);
-    } else if (strcasecmp(key, "n") == 0) {
+    } else if (key == 'n' || key == 'N') {
         register_set_bit(keyboard[7], 3, value);
-    } else if (strcasecmp(key, "b") == 0) {
+    } else if (key == 'b' || key == 'B') {
         register_set_bit(keyboard[7], 4, value);
     }
+}
+
+void keyboard_press_down(unsigned char key, int x, int y) {
+    keyboard_press(key, true);
+}
+
+void keyboard_press_up(unsigned char key, int x, int y) {
+    keyboard_press(key, false);
 }
 
 REG8 port_read8(const REG16 reg) {
@@ -219,14 +230,33 @@ void *z80_run(void *args) {
     return NULL;
 }
 
-void ula_draw_screen(const int value) {
+void ula_point(const int x, const int y, const int c, const int b) {
+}
+
+void ula_draw_line(int i) {    
+}
+
+void ula_draw_screen_once() {
     glClear(GL_COLOR_BUFFER_BIT);
     glutSwapBuffers();
-    glutTimerFunc(1000, ula_draw_screen, 0);
+}
+
+void *ula_draw_screen(void *args) {
+    ula_t_states_all = 0;
+    ula_draw_counter = 0;
+    while (running) {
+        z80_maskable_interrupt_flag = true;
+        ula_draw_screen_once();
+        ula_draw_counter += 1;
+        if (ula_draw_counter == 16) {
+            ula_draw_counter = 0;
+        }
+    }
+    return NULL;
 }
 
 int main(int argc, char** argv) {
-    pthread_t run_id;
+    pthread_t z80_id, ula_id;
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
@@ -244,8 +274,10 @@ int main(int argc, char** argv) {
     glClearColor(Red, Green, Blue, Alpha);
 
     // glutDisplayFunc(renderScene);
-    pthread_create(&run_id, NULL, z80_run, NULL);
-    glutTimerFunc(100, ula_draw_screen, 0);
+    glutKeyboardFunc(keyboard_press_down);
+    glutKeyboardUpFunc(keyboard_press_up);
+    pthread_create(&z80_id, NULL, z80_run, NULL);
+    pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
     glutMainLoop();
 
     return 0;
