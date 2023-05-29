@@ -26,6 +26,13 @@
 #define MAX15 0x8000
 #define MAX16 0x10000
 
+#define is_bit(I, B) (I & (1 << (B)))
+#define register_is_bit(R, B) (is_bit(R.byte_value, B))
+#define set_bit(I, B) (I |= (1 << (B)))
+#define unset_bit(I, B) (I &= ~(1 << (B)))
+#define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
+#define register_set_or_unset_bit(R, B, V) (set_or_unset_bit(R.byte_value, B, V))
+
 typedef union {
     unsigned char byte_value;
     char value;
@@ -49,6 +56,7 @@ const unsigned int ula_t_states_per_line = 224;
 long double time_start, state_duration = 0.00000035L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
+REG16 ula_addr_bitmap, ula_addr_attrib;
 bool running = true, z80_maskable_interrupt_flag = false;
 
 long double time_in_seconds() {
@@ -68,18 +76,6 @@ void time_sync(unsigned long* t_states_all, unsigned int t_states) {
     struct timespec ts;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
     nanosleep(&ts, &ts);
-}
-
-bool register_is_bit(REG8 reg, int b) {
-    return reg.byte_value & (1 << b);
-}
-
-void register_set_bit(REG8 reg, int b, bool value) {
-    if (value) {
-        reg.byte_value |= (1 << b);
-    } else {
-        reg.byte_value &= ~(1 << b);
-    }
 }
 
 void memory_load_rom(const char *filename) {
@@ -107,7 +103,7 @@ REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8) {
 REG16 memory_read16(REG16 reg) {
     REG16 alt;
     alt.bytes.low = memory_read8(reg);
-    reg.value += 1;
+    reg.value++;
     alt.bytes.high = memory_read8(reg);
     return alt;
 }
@@ -125,85 +121,85 @@ REG8 keyboard_read8(const REG16 reg) {
 
 void keyboard_press(unsigned char key, const bool value) {
     // if (strcmp(key, "Caps_Lock") == 0) {
-    //     register_set_bit(keyboard[0], 0, value);
+    //     register_set_or_unset_bit(keyboard[0], 0, value);
     if (key == 'z' || key == 'Z') {
-        register_set_bit(keyboard[0], 1, value);
+        register_set_or_unset_bit(keyboard[0], 1, value);
     } else if (key == 'x' || key == 'X') {
-        register_set_bit(keyboard[0], 2, value);
+        register_set_or_unset_bit(keyboard[0], 2, value);
     } else if (key == 'c' || key == 'C') {
-        register_set_bit(keyboard[0], 3, value);
+        register_set_or_unset_bit(keyboard[0], 3, value);
     } else if (key == 'v' || key == 'V') {
-        register_set_bit(keyboard[0], 4, value);
+        register_set_or_unset_bit(keyboard[0], 4, value);
     } else if (key == 'a' || key == 'A') {
-        register_set_bit(keyboard[1], 0, value);
+        register_set_or_unset_bit(keyboard[1], 0, value);
     } else if (key == 's' || key == 'S') {
-        register_set_bit(keyboard[1], 1, value);
+        register_set_or_unset_bit(keyboard[1], 1, value);
     } else if (key == 'd' || key == 'D') {
-        register_set_bit(keyboard[1], 2, value);
+        register_set_or_unset_bit(keyboard[1], 2, value);
     } else if (key == 'f' || key == 'F') {
-        register_set_bit(keyboard[1], 3, value);
+        register_set_or_unset_bit(keyboard[1], 3, value);
     } else if (key == 'g' || key == 'G') {
-        register_set_bit(keyboard[1], 4, value);
+        register_set_or_unset_bit(keyboard[1], 4, value);
     } else if (key == 'q' || key == 'Q') {
-        register_set_bit(keyboard[2], 0, value);
+        register_set_or_unset_bit(keyboard[2], 0, value);
     } else if (key == 'w' || key == 'W') {
-        register_set_bit(keyboard[2], 1, value);
+        register_set_or_unset_bit(keyboard[2], 1, value);
     } else if (key == 'e' || key == 'E') {
-        register_set_bit(keyboard[2], 2, value);
+        register_set_or_unset_bit(keyboard[2], 2, value);
     } else if (key == 'r' || key == 'R') {
-        register_set_bit(keyboard[2], 3, value);
+        register_set_or_unset_bit(keyboard[2], 3, value);
     } else if (key == 't' || key == 'T') {
-        register_set_bit(keyboard[2], 4, value);
+        register_set_or_unset_bit(keyboard[2], 4, value);
     } else if (key == '1') {
-        register_set_bit(keyboard[3], 0, value);
+        register_set_or_unset_bit(keyboard[3], 0, value);
     } else if (key == '2') {
-        register_set_bit(keyboard[3], 1, value);
+        register_set_or_unset_bit(keyboard[3], 1, value);
     } else if (key == '3') {
-        register_set_bit(keyboard[3], 2, value);
+        register_set_or_unset_bit(keyboard[3], 2, value);
     } else if (key == '4') {
-        register_set_bit(keyboard[3], 3, value);
+        register_set_or_unset_bit(keyboard[3], 3, value);
     } else if (key == '5') {
-        register_set_bit(keyboard[3], 4, value);
+        register_set_or_unset_bit(keyboard[3], 4, value);
     } else if (key == '0') {
-        register_set_bit(keyboard[4], 0, value);
+        register_set_or_unset_bit(keyboard[4], 0, value);
     } else if (key == '9') {
-        register_set_bit(keyboard[4], 1, value);
+        register_set_or_unset_bit(keyboard[4], 1, value);
     } else if (key == '8') {
-        register_set_bit(keyboard[4], 2, value);
+        register_set_or_unset_bit(keyboard[4], 2, value);
     } else if (key == '7') {
-        register_set_bit(keyboard[4], 3, value);
+        register_set_or_unset_bit(keyboard[4], 3, value);
     } else if (key == '6') {
-        register_set_bit(keyboard[4], 4, value);
+        register_set_or_unset_bit(keyboard[4], 4, value);
     } else if (key == 'p' || key == 'P') {
-        register_set_bit(keyboard[5], 0, value);
+        register_set_or_unset_bit(keyboard[5], 0, value);
     } else if (key == 'o' || key == 'O') {
-        register_set_bit(keyboard[5], 1, value);
+        register_set_or_unset_bit(keyboard[5], 1, value);
     } else if (key == 'i' || key == 'I') {
-        register_set_bit(keyboard[5], 2, value);
+        register_set_or_unset_bit(keyboard[5], 2, value);
     } else if (key == 'u' || key == 'U') {
-        register_set_bit(keyboard[5], 3, value);
+        register_set_or_unset_bit(keyboard[5], 3, value);
     } else if (key == 'y' || key == 'Y') {
-        register_set_bit(keyboard[5], 4, value);
+        register_set_or_unset_bit(keyboard[5], 4, value);
     } else if (key == 13) {
-        register_set_bit(keyboard[6], 0, value);
+        register_set_or_unset_bit(keyboard[6], 0, value);
     } else if (key == 'l' || key == 'L') {
-        register_set_bit(keyboard[6], 1, value);
+        register_set_or_unset_bit(keyboard[6], 1, value);
     } else if (key == 'k' || key == 'K') {
-        register_set_bit(keyboard[6], 2, value);
+        register_set_or_unset_bit(keyboard[6], 2, value);
     } else if (key == 'j' || key == 'J') {
-        register_set_bit(keyboard[6], 3, value);
+        register_set_or_unset_bit(keyboard[6], 3, value);
     } else if (key == 'h' || key == 'H') {
-        register_set_bit(keyboard[6], 4, value);
+        register_set_or_unset_bit(keyboard[6], 4, value);
     } else if (key == ' ') {
-        register_set_bit(keyboard[7], 0, value);
+        register_set_or_unset_bit(keyboard[7], 0, value);
     // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
-    //     register_set_bit(keyboard[7], 1, value);
+    //     register_set_or_unset_bit(keyboard[7], 1, value);
     } else if (key == 'm' || key == 'M') {
-        register_set_bit(keyboard[7], 2, value);
+        register_set_or_unset_bit(keyboard[7], 2, value);
     } else if (key == 'n' || key == 'N') {
-        register_set_bit(keyboard[7], 3, value);
+        register_set_or_unset_bit(keyboard[7], 3, value);
     } else if (key == 'b' || key == 'B') {
-        register_set_bit(keyboard[7], 4, value);
+        register_set_or_unset_bit(keyboard[7], 4, value);
     }
 }
 
@@ -237,22 +233,60 @@ void *z80_run(void *args) {
     return NULL;
 }
 
-void ula_point(const int x, const int y, const int c, const int b) {
+void ula_point(const int x, const int y, const int c, const bool b) {
 }
 
-void ula_draw_line(int i) {    
+void ula_draw_line(int y) {   
+    if (y > 63 && y < 256) {
+        int x = 0;
+        ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
+        for (int i = 0; i < 32; i ++) {
+            REG8 reg_bitmap = memory_read8(ula_addr_bitmap);
+            REG8 reg_attrib = memory_read8(ula_addr_attrib);
+            int ink = reg_attrib.byte_value & 7;
+            int paper = reg_attrib.byte_value >> 3 & 7;
+            bool flash = register_is_bit(reg_attrib, 7);
+            if (flash && ula_draw_counter == 0) {
+                int temp = ink;
+                ink = paper;
+                paper = temp;
+            }
+            bool brightness = register_is_bit(reg_attrib, 6);
+            for (int j = 0; j < 8; j++) {
+                ula_point(x + j, y, register_is_bit(reg_bitmap, 7 - j) ? ink : paper, brightness);
+            }
+            ula_addr_bitmap.byte_value++;
+            ula_addr_attrib.byte_value++;
+            x += 8;
+        }
+        y++;
+        register_set_or_unset_bit(ula_addr_bitmap, 5, is_bit(y, 3));
+        register_set_or_unset_bit(ula_addr_bitmap, 6, is_bit(y, 4));
+        register_set_or_unset_bit(ula_addr_bitmap, 7, is_bit(y, 5));
+        register_set_or_unset_bit(ula_addr_bitmap, 8, is_bit(y, 0));
+        register_set_or_unset_bit(ula_addr_bitmap, 9, is_bit(y, 1));
+        register_set_or_unset_bit(ula_addr_bitmap, 10, is_bit(y, 2));
+        register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, 6));
+        register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, 7));
+    } 
 }
 
 void ula_draw_screen_once() {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glutSwapBuffers();
+    // glClear(GL_COLOR_BUFFER_BIT);
+    // glutSwapBuffers();
+    ula_addr_bitmap.byte_value = 0x4000;
+    ula_addr_attrib.byte_value = 0;
+    for (int i = 0; i < 312; i++) {
+        ula_draw_line(i);
+        time_sync(&ula_t_states_all, ula_t_states_per_line);
+    }
 }
 
 void *ula_draw_screen(void *args) {
     while (running) {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
-        ula_draw_counter += 1;
+        ula_draw_counter++;
         if (ula_draw_counter == 16) {
             ula_draw_counter = 0;
         }
