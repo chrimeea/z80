@@ -47,6 +47,12 @@ typedef union {
     short value;
 } REG16;
 
+typedef struct {
+    GLfloat red;
+    GLfloat green;
+    GLfloat blue;
+} RGB;
+
 REG8 memory[MAX16];
 REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
@@ -58,6 +64,14 @@ unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 bool running = true, z80_maskable_interrupt_flag = false;
+RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
+    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
+    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
+    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
+    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
+    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
+    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
 
 long double time_in_seconds() {
   struct timespec ts;
@@ -234,6 +248,11 @@ void *z80_run(void *args) {
 }
 
 void ula_point(const int x, const int y, const int c, const bool b) {
+    RGB color = b ? ula_bright_colors[c] : ula_colors[c];
+    glColor3f(color.red, color.green, color.blue);
+    glBegin(GL_POINTS);
+    glVertex2f((x + 48.0f) / 304.0f, (y + 48.0f) / 288.0f);
+    glEnd();
 }
 
 void ula_draw_line(int y) {   
@@ -272,14 +291,13 @@ void ula_draw_line(int y) {
 }
 
 void ula_draw_screen_once() {
-    // glClear(GL_COLOR_BUFFER_BIT);
-    // glutSwapBuffers();
     ula_addr_bitmap.byte_value = 0x4000;
     ula_addr_attrib.byte_value = 0;
     for (int i = 0; i < 312; i++) {
         ula_draw_line(i);
         time_sync(&ula_t_states_all, ula_t_states_per_line);
     }
+    glFlush();
 }
 
 void *ula_draw_screen(void *args) {
@@ -298,23 +316,23 @@ int main(int argc, char** argv) {
     pthread_t z80_id, ula_id;
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
-
-    int width = 304;
-    int height = 240;
-    glutInitWindowSize(width, height);
+    glutInitDisplayMode(GLUT_SINGLE);
+    glutInitWindowSize(304, 288);
 
     // int x = 200;
     // int y = 100;
     // glutInitWindowPosition(x, y);
     glutCreateWindow("Cristian Mocanu Z80");
-
-    GLclampf Red = 0.0f, Green = 0.0f, Blue = 0.0f, Alpha = 0.0f;
-    glClearColor(Red, Green, Blue, Alpha);
+    glPointSize(1.0f);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     // glutDisplayFunc(renderScene);
     glutKeyboardFunc(keyboard_press_down);
     glutKeyboardUpFunc(keyboard_press_up);
+    if (argc == 2) {
+        memory_load_rom(argv[1]);
+    }
     time_start = time_in_seconds();
     pthread_create(&z80_id, NULL, z80_run, NULL);
     pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
