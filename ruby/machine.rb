@@ -632,7 +632,7 @@ module Z80
             @t_states = 11
             @iff1, @iff2 = false, @iff1
             self.push16.copy(@pc)
-            @pc.copy(0x66)
+            @pc.store_byte_value(0x66)
         end
 
         def maskable_interrupt

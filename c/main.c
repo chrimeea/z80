@@ -57,13 +57,6 @@ REG8 memory[MAX16];
 REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
     (REG8){.value=0x1F}};
-const unsigned int memory_size = MAX16;
-const unsigned int ula_t_states_per_line = 224;
-long double time_start, state_duration = 0.00000035L;
-unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
-unsigned int ula_draw_counter = 0;
-REG16 ula_addr_bitmap, ula_addr_attrib;
-bool running = true, z80_maskable_interrupt_flag = false;
 RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
     (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
     (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
@@ -72,6 +65,18 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
     (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
     (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
     (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+const unsigned int memory_size = MAX16;
+long double time_start, state_duration = 0.00000035L;
+unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
+unsigned int ula_draw_counter = 0;
+REG16 ula_addr_bitmap, ula_addr_attrib;
+REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
+REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
+REG8 z80_reg_i, z80_reg_r;
+bool running;
+bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
+bool z80_iff1, z80_iff2, z80_can_execute;
+int z80_imode;
 
 long double time_in_seconds() {
   struct timespec ts;
@@ -236,7 +241,77 @@ REG8 port_read8(const REG16 reg) {
 void port_write8(const REG16 reg, const REG8 alt) {
 }
 
+void z80_reset() {
+    z80_nonmaskable_interrupt_flag = false;
+    z80_maskable_interrupt_flag = false;
+    z80_iff1 = false;
+    z80_iff2 = false;
+    z80_can_execute = true;
+    z80_imode = 0;
+    z80_reg_af.byte_value = 0xFFFF;
+    z80_reg_sp.byte_value = 0xFFFF;
+    z80_reg_pc.byte_value = 0;
+    z80_reg_r.byte_value = 0;
+    running = true;
+    time_start = time_in_seconds();
+}
+
+void z80_memory_refresh() {
+    z80_reg_r.byte_value = (z80_reg_r.byte_value + 1) % MAX7;
+}
+
+REG8 z80_next8() {
+    REG8 v = memory_read8(z80_reg_pc);
+    z80_reg_pc.byte_value++;
+    return v;
+}
+
+REG16 z80_next16() {
+    REG16 v = memory_read16(z80_reg_pc);
+    z80_reg_pc.byte_value += 2;
+    return v;
+}
+
+REG16 z80_push16() {
+    z80_reg_sp.byte_value -= 2;
+    return memory_read16(z80_reg_sp);
+}
+
+REG16 z80_pop16() {
+    REG16 v = memory_read16(z80_reg_sp);
+    z80_reg_sp.byte_value += 2;
+    return v;
+}
+
+REG8 z80_fetch_opcode() {
+    z80_memory_refresh();
+    return z80_next8();
+}
+
+unsigned int z80_nonmaskable_interrupt() {
+    return 0;
+}
+
+unsigned int z80_maskable_interrupt() {
+    return 0;
+}
+
+unsigned int z80_execute(REG8 opcode) {
+    return 0;
+}
+
 unsigned int z80_run_one() {
+    if (z80_nonmaskable_interrupt_flag) {
+        z80_nonmaskable_interrupt_flag = false;
+        return z80_nonmaskable_interrupt();
+    } else if (z80_maskable_interrupt_flag) {
+        z80_maskable_interrupt_flag = false;
+        if (z80_iff1) {
+            return z80_maskable_interrupt();
+        }
+    } else if (z80_can_execute) {
+        return z80_execute(z80_fetch_opcode());
+    }
     return 0;
 }
 
@@ -255,7 +330,7 @@ void ula_point(const int x, const int y, const int c, const bool b) {
     glEnd();
 }
 
-void ula_draw_line(int y) {   
+unsigned int ula_draw_line(int y) {
     if (y > 63 && y < 256) {
         int x = 0;
         ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
@@ -287,15 +362,15 @@ void ula_draw_line(int y) {
         register_set_or_unset_bit(ula_addr_bitmap, 10, is_bit(y, 2));
         register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, 6));
         register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, 7));
-    } 
+    }
+    return 224;
 }
 
 void ula_draw_screen_once() {
     ula_addr_bitmap.byte_value = 0x4000;
     ula_addr_attrib.byte_value = 0;
     for (int i = 0; i < 312; i++) {
-        ula_draw_line(i);
-        time_sync(&ula_t_states_all, ula_t_states_per_line);
+        time_sync(&ula_t_states_all, ula_draw_line(i));
     }
     glFlush();
 }
@@ -304,10 +379,7 @@ void *ula_draw_screen(void *args) {
     while (running) {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
-        ula_draw_counter++;
-        if (ula_draw_counter == 16) {
-            ula_draw_counter = 0;
-        }
+        ula_draw_counter = (ula_draw_counter + 1) % 16;
     }
     return NULL;
 }
@@ -319,9 +391,7 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_SINGLE);
     glutInitWindowSize(304, 288);
 
-    // int x = 200;
-    // int y = 100;
-    // glutInitWindowPosition(x, y);
+    // glutInitWindowPosition(200, 100);
     glutCreateWindow("Cristian Mocanu Z80");
     glPointSize(1.0f);
     glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
@@ -333,10 +403,15 @@ int main(int argc, char** argv) {
     if (argc == 2) {
         memory_load_rom(argv[1]);
     }
-    time_start = time_in_seconds();
+    z80_reset();
     pthread_create(&z80_id, NULL, z80_run, NULL);
     pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
     glutMainLoop();
     running = false;
     return 0;
 }
+
+//TODO: bright colors
+//TODO: keyboard caps lock and shift
+//TODO: border, UART, sound, tape
+//TODO: debugger
