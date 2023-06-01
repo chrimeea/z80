@@ -78,6 +78,11 @@ bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
 int z80_imode;
 
+int system_little_endian() {
+    int x = 1;
+    return *(char*)&x;
+}
+
 long double time_in_seconds() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -109,34 +114,40 @@ void memory_load_rom(const char *filename) {
     fclose(f);
 }
 
+REG8 *memory_ref8(const REG16 reg) {
+    return &memory[reg.byte_value];
+}
+
 REG8 memory_read8(const REG16 reg) {
-    return memory[reg.byte_value];
+    return *memory_ref8(reg);
 }
 
 void memory_write8(const REG16 reg, const REG8 alt) {
-    memory[reg.byte_value] = alt;
+    *memory_ref8(reg) = alt;
+}
+
+REG8 *memory_ref8_indexed(const REG16 reg16, const REG8 reg8) {
+    return &memory[reg16.byte_value + reg8.value];
 }
 
 REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8) {
-    return memory[reg16.byte_value + reg8.value];
+    return *memory_ref8_indexed(reg16, reg8);
 }
 
 void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt) {
-    memory[reg16.byte_value + reg8.value] = alt;
+    *memory_ref8_indexed(reg16, reg8) = alt;
+}
+
+REG16 *memory_ref16(REG16 reg) {
+    return (REG16 *)memory_ref8(reg);
 }
 
 REG16 memory_read16(REG16 reg) {
-    REG16 alt;
-    alt.bytes.low = memory_read8(reg);
-    reg.value++;
-    alt.bytes.high = memory_read8(reg);
-    return alt;
+    return *memory_ref16(reg);
 }
 
 void memory_write16(REG16 reg, REG16 alt) {
-    memory_write8(reg, alt.bytes.low);
-    reg.value++;
-    memory_write8(reg, alt.bytes.high);
+    *memory_ref16(reg) = alt;
 }
 
 REG8 keyboard_read8(const REG16 reg) {
@@ -284,7 +295,7 @@ REG16 z80_next16() {
     return v;
 }
 
-void z80_push16(REG16 reg) {
+void z80_push16(const REG16 reg) {
     z80_reg_sp.byte_value -= 2;
     memory_write16(z80_reg_sp, reg);
 }
@@ -298,6 +309,34 @@ REG16 z80_pop16() {
 REG8 z80_fetch_opcode() {
     z80_memory_refresh();
     return z80_next8();
+}
+
+unsigned int z80_decode_reg8(REG8 reg, int pos, unsigned int t, REG8 *result) {
+    REG8 *a[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
+        &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
+        &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
+        memory_ref8(z80_reg_hl), &z80_reg_af.bytes.high};
+    int i = reg.byte_value >> pos & 0x07;
+    result = a[i];
+    return i == 0x06 ? t : 0;
+}
+
+void z80_decode_reg16(REG16 reg, int pos, REG16 *result) {
+    REG16 *a[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
+    result = a[reg.byte_value >> pos & 0x03];
+}
+
+unsigned int z80_execute(REG8 reg) {
+    switch (reg.byte_value) {
+        case 0x00: //NOP
+        return 4;
+        case 0x01: //LD dd,nn
+        case 0x11:
+        case 0x21:
+        case 0x31:
+        return 10;
+    }
+    return 0;
 }
 
 unsigned int z80_nonmaskable_interrupt() {
@@ -327,28 +366,6 @@ unsigned int z80_maskable_interrupt() {
         default:
         return 0; //fail
     }
-}
-
-unsigned int z80_decode_reg8(REG8 reg, int pos, int t, REG8 *result) {
-    return 0;
-}
-
-void z80_decode_reg16(REG16 reg, int pos, REG16 *result) {
-    REG16 *a[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
-    result = &a[reg.byte_value >> pos & 0x03];
-}
-
-unsigned int z80_execute(REG8 reg) {
-    switch (reg.byte_value) {
-        case 0x00: //NOP
-        return 4;
-        case 0x01: //LD dd,nn
-        case 0x11:
-        case 0x21:
-        case 0x31:
-        return 10;
-    }
-    return 0;
 }
 
 unsigned int z80_run_one() {
@@ -437,27 +454,28 @@ void *ula_draw_screen(void *args) {
 
 int main(int argc, char** argv) {
     pthread_t z80_id, ula_id;
+    if (system_little_endian()) {
+        glutInit(&argc, argv);
+        glutInitDisplayMode(GLUT_SINGLE);
+        glutInitWindowSize(304, 288);
 
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE);
-    glutInitWindowSize(304, 288);
+        // glutInitWindowPosition(200, 100);
+        glutCreateWindow("Cristian Mocanu Z80");
+        glPointSize(1.0f);
+        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-    // glutInitWindowPosition(200, 100);
-    glutCreateWindow("Cristian Mocanu Z80");
-    glPointSize(1.0f);
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // glutDisplayFunc(renderScene);
-    glutKeyboardFunc(keyboard_press_down);
-    glutKeyboardUpFunc(keyboard_press_up);
-    if (argc == 2) {
-        memory_load_rom(argv[1]);
+        // glutDisplayFunc(renderScene);
+        glutKeyboardFunc(keyboard_press_down);
+        glutKeyboardUpFunc(keyboard_press_up);
+        if (argc == 2) {
+            memory_load_rom(argv[1]);
+        }
+        z80_reset();
+        pthread_create(&z80_id, NULL, z80_run, NULL);
+        pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
+        glutMainLoop();
     }
-    z80_reset();
-    pthread_create(&z80_id, NULL, z80_run, NULL);
-    pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
-    glutMainLoop();
     running = false;
     return 0;
 }
