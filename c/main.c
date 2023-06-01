@@ -73,6 +73,11 @@ REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
 REG8 z80_reg_i, z80_reg_r, z80_data_bus;
+REG8 *z80_all8[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
+    &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
+    &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
+    NULL, &z80_reg_af.bytes.high};
+REG16 *z80_all16[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
@@ -311,19 +316,19 @@ REG8 z80_fetch_opcode() {
     return z80_next8();
 }
 
-unsigned int z80_decode_reg8(REG8 reg, int pos, unsigned int t, REG8 *result) {
-    REG8 *a[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
-        &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
-        &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
-        memory_ref8(z80_reg_hl), &z80_reg_af.bytes.high};
+REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, unsigned int *r) {
     int i = reg.byte_value >> pos & 0x07;
-    result = a[i];
-    return i == 0x06 ? t : 0;
+    if (i == 0x06) {
+        *r = t;
+        return memory_ref8(z80_reg_hl);
+    } else {
+        *r = 0;
+        return z80_all8[i];
+    }
 }
 
-void z80_decode_reg16(REG16 reg, int pos, REG16 *result) {
-    REG16 *a[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
-    result = a[reg.byte_value >> pos & 0x03];
+REG16 *z80_decode16(REG8 reg, int pos) {
+    return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
 unsigned int z80_execute(REG8 reg) {
@@ -334,6 +339,7 @@ unsigned int z80_execute(REG8 reg) {
         case 0x11:
         case 0x21:
         case 0x31:
+        *z80_decode16(reg, 4) = z80_next16();
         return 10;
     }
     return 0;
