@@ -1,4 +1,4 @@
-//gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
+// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
 
 #include <GL/freeglut.h>
 #include <stdio.h>
@@ -33,13 +33,16 @@
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit(R.byte_value, B, V))
 
-typedef union {
+typedef union
+{
     unsigned char byte_value;
     char value;
 } REG8;
 
-typedef union {
-    struct {
+typedef union
+{
+    struct
+    {
         REG8 low;
         REG8 high;
     } bytes;
@@ -47,24 +50,25 @@ typedef union {
     short value;
 } REG16;
 
-typedef struct {
+typedef struct
+{
     GLfloat red;
     GLfloat green;
     GLfloat blue;
 } RGB;
 
 REG8 memory[MAX16];
-REG8 keyboard[] = {(REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
-    (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F}, (REG8){.value=0x1F},
-    (REG8){.value=0x1F}};
+REG8 keyboard[] = {(REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
+                   (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
+                   (REG8){.value = 0x1F}};
 RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
-    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
-    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
-    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+                    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
+                    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
+                    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
 RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
-    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
-    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
-    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+                           (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
+                           (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
+                           (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
 const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000035L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
@@ -74,44 +78,50 @@ REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z8
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
 REG8 z80_reg_i, z80_reg_r, z80_data_bus;
 REG8 *z80_all8[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
-    &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
-    &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
-    NULL, &z80_reg_af.bytes.high};
+                    &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
+                    &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
+                    NULL, &z80_reg_af.bytes.high};
 REG16 *z80_all16[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
 int z80_imode;
 
-int system_little_endian() {
+int system_little_endian()
+{
     int x = 1;
-    return *(char*)&x;
+    return *(char *)&x;
 }
 
-long double time_in_seconds() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return ts.tv_sec + ts.tv_nsec / 1000000000L;
+long double time_in_seconds()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1000000000L;
 }
 
-void time_seconds_to_timespec(struct timespec *ts, long double s) {
+void time_seconds_to_timespec(struct timespec *ts, long double s)
+{
     long double temp;
     ts->tv_nsec = modfl(s, &temp) * 1000000000;
     ts->tv_sec = temp;
 }
 
-void time_sync(unsigned long* t_states_all, unsigned int t_states) {
+void time_sync(unsigned long *t_states_all, unsigned int t_states)
+{
     *t_states_all += t_states;
     struct timespec ts;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
     nanosleep(&ts, &ts);
 }
 
-void memory_load_rom(const char *filename) {
+void memory_load_rom(const char *filename)
+{
     int n, remaining = memory_size;
     REG8 *m = memory;
     FILE *f = fopen(filename, "rb");
-    do {
+    do
+    {
         n = fread(m, 1, remaining, f);
         m += n;
         remaining -= n;
@@ -119,157 +129,253 @@ void memory_load_rom(const char *filename) {
     fclose(f);
 }
 
-REG8 *memory_ref8(const REG16 reg) {
+REG8 *memory_ref8(const REG16 reg)
+{
     return &memory[reg.byte_value];
 }
 
-REG8 memory_read8(const REG16 reg) {
+REG8 memory_read8(const REG16 reg)
+{
     return *memory_ref8(reg);
 }
 
-void memory_write8(const REG16 reg, const REG8 alt) {
+void memory_write8(const REG16 reg, const REG8 alt)
+{
     *memory_ref8(reg) = alt;
 }
 
-REG8 *memory_ref8_indexed(const REG16 reg16, const REG8 reg8) {
+REG8 *memory_ref8_indexed(const REG16 reg16, const REG8 reg8)
+{
     return &memory[reg16.byte_value + reg8.value];
 }
 
-REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8) {
+REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8)
+{
     return *memory_ref8_indexed(reg16, reg8);
 }
 
-void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt) {
+void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt)
+{
     *memory_ref8_indexed(reg16, reg8) = alt;
 }
 
-REG16 *memory_ref16(REG16 reg) {
+REG16 *memory_ref16(REG16 reg)
+{
     return (REG16 *)memory_ref8(reg);
 }
 
-REG16 memory_read16(REG16 reg) {
+REG16 memory_read16(REG16 reg)
+{
     return *memory_ref16(reg);
 }
 
-void memory_write16(REG16 reg, REG16 alt) {
+void memory_write16(REG16 reg, REG16 alt)
+{
     *memory_ref16(reg) = alt;
 }
 
-REG8 keyboard_read8(const REG16 reg) {
+REG8 keyboard_read8(const REG16 reg)
+{
     REG8 alt;
     alt.byte_value = 0x1F;
-    for (int i = 0; i < 8; i++) {
-        if (!register_is_bit(reg.bytes.high, i)) {
+    for (int i = 0; i < 8; i++)
+    {
+        if (!register_is_bit(reg.bytes.high, i))
+        {
             alt.byte_value &= keyboard[i].byte_value;
         }
     }
     return alt;
 }
 
-void keyboard_press(unsigned char key, const bool value) {
+void keyboard_press(unsigned char key, const bool value)
+{
     // if (strcmp(key, "Caps_Lock") == 0) {
     //     register_set_or_unset_bit(keyboard[0], 0, value);
-    if (key == 'z' || key == 'Z') {
+    if (key == 'z' || key == 'Z')
+    {
         register_set_or_unset_bit(keyboard[0], 1, value);
-    } else if (key == 'x' || key == 'X') {
+    }
+    else if (key == 'x' || key == 'X')
+    {
         register_set_or_unset_bit(keyboard[0], 2, value);
-    } else if (key == 'c' || key == 'C') {
+    }
+    else if (key == 'c' || key == 'C')
+    {
         register_set_or_unset_bit(keyboard[0], 3, value);
-    } else if (key == 'v' || key == 'V') {
+    }
+    else if (key == 'v' || key == 'V')
+    {
         register_set_or_unset_bit(keyboard[0], 4, value);
-    } else if (key == 'a' || key == 'A') {
+    }
+    else if (key == 'a' || key == 'A')
+    {
         register_set_or_unset_bit(keyboard[1], 0, value);
-    } else if (key == 's' || key == 'S') {
+    }
+    else if (key == 's' || key == 'S')
+    {
         register_set_or_unset_bit(keyboard[1], 1, value);
-    } else if (key == 'd' || key == 'D') {
+    }
+    else if (key == 'd' || key == 'D')
+    {
         register_set_or_unset_bit(keyboard[1], 2, value);
-    } else if (key == 'f' || key == 'F') {
+    }
+    else if (key == 'f' || key == 'F')
+    {
         register_set_or_unset_bit(keyboard[1], 3, value);
-    } else if (key == 'g' || key == 'G') {
+    }
+    else if (key == 'g' || key == 'G')
+    {
         register_set_or_unset_bit(keyboard[1], 4, value);
-    } else if (key == 'q' || key == 'Q') {
+    }
+    else if (key == 'q' || key == 'Q')
+    {
         register_set_or_unset_bit(keyboard[2], 0, value);
-    } else if (key == 'w' || key == 'W') {
+    }
+    else if (key == 'w' || key == 'W')
+    {
         register_set_or_unset_bit(keyboard[2], 1, value);
-    } else if (key == 'e' || key == 'E') {
+    }
+    else if (key == 'e' || key == 'E')
+    {
         register_set_or_unset_bit(keyboard[2], 2, value);
-    } else if (key == 'r' || key == 'R') {
+    }
+    else if (key == 'r' || key == 'R')
+    {
         register_set_or_unset_bit(keyboard[2], 3, value);
-    } else if (key == 't' || key == 'T') {
+    }
+    else if (key == 't' || key == 'T')
+    {
         register_set_or_unset_bit(keyboard[2], 4, value);
-    } else if (key == '1') {
+    }
+    else if (key == '1')
+    {
         register_set_or_unset_bit(keyboard[3], 0, value);
-    } else if (key == '2') {
+    }
+    else if (key == '2')
+    {
         register_set_or_unset_bit(keyboard[3], 1, value);
-    } else if (key == '3') {
+    }
+    else if (key == '3')
+    {
         register_set_or_unset_bit(keyboard[3], 2, value);
-    } else if (key == '4') {
+    }
+    else if (key == '4')
+    {
         register_set_or_unset_bit(keyboard[3], 3, value);
-    } else if (key == '5') {
+    }
+    else if (key == '5')
+    {
         register_set_or_unset_bit(keyboard[3], 4, value);
-    } else if (key == '0') {
+    }
+    else if (key == '0')
+    {
         register_set_or_unset_bit(keyboard[4], 0, value);
-    } else if (key == '9') {
+    }
+    else if (key == '9')
+    {
         register_set_or_unset_bit(keyboard[4], 1, value);
-    } else if (key == '8') {
+    }
+    else if (key == '8')
+    {
         register_set_or_unset_bit(keyboard[4], 2, value);
-    } else if (key == '7') {
+    }
+    else if (key == '7')
+    {
         register_set_or_unset_bit(keyboard[4], 3, value);
-    } else if (key == '6') {
+    }
+    else if (key == '6')
+    {
         register_set_or_unset_bit(keyboard[4], 4, value);
-    } else if (key == 'p' || key == 'P') {
+    }
+    else if (key == 'p' || key == 'P')
+    {
         register_set_or_unset_bit(keyboard[5], 0, value);
-    } else if (key == 'o' || key == 'O') {
+    }
+    else if (key == 'o' || key == 'O')
+    {
         register_set_or_unset_bit(keyboard[5], 1, value);
-    } else if (key == 'i' || key == 'I') {
+    }
+    else if (key == 'i' || key == 'I')
+    {
         register_set_or_unset_bit(keyboard[5], 2, value);
-    } else if (key == 'u' || key == 'U') {
+    }
+    else if (key == 'u' || key == 'U')
+    {
         register_set_or_unset_bit(keyboard[5], 3, value);
-    } else if (key == 'y' || key == 'Y') {
+    }
+    else if (key == 'y' || key == 'Y')
+    {
         register_set_or_unset_bit(keyboard[5], 4, value);
-    } else if (key == 13) {
+    }
+    else if (key == 13)
+    {
         register_set_or_unset_bit(keyboard[6], 0, value);
-    } else if (key == 'l' || key == 'L') {
+    }
+    else if (key == 'l' || key == 'L')
+    {
         register_set_or_unset_bit(keyboard[6], 1, value);
-    } else if (key == 'k' || key == 'K') {
+    }
+    else if (key == 'k' || key == 'K')
+    {
         register_set_or_unset_bit(keyboard[6], 2, value);
-    } else if (key == 'j' || key == 'J') {
+    }
+    else if (key == 'j' || key == 'J')
+    {
         register_set_or_unset_bit(keyboard[6], 3, value);
-    } else if (key == 'h' || key == 'H') {
+    }
+    else if (key == 'h' || key == 'H')
+    {
         register_set_or_unset_bit(keyboard[6], 4, value);
-    } else if (key == ' ') {
+    }
+    else if (key == ' ')
+    {
         register_set_or_unset_bit(keyboard[7], 0, value);
-    // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
-    //     register_set_or_unset_bit(keyboard[7], 1, value);
-    } else if (key == 'm' || key == 'M') {
+        // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
+        //     register_set_or_unset_bit(keyboard[7], 1, value);
+    }
+    else if (key == 'm' || key == 'M')
+    {
         register_set_or_unset_bit(keyboard[7], 2, value);
-    } else if (key == 'n' || key == 'N') {
+    }
+    else if (key == 'n' || key == 'N')
+    {
         register_set_or_unset_bit(keyboard[7], 3, value);
-    } else if (key == 'b' || key == 'B') {
+    }
+    else if (key == 'b' || key == 'B')
+    {
         register_set_or_unset_bit(keyboard[7], 4, value);
     }
 }
 
-void keyboard_press_down(unsigned char key, int x, int y) {
+void keyboard_press_down(unsigned char key, int x, int y)
+{
     keyboard_press(key, true);
 }
 
-void keyboard_press_up(unsigned char key, int x, int y) {
+void keyboard_press_up(unsigned char key, int x, int y)
+{
     keyboard_press(key, false);
 }
 
-REG8 port_read8(const REG16 reg) {
-    if (reg.byte_value == 0xFE) {
+REG8 port_read8(const REG16 reg)
+{
+    if (reg.byte_value == 0xFE)
+    {
         return keyboard_read8(reg);
-    } else {
+    }
+    else
+    {
         return (REG8){.byte_value = 0xFF};
     }
 }
 
-void port_write8(const REG16 reg, const REG8 alt) {
+void port_write8(const REG16 reg, const REG8 alt)
+{
 }
 
-void z80_reset() {
+void z80_reset()
+{
     z80_nonmaskable_interrupt_flag = false;
     z80_maskable_interrupt_flag = false;
     z80_iff1 = false;
@@ -284,68 +390,91 @@ void z80_reset() {
     time_start = time_in_seconds();
 }
 
-void z80_memory_refresh() {
+void z80_memory_refresh()
+{
     z80_reg_r.byte_value = (z80_reg_r.byte_value + 1) % MAX7;
 }
 
-REG8 z80_next8() {
+REG8 z80_next8()
+{
     REG8 v = memory_read8(z80_reg_pc);
     z80_reg_pc.byte_value++;
     return v;
 }
 
-REG16 z80_next16() {
+REG16 z80_next16()
+{
     REG16 v = memory_read16(z80_reg_pc);
     z80_reg_pc.byte_value += 2;
     return v;
 }
 
-void z80_push16(const REG16 reg) {
+void z80_push16(const REG16 reg)
+{
     z80_reg_sp.byte_value -= 2;
     memory_write16(z80_reg_sp, reg);
 }
 
-REG16 z80_pop16() {
+REG16 z80_pop16()
+{
     REG16 v = memory_read16(z80_reg_sp);
     z80_reg_sp.byte_value += 2;
     return v;
 }
 
-REG8 z80_fetch_opcode() {
+REG8 z80_fetch_opcode()
+{
     z80_memory_refresh();
     return z80_next8();
 }
 
-REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, unsigned int *r) {
+REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, unsigned int *r)
+{
     int i = reg.byte_value >> pos & 0x07;
-    if (i == 0x06) {
+    if (i == 0x06)
+    {
         *r = t;
         return memory_ref8(z80_reg_hl);
-    } else {
+    }
+    else
+    {
         *r = 0;
         return z80_all8[i];
     }
 }
 
-REG16 *z80_decode16(REG8 reg, int pos) {
+REG16 *z80_decode16(REG8 reg, int pos)
+{
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
-unsigned int z80_execute(REG8 reg) {
-    switch (reg.byte_value) {
-        case 0x00: //NOP
+unsigned int z80_execute(REG8 reg)
+{
+    switch (reg.byte_value)
+    {
+    case 0x00: // NOP
         return 4;
-        case 0x01: //LD dd,nn
-        case 0x11:
-        case 0x21:
-        case 0x31:
+    case 0x01: // LD dd,nn
+    case 0x11:
+    case 0x21:
+    case 0x31:
         *z80_decode16(reg, 4) = z80_next16();
         return 10;
+    case 0x02: // LD (BC),A
+        memory_write8(z80_reg_bc, z80_reg_af.bytes.high);
+        return 7;
+    case 0x03: // INC ss
+    case 0x13:
+    case 0x23:
+    case 0x33:
+        z80_decode16(reg, 4)->byte_value++;
+        return 6;
     }
     return 0;
 }
 
-unsigned int z80_nonmaskable_interrupt() {
+unsigned int z80_nonmaskable_interrupt()
+{
     z80_iff2 = z80_iff1;
     z80_iff1 = false;
     z80_push16(z80_reg_pc);
@@ -353,50 +482,62 @@ unsigned int z80_nonmaskable_interrupt() {
     return 11;
 }
 
-unsigned int z80_maskable_interrupt() {
+unsigned int z80_maskable_interrupt()
+{
     z80_iff1 = false;
     z80_iff2 = false;
-    switch (z80_imode) {
-        case 0:
-        //TODO: wait 2 cycles for interrupting device to write to data_bus
+    switch (z80_imode)
+    {
+    case 0:
+        // TODO: wait 2 cycles for interrupting device to write to data_bus
         z80_memory_refresh();
         return z80_execute(z80_data_bus) + 2;
-        case 1:
+    case 1:
         z80_push16(z80_reg_pc);
         z80_reg_pc.byte_value = 0x38;
         return 13;
-        case 2:
+    case 2:
         z80_push16(z80_reg_pc);
         z80_reg_pc = memory_read16((REG16){.bytes.high = z80_reg_i, .bytes.low = z80_data_bus});
         return 19;
-        default:
-        return 0; //fail
+    default:
+        return 0; // fail
     }
 }
 
-unsigned int z80_run_one() {
-    if (z80_nonmaskable_interrupt_flag) {
+unsigned int z80_run_one()
+{
+    if (z80_nonmaskable_interrupt_flag)
+    {
         z80_nonmaskable_interrupt_flag = false;
         return z80_nonmaskable_interrupt();
-    } else if (z80_maskable_interrupt_flag) {
+    }
+    else if (z80_maskable_interrupt_flag)
+    {
         z80_maskable_interrupt_flag = false;
-        if (z80_iff1) {
+        if (z80_iff1)
+        {
             return z80_maskable_interrupt();
         }
-    } else if (z80_can_execute) {
+    }
+    else if (z80_can_execute)
+    {
         return z80_execute(z80_fetch_opcode());
     }
     return 0;
 }
 
-void *z80_run(void *args) {
-    while (running) {
+void *z80_run(void *args)
+{
+    while (running)
+    {
         time_sync(&z80_t_states_all, z80_run_one());
     }
     return NULL;
 }
 
-void ula_point(const int x, const int y, const int c, const bool b) {
+void ula_point(const int x, const int y, const int c, const bool b)
+{
     RGB color = b ? ula_bright_colors[c] : ula_colors[c];
     glColor3f(color.red, color.green, color.blue);
     glBegin(GL_POINTS);
@@ -404,23 +545,28 @@ void ula_point(const int x, const int y, const int c, const bool b) {
     glEnd();
 }
 
-unsigned int ula_draw_line(int y) {
-    if (y > 63 && y < 256) {
+unsigned int ula_draw_line(int y)
+{
+    if (y > 63 && y < 256)
+    {
         int x = 0;
         ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
-        for (int i = 0; i < 32; i ++) {
+        for (int i = 0; i < 32; i++)
+        {
             REG8 reg_bitmap = memory_read8(ula_addr_bitmap);
             REG8 reg_attrib = memory_read8(ula_addr_attrib);
             int ink = reg_attrib.byte_value & 7;
             int paper = reg_attrib.byte_value >> 3 & 7;
             bool flash = register_is_bit(reg_attrib, 7);
-            if (flash && ula_draw_counter == 0) {
+            if (flash && ula_draw_counter == 0)
+            {
                 int temp = ink;
                 ink = paper;
                 paper = temp;
             }
             bool brightness = register_is_bit(reg_attrib, 6);
-            for (int j = 0; j < 8; j++) {
+            for (int j = 0; j < 8; j++)
+            {
                 ula_point(x + j, y, register_is_bit(reg_bitmap, 7 - j) ? ink : paper, brightness);
             }
             ula_addr_bitmap.byte_value++;
@@ -440,17 +586,21 @@ unsigned int ula_draw_line(int y) {
     return 224;
 }
 
-void ula_draw_screen_once() {
+void ula_draw_screen_once()
+{
     ula_addr_bitmap.byte_value = 0x4000;
     ula_addr_attrib.byte_value = 0;
-    for (int i = 0; i < 312; i++) {
+    for (int i = 0; i < 312; i++)
+    {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
     glFlush();
 }
 
-void *ula_draw_screen(void *args) {
-    while (running) {
+void *ula_draw_screen(void *args)
+{
+    while (running)
+    {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
         ula_draw_counter = (ula_draw_counter + 1) % 16;
@@ -458,9 +608,11 @@ void *ula_draw_screen(void *args) {
     return NULL;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     pthread_t z80_id, ula_id;
-    if (system_little_endian()) {
+    if (system_little_endian())
+    {
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
         glutInitWindowSize(304, 288);
@@ -474,7 +626,8 @@ int main(int argc, char** argv) {
         // glutDisplayFunc(renderScene);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
-        if (argc == 2) {
+        if (argc == 2)
+        {
             memory_load_rom(argv[1]);
         }
         z80_reset();
@@ -486,7 +639,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-//TODO: bright colors
-//TODO: keyboard caps lock and shift
-//TODO: border, UART, sound, tape
-//TODO: debugger
+// TODO: bright colors
+// TODO: keyboard caps lock and shift
+// TODO: border, UART, sound, tape
+// TODO: debugger
