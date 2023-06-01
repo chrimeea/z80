@@ -72,7 +72,7 @@ unsigned int ula_draw_counter = 0;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
-REG8 z80_reg_i, z80_reg_r;
+REG8 z80_reg_i, z80_reg_r, z80_data_bus;
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
@@ -113,10 +113,16 @@ REG8 memory_read8(const REG16 reg) {
     return memory[reg.byte_value];
 }
 
+void memory_write8(const REG16 reg, const REG8 alt) {
+    memory[reg.byte_value] = alt;
+}
+
 REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8) {
-    REG16 alt;
-    alt.byte_value = reg16.byte_value + reg8.value;
-    return memory_read8(alt);
+    return memory[reg16.byte_value + reg8.value];
+}
+
+void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt) {
+    memory[reg16.byte_value + reg8.value] = alt;
 }
 
 REG16 memory_read16(REG16 reg) {
@@ -125,6 +131,12 @@ REG16 memory_read16(REG16 reg) {
     reg.value++;
     alt.bytes.high = memory_read8(reg);
     return alt;
+}
+
+void memory_write16(REG16 reg, REG16 alt) {
+    memory_write8(reg, alt.bytes.low);
+    reg.value++;
+    memory_write8(reg, alt.bytes.high);
 }
 
 REG8 keyboard_read8(const REG16 reg) {
@@ -272,9 +284,9 @@ REG16 z80_next16() {
     return v;
 }
 
-REG16 z80_push16() {
+void z80_push16(REG16 reg) {
     z80_reg_sp.byte_value -= 2;
-    return memory_read16(z80_reg_sp);
+    memory_write16(z80_reg_sp, reg);
 }
 
 REG16 z80_pop16() {
@@ -289,14 +301,53 @@ REG8 z80_fetch_opcode() {
 }
 
 unsigned int z80_nonmaskable_interrupt() {
-    return 0;
+    z80_iff2 = z80_iff1;
+    z80_iff1 = false;
+    z80_push16(z80_reg_pc);
+    z80_reg_pc.byte_value = 0x66;
+    return 11;
 }
 
 unsigned int z80_maskable_interrupt() {
+    z80_iff1 = false;
+    z80_iff2 = false;
+    switch (z80_imode) {
+        case 0:
+        //TODO: wait 2 cycles for interrupting device to write to data_bus
+        z80_memory_refresh();
+        return z80_execute(z80_data_bus) + 2;
+        case 1:
+        z80_push16(z80_reg_pc);
+        z80_reg_pc.byte_value = 0x38;
+        return 13;
+        case 2:
+        z80_push16(z80_reg_pc);
+        z80_reg_pc = memory_read16((REG16){.bytes.high = z80_reg_i, .bytes.low = z80_data_bus});
+        return 19;
+        default:
+        return 0; //fail
+    }
+}
+
+unsigned int z80_decode_reg8(REG8 reg, int pos, int t, REG8 *result) {
     return 0;
 }
 
-unsigned int z80_execute(REG8 opcode) {
+void z80_decode_reg16(REG16 reg, int pos, REG16 *result) {
+    REG16 *a[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
+    result = &a[reg.byte_value >> pos & 0x03];
+}
+
+unsigned int z80_execute(REG8 reg) {
+    switch (reg.byte_value) {
+        case 0x00: //NOP
+        return 4;
+        case 0x01: //LD dd,nn
+        case 0x11:
+        case 0x21:
+        case 0x31:
+        return 10;
+    }
     return 0;
 }
 
