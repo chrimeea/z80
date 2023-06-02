@@ -125,7 +125,7 @@ void register_add16_with_flags(REG16 reg, REG16 alt) {
     if (sign(reg.value) == sign(alt.value) && sign((short)r) != sign(reg.value)) {
         z80_flag_overflow = true;
     }
-    reg.byte_value += alt.byte_value;
+    reg.byte_value = r;
 }
 
 void register_sub16_with_flags(REG16 reg, REG16 alt) {
