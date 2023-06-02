@@ -32,6 +32,7 @@
 #define unset_bit(I, B) (I &= ~(1 << (B)))
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit(R.byte_value, B, V))
+#define sign(X) ((X > 0) ? 1 : ((X < 0) ? -1 : 0))
 
 typedef union
 {
@@ -85,6 +86,7 @@ REG16 *z80_all16[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
+bool z80_flag_carry, z80_flag_hc, z80_flag_n, z80_flag_overflow;
 int z80_imode;
 
 int system_little_endian()
@@ -113,6 +115,28 @@ void time_sync(unsigned long *t_states_all, unsigned int t_states)
     struct timespec ts;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
     nanosleep(&ts, &ts);
+}
+
+void register_add16_with_flags(REG16 reg, REG16 alt) {
+    int r = reg.byte_value + alt.byte_value;
+    z80_flag_carry = (r >= MAX16);
+    z80_flag_hc = (((reg.byte_value & 0xFFF) + (alt.byte_value & 0xFFF)) >= MAX12);
+    z80_flag_n = false;
+    if (sign(reg.value) == sign(alt.value) && sign(r) != sign(reg.value)) {
+        z80_flag_overflow = true;
+    }
+    reg.byte_value += alt.byte_value;
+}
+
+void register_sub16_with_flags(REG16 reg, REG16 alt) {
+    int r = reg.byte_value + alt.byte_value;
+    z80_flag_carry = (alt.byte_value > reg.byte_value);
+    z80_flag_hc = ((alt.byte_value & 0xFFF) > (reg.byte_value & 0xFFF));
+    z80_flag_n = true;
+    if (sign(reg.value) != sign(alt.value) && sign(r) != sign(reg.value)) {
+        z80_flag_overflow = true;
+    }
+    reg.byte_value -= alt.byte_value;
 }
 
 void memory_load_rom(const char *filename)
