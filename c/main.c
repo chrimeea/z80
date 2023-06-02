@@ -117,23 +117,27 @@ void time_sync(unsigned long *t_states_all, unsigned int t_states)
     nanosleep(&ts, &ts);
 }
 
-void register_add16_with_flags(REG16 reg, REG16 alt) {
+void register_add16_with_flags(REG16 reg, REG16 alt)
+{
     int r = reg.byte_value + alt.byte_value;
     z80_flag_carry = (r >= MAX16);
     z80_flag_hc = (((reg.byte_value & 0xFFF) + (alt.byte_value & 0xFFF)) >= MAX12);
     z80_flag_n = false;
-    if (sign(reg.value) == sign(alt.value) && sign((short)r) != sign(reg.value)) {
+    if (sign(reg.value) == sign(alt.value) && sign((short)r) != sign(reg.value))
+    {
         z80_flag_overflow = true;
     }
     reg.byte_value = r;
 }
 
-void register_sub16_with_flags(REG16 reg, REG16 alt) {
+void register_sub16_with_flags(REG16 reg, REG16 alt)
+{
     short r = reg.byte_value - alt.byte_value;
     z80_flag_carry = (alt.byte_value > reg.byte_value);
     z80_flag_hc = ((alt.byte_value & 0xFFF) > (reg.byte_value & 0xFFF));
     z80_flag_n = true;
-    if (sign(reg.value) != sign(alt.value) && sign(r) != sign(reg.value)) {
+    if (sign(reg.value) != sign(alt.value) && sign(r) != sign(reg.value))
+    {
         z80_flag_overflow = true;
     }
     reg.byte_value -= alt.byte_value;
