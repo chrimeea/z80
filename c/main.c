@@ -94,7 +94,6 @@ REG16 *z80_all16[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
-bool z80_flag_carry, z80_flag_hc, z80_flag_n, z80_flag_overflow;
 int z80_imode;
 
 int system_little_endian()
