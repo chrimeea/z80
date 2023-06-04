@@ -33,6 +33,7 @@
 #define FLAG_Z 6
 #define FLAG_S 7
 
+#define sign(X) ((X > 0) ? 1 : ((X < 0) ? -1 : 0))
 #define is_bit(I, B) (I & (1 << (B)))
 #define register_is_bit(R, B) (is_bit(R.byte_value, B))
 #define set_bit(I, B) (I |= (1 << (B)))
@@ -40,7 +41,8 @@
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit(R.byte_value, B, V))
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
-#define sign(X) ((X > 0) ? 1 : ((X < 0) ? -1 : 0))
+#define register_split_8_to_4(R) (div(R.byte_value, MAX3))
+#define register_set_8_from_4(R, Q, M) (R.byte_value = Q * MAX3 + M)
 
 typedef union
 {
