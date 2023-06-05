@@ -554,6 +554,9 @@ unsigned int z80_execute(REG8 reg)
     case 0x3D:
         register_sub8_with_flags(z80_decode8(reg, 3, 7, &t), REG8_ONE, MASK_SZHVN);
         return t;
+    case 0x06:
+        z80_reg_bc.bytes.high = z80_next8();
+        return 7;
     }
     return 0;
 }

@@ -691,7 +691,6 @@ module Z80
             when 0x06 #LD B,NN
                 @t_states = 7
                 @b.copy(self.next8)
-                op_size = 2
             when 0x07 #RLCA
                 @a.rotate_left
                 @f.hc_n_c(@a)
