@@ -26,19 +26,27 @@
 #define MAX15 0x8000
 #define MAX16 0x10000
 
-#define FLAG_C 0
-#define FLAG_N 1
-#define FLAG_PV 2
-#define FLAG_HC 4
-#define FLAG_Z 6
-#define FLAG_S 7
+#define FLAG_C 0x01
+#define FLAG_N 0x02
+#define FLAG_PV 0x04
+#define FLAG_HC 0x10
+#define FLAG_Z 0x40
+#define FLAG_S 0x80
+#define MASK_SZHVNC 0xD7
+#define MASK_SZHVN 0xD6
+#define MASK_NONE 0x00
+
+#define REG8_ONE \
+    (REG8) { .value = 1 }
+#define REG16_ONE \
+    (REG16) { .value = 1 }
 
 #define sign(X) (X < 0)
 #define zero(X) (X == 0)
-#define is_bit(I, B) (I & (1 << (B)))
+#define is_bit(I, B) (I & (B))
 #define register_is_bit(R, B) (is_bit(R.byte_value, B))
-#define set_bit(I, B) (I |= (1 << (B)))
-#define unset_bit(I, B) (I &= ~(1 << (B)))
+#define set_bit(I, B) (I |= (B))
+#define unset_bit(I, B) (I &= ~(B))
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit(R.byte_value, B, V))
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
@@ -127,47 +135,47 @@ void time_sync(unsigned long *t_states_all, unsigned int t_states)
     nanosleep(&ts, &ts);
 }
 
-void register_add8_with_flags(REG8 reg, REG8 alt)
+void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
 {
-    int r = reg.byte_value + alt.byte_value;
+    int r = reg->byte_value + alt.byte_value;
     bool s = sign((short)r);
-    register_set_or_unset_flag(FLAG_C, r >= MAX8);
-    register_set_or_unset_flag(FLAG_HC, (r & 0x0F) >= MAX4);
-    register_set_or_unset_flag(FLAG_N, false);
-    register_set_or_unset_flag(FLAG_PV, sign(reg.value) == sign(alt.value) && s != sign(reg.value));
-    register_set_or_unset_flag(FLAG_S, s);
-    register_set_or_unset_flag(FLAG_Z, zero(r));
-    reg.byte_value = r;
+    register_set_or_unset_flag(FLAG_C & mask, r >= MAX8);
+    register_set_or_unset_flag(FLAG_HC & mask, (r & 0x0F) >= MAX4);
+    register_set_or_unset_flag(FLAG_N & mask, false);
+    register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) == sign(alt.value) && s != sign(reg->value));
+    register_set_or_unset_flag(FLAG_S & mask, s);
+    register_set_or_unset_flag(FLAG_Z & mask, zero(r));
+    reg->byte_value = r;
 }
 
-void register_sub8_with_flags(REG8 reg, REG8 alt)
+void register_sub8_with_flags(REG8 *reg, REG8 alt, int mask)
 {
-    short r = reg.byte_value - alt.byte_value;
+    short r = reg->byte_value - alt.byte_value;
     bool s = sign(r);
-    register_set_or_unset_flag(FLAG_C, alt.byte_value > reg.byte_value);
-    register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0x0F) > (reg.byte_value & 0x0F));
-    register_set_or_unset_flag(FLAG_N, true);
-    register_set_or_unset_flag(FLAG_PV, sign(reg.value) != sign(alt.value) && s != sign(reg.value));
-    register_set_or_unset_flag(FLAG_S, s);
-    register_set_or_unset_flag(FLAG_Z, zero(r));
-    reg.byte_value = r;
+    register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
+    register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0x0F) > (reg->byte_value & 0x0F));
+    register_set_or_unset_flag(FLAG_N & mask, true);
+    register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) != sign(alt.value) && s != sign(reg->value));
+    register_set_or_unset_flag(FLAG_S & mask, s);
+    register_set_or_unset_flag(FLAG_Z & mask, zero(r));
+    reg->byte_value = r;
 }
 
-void register_add16_with_flags(REG16 reg, REG16 alt)
+void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
-    int r = reg.byte_value + alt.byte_value;
+    int r = reg->byte_value + alt.byte_value;
     register_set_or_unset_flag(FLAG_C, r >= MAX16);
     register_set_or_unset_flag(FLAG_HC, (r & 0xFFF) >= MAX12);
     register_set_or_unset_flag(FLAG_N, false);
-    reg.byte_value = r;
+    reg->byte_value = r;
 }
 
-void register_sub16_with_flags(REG16 reg, REG16 alt)
+void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
-    register_set_or_unset_flag(FLAG_C, alt.byte_value > reg.byte_value);
-    register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0xFFF) > (reg.byte_value & 0xFFF));
+    register_set_or_unset_flag(FLAG_C, alt.byte_value > reg->byte_value);
+    register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
     register_set_or_unset_flag(FLAG_N, true);
-    reg.byte_value -= alt.byte_value;
+    reg->byte_value -= alt.byte_value;
 }
 
 void memory_load_rom(const char *filename)
@@ -233,12 +241,14 @@ REG8 keyboard_read8(const REG16 reg)
 {
     REG8 alt;
     alt.byte_value = 0x1F;
+    int b = MAX0;
     for (int i = 0; i < 8; i++)
     {
-        if (!register_is_bit(reg.bytes.high, i))
+        if (!register_is_bit(reg.bytes.high, b))
         {
             alt.byte_value &= keyboard[i].byte_value;
         }
+        b <<= 1;
     }
     return alt;
 }
@@ -246,160 +256,160 @@ REG8 keyboard_read8(const REG16 reg)
 void keyboard_press(unsigned char key, const bool value)
 {
     // if (strcmp(key, "Caps_Lock") == 0) {
-    //     register_set_or_unset_bit(keyboard[0], 0, value);
+    //     register_set_or_unset_bit(keyboard[0], MAX0, value);
     if (key == 'z' || key == 'Z')
     {
-        register_set_or_unset_bit(keyboard[0], 1, value);
+        register_set_or_unset_bit(keyboard[0], MAX1, value);
     }
     else if (key == 'x' || key == 'X')
     {
-        register_set_or_unset_bit(keyboard[0], 2, value);
+        register_set_or_unset_bit(keyboard[0], MAX2, value);
     }
     else if (key == 'c' || key == 'C')
     {
-        register_set_or_unset_bit(keyboard[0], 3, value);
+        register_set_or_unset_bit(keyboard[0], MAX3, value);
     }
     else if (key == 'v' || key == 'V')
     {
-        register_set_or_unset_bit(keyboard[0], 4, value);
+        register_set_or_unset_bit(keyboard[0], MAX4, value);
     }
     else if (key == 'a' || key == 'A')
     {
-        register_set_or_unset_bit(keyboard[1], 0, value);
+        register_set_or_unset_bit(keyboard[1], MAX0, value);
     }
     else if (key == 's' || key == 'S')
     {
-        register_set_or_unset_bit(keyboard[1], 1, value);
+        register_set_or_unset_bit(keyboard[1], MAX1, value);
     }
     else if (key == 'd' || key == 'D')
     {
-        register_set_or_unset_bit(keyboard[1], 2, value);
+        register_set_or_unset_bit(keyboard[1], MAX2, value);
     }
     else if (key == 'f' || key == 'F')
     {
-        register_set_or_unset_bit(keyboard[1], 3, value);
+        register_set_or_unset_bit(keyboard[1], MAX3, value);
     }
     else if (key == 'g' || key == 'G')
     {
-        register_set_or_unset_bit(keyboard[1], 4, value);
+        register_set_or_unset_bit(keyboard[1], MAX4, value);
     }
     else if (key == 'q' || key == 'Q')
     {
-        register_set_or_unset_bit(keyboard[2], 0, value);
+        register_set_or_unset_bit(keyboard[2], MAX0, value);
     }
     else if (key == 'w' || key == 'W')
     {
-        register_set_or_unset_bit(keyboard[2], 1, value);
+        register_set_or_unset_bit(keyboard[2], MAX1, value);
     }
     else if (key == 'e' || key == 'E')
     {
-        register_set_or_unset_bit(keyboard[2], 2, value);
+        register_set_or_unset_bit(keyboard[2], MAX2, value);
     }
     else if (key == 'r' || key == 'R')
     {
-        register_set_or_unset_bit(keyboard[2], 3, value);
+        register_set_or_unset_bit(keyboard[2], MAX3, value);
     }
     else if (key == 't' || key == 'T')
     {
-        register_set_or_unset_bit(keyboard[2], 4, value);
+        register_set_or_unset_bit(keyboard[2], MAX4, value);
     }
     else if (key == '1')
     {
-        register_set_or_unset_bit(keyboard[3], 0, value);
+        register_set_or_unset_bit(keyboard[3], MAX0, value);
     }
     else if (key == '2')
     {
-        register_set_or_unset_bit(keyboard[3], 1, value);
+        register_set_or_unset_bit(keyboard[3], MAX1, value);
     }
     else if (key == '3')
     {
-        register_set_or_unset_bit(keyboard[3], 2, value);
+        register_set_or_unset_bit(keyboard[3], MAX2, value);
     }
     else if (key == '4')
     {
-        register_set_or_unset_bit(keyboard[3], 3, value);
+        register_set_or_unset_bit(keyboard[3], MAX3, value);
     }
     else if (key == '5')
     {
-        register_set_or_unset_bit(keyboard[3], 4, value);
+        register_set_or_unset_bit(keyboard[3], MAX4, value);
     }
     else if (key == '0')
     {
-        register_set_or_unset_bit(keyboard[4], 0, value);
+        register_set_or_unset_bit(keyboard[4], MAX0, value);
     }
     else if (key == '9')
     {
-        register_set_or_unset_bit(keyboard[4], 1, value);
+        register_set_or_unset_bit(keyboard[4], MAX1, value);
     }
     else if (key == '8')
     {
-        register_set_or_unset_bit(keyboard[4], 2, value);
+        register_set_or_unset_bit(keyboard[4], MAX2, value);
     }
     else if (key == '7')
     {
-        register_set_or_unset_bit(keyboard[4], 3, value);
+        register_set_or_unset_bit(keyboard[4], MAX3, value);
     }
     else if (key == '6')
     {
-        register_set_or_unset_bit(keyboard[4], 4, value);
+        register_set_or_unset_bit(keyboard[4], MAX4, value);
     }
     else if (key == 'p' || key == 'P')
     {
-        register_set_or_unset_bit(keyboard[5], 0, value);
+        register_set_or_unset_bit(keyboard[5], MAX0, value);
     }
     else if (key == 'o' || key == 'O')
     {
-        register_set_or_unset_bit(keyboard[5], 1, value);
+        register_set_or_unset_bit(keyboard[5], MAX1, value);
     }
     else if (key == 'i' || key == 'I')
     {
-        register_set_or_unset_bit(keyboard[5], 2, value);
+        register_set_or_unset_bit(keyboard[5], MAX2, value);
     }
     else if (key == 'u' || key == 'U')
     {
-        register_set_or_unset_bit(keyboard[5], 3, value);
+        register_set_or_unset_bit(keyboard[5], MAX3, value);
     }
     else if (key == 'y' || key == 'Y')
     {
-        register_set_or_unset_bit(keyboard[5], 4, value);
+        register_set_or_unset_bit(keyboard[5], MAX4, value);
     }
     else if (key == 13)
     {
-        register_set_or_unset_bit(keyboard[6], 0, value);
+        register_set_or_unset_bit(keyboard[6], MAX0, value);
     }
     else if (key == 'l' || key == 'L')
     {
-        register_set_or_unset_bit(keyboard[6], 1, value);
+        register_set_or_unset_bit(keyboard[6], MAX1, value);
     }
     else if (key == 'k' || key == 'K')
     {
-        register_set_or_unset_bit(keyboard[6], 2, value);
+        register_set_or_unset_bit(keyboard[6], MAX2, value);
     }
     else if (key == 'j' || key == 'J')
     {
-        register_set_or_unset_bit(keyboard[6], 3, value);
+        register_set_or_unset_bit(keyboard[6], MAX3, value);
     }
     else if (key == 'h' || key == 'H')
     {
-        register_set_or_unset_bit(keyboard[6], 4, value);
+        register_set_or_unset_bit(keyboard[6], MAX4, value);
     }
     else if (key == ' ')
     {
-        register_set_or_unset_bit(keyboard[7], 0, value);
+        register_set_or_unset_bit(keyboard[7], MAX0, value);
         // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
-        //     register_set_or_unset_bit(keyboard[7], 1, value);
+        //     register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
     else if (key == 'm' || key == 'M')
     {
-        register_set_or_unset_bit(keyboard[7], 2, value);
+        register_set_or_unset_bit(keyboard[7], MAX2, value);
     }
     else if (key == 'n' || key == 'N')
     {
-        register_set_or_unset_bit(keyboard[7], 3, value);
+        register_set_or_unset_bit(keyboard[7], MAX3, value);
     }
     else if (key == 'b' || key == 'B')
     {
-        register_set_or_unset_bit(keyboard[7], 4, value);
+        register_set_or_unset_bit(keyboard[7], MAX4, value);
     }
 }
 
@@ -483,17 +493,16 @@ REG8 z80_fetch_opcode()
     return z80_next8();
 }
 
-REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, unsigned int *r)
+REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, int *r)
 {
     int i = reg.byte_value >> pos & 0x07;
     if (i == 0x06)
     {
-        *r = t;
+        *r += t;
         return memory_ref8(z80_reg_hl);
     }
     else
     {
-        *r = 0;
         return z80_all8[i];
     }
 }
@@ -505,6 +514,7 @@ REG16 *z80_decode16(REG8 reg, int pos)
 
 unsigned int z80_execute(REG8 reg)
 {
+    int t = 4;
     switch (reg.byte_value)
     {
     case 0x00: // NOP
@@ -522,8 +532,18 @@ unsigned int z80_execute(REG8 reg)
     case 0x13:
     case 0x23:
     case 0x33:
-        z80_decode16(reg, 4)->byte_value++;
+        register_add16_with_flags(z80_decode16(reg, 4), REG16_ONE, MASK_NONE);
         return 6;
+    case 0x04: // INC r
+    case 0x0C:
+    case 0x14:
+    case 0x1C:
+    case 0x24:
+    case 0x2C:
+    case 0x34:
+    case 0x3C:
+        register_add8_with_flags(z80_decode8(reg, 3, 7, &t), REG8_ONE, MASK_SZHVN);
+        return t;
     }
     return 0;
 }
@@ -612,31 +632,33 @@ unsigned int ula_draw_line(int y)
             REG8 reg_attrib = memory_read8(ula_addr_attrib);
             int ink = reg_attrib.byte_value & 7;
             int paper = reg_attrib.byte_value >> 3 & 7;
-            bool flash = register_is_bit(reg_attrib, 7);
+            bool flash = register_is_bit(reg_attrib, MAX7);
             if (flash && ula_draw_counter == 0)
             {
                 int temp = ink;
                 ink = paper;
                 paper = temp;
             }
-            bool brightness = register_is_bit(reg_attrib, 6);
+            bool brightness = register_is_bit(reg_attrib, MAX6);
+            int b = MAX7;
             for (int j = 0; j < 8; j++)
             {
-                ula_point(x + j, y, register_is_bit(reg_bitmap, 7 - j) ? ink : paper, brightness);
+                ula_point(x + j, y, register_is_bit(reg_bitmap, b) ? ink : paper, brightness);
+                b >>= 1;
             }
             ula_addr_bitmap.byte_value++;
             ula_addr_attrib.byte_value++;
             x += 8;
         }
         y++;
-        register_set_or_unset_bit(ula_addr_bitmap, 5, is_bit(y, 3));
-        register_set_or_unset_bit(ula_addr_bitmap, 6, is_bit(y, 4));
-        register_set_or_unset_bit(ula_addr_bitmap, 7, is_bit(y, 5));
-        register_set_or_unset_bit(ula_addr_bitmap, 8, is_bit(y, 0));
-        register_set_or_unset_bit(ula_addr_bitmap, 9, is_bit(y, 1));
-        register_set_or_unset_bit(ula_addr_bitmap, 10, is_bit(y, 2));
-        register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, 6));
-        register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, 7));
+        register_set_or_unset_bit(ula_addr_bitmap, 5, is_bit(y, MAX3));
+        register_set_or_unset_bit(ula_addr_bitmap, 6, is_bit(y, MAX4));
+        register_set_or_unset_bit(ula_addr_bitmap, 7, is_bit(y, MAX5));
+        register_set_or_unset_bit(ula_addr_bitmap, 8, is_bit(y, MAX0));
+        register_set_or_unset_bit(ula_addr_bitmap, 9, is_bit(y, MAX1));
+        register_set_or_unset_bit(ula_addr_bitmap, 10, is_bit(y, MAX2));
+        register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, MAX6));
+        register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, MAX7));
     }
     return 224;
 }
