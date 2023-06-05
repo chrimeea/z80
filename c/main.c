@@ -33,7 +33,8 @@
 #define FLAG_Z 6
 #define FLAG_S 7
 
-#define sign(X) ((X > 0) ? 1 : ((X < 0) ? -1 : 0))
+#define sign(X) (X < 0)
+#define zero(X) (X == 0)
 #define is_bit(I, B) (I & (1 << (B)))
 #define register_is_bit(R, B) (is_bit(R.byte_value, B))
 #define set_bit(I, B) (I |= (1 << (B)))
@@ -128,29 +129,44 @@ void time_sync(unsigned long *t_states_all, unsigned int t_states)
 
 void register_add8_with_flags(REG8 reg, REG8 alt)
 {
+    int r = reg.byte_value + alt.byte_value;
+    bool s = sign((short)r);
+    register_set_or_unset_flag(FLAG_C, r >= MAX8);
+    register_set_or_unset_flag(FLAG_HC, (r & 0x0F) >= MAX4);
+    register_set_or_unset_flag(FLAG_N, false);
+    register_set_or_unset_flag(FLAG_PV, sign(reg.value) == sign(alt.value) && s != sign(reg.value));
+    register_set_or_unset_flag(FLAG_S, s);
+    register_set_or_unset_flag(FLAG_Z, zero(r));
+    reg.byte_value = r;
 }
 
 void register_sub8_with_flags(REG8 reg, REG8 alt)
 {
+    short r = reg.byte_value - alt.byte_value;
+    bool s = sign(r);
+    register_set_or_unset_flag(FLAG_C, alt.byte_value > reg.byte_value);
+    register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0x0F) > (reg.byte_value & 0x0F));
+    register_set_or_unset_flag(FLAG_N, true);
+    register_set_or_unset_flag(FLAG_PV, sign(reg.value) != sign(alt.value) && s != sign(reg.value));
+    register_set_or_unset_flag(FLAG_S, s);
+    register_set_or_unset_flag(FLAG_Z, zero(r));
+    reg.byte_value = r;
 }
 
 void register_add16_with_flags(REG16 reg, REG16 alt)
 {
     int r = reg.byte_value + alt.byte_value;
     register_set_or_unset_flag(FLAG_C, r >= MAX16);
-    register_set_or_unset_flag(FLAG_HC, ((reg.byte_value & 0xFFF) + (alt.byte_value & 0xFFF)) >= MAX12);
+    register_set_or_unset_flag(FLAG_HC, (r & 0xFFF) >= MAX12);
     register_set_or_unset_flag(FLAG_N, false);
-    // register_set_or_unset_flag(FLAG_PV, sign(reg.value) == sign(alt.value) && sign((short)r) != sign(reg.value));
     reg.byte_value = r;
 }
 
 void register_sub16_with_flags(REG16 reg, REG16 alt)
 {
-    // short r = reg.byte_value - alt.byte_value;
     register_set_or_unset_flag(FLAG_C, alt.byte_value > reg.byte_value);
     register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0xFFF) > (reg.byte_value & 0xFFF));
     register_set_or_unset_flag(FLAG_N, true);
-    // register_set_or_unset_flag(FLAG_PV, sign(reg.value) != sign(alt.value) && sign(r) != sign(reg.value));
     reg.byte_value -= alt.byte_value;
 }
 
