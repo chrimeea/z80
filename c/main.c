@@ -127,12 +127,18 @@ void time_seconds_to_timespec(struct timespec *ts, long double s)
     ts->tv_sec = temp;
 }
 
-void time_sync(unsigned long *t_states_all, unsigned int t_states)
+void time_sync(unsigned long *t_states_all, int t_states)
 {
     *t_states_all += t_states;
     struct timespec ts;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
     nanosleep(&ts, &ts);
+}
+
+void register_exchange16(REG16 *reg, REG16 *alt) {
+    REG16 temp = *reg;
+    *reg = *alt;
+    *alt = temp;
 }
 
 void register_left8_with_flags(REG8 *reg, int mask, bool b) {
@@ -500,7 +506,7 @@ REG8 z80_fetch_opcode()
     return z80_next8();
 }
 
-REG8 *z80_decode8(REG8 reg, int pos, unsigned int t, int *r)
+REG8 *z80_decode8(REG8 reg, int pos, int t, int *r)
 {
     int i = reg.byte_value >> pos & 0x07;
     if (i == 0x06)
@@ -519,13 +525,13 @@ REG16 *z80_decode16(REG8 reg, int pos)
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
-unsigned int z80_execute(REG8 reg)
+int z80_execute(REG8 reg)
 {
     int t = 4;
     switch (reg.byte_value)
     {
     case 0x00: // NOP
-        return 4;
+        return t;
     case 0x01: // LD dd,nn
     case 0x11:
     case 0x21:
@@ -566,12 +572,16 @@ unsigned int z80_execute(REG8 reg)
         return 7;
     case 0x07: // RLCA
         register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, sign(z80_reg_af.bytes.high.value));
-        return 4;
+        return t;
+    case 0x08: // EX AF,AF’
+        register_exchange16(&z80_reg_af, &z80_reg_af_2);
+        return t;
+    default:
+        return 0; // fail
     }
-    return 0;
 }
 
-unsigned int z80_nonmaskable_interrupt()
+int z80_nonmaskable_interrupt()
 {
     z80_iff2 = z80_iff1;
     z80_iff1 = false;
@@ -580,7 +590,7 @@ unsigned int z80_nonmaskable_interrupt()
     return 11;
 }
 
-unsigned int z80_maskable_interrupt()
+int z80_maskable_interrupt()
 {
     z80_iff1 = false;
     z80_iff2 = false;
@@ -603,7 +613,7 @@ unsigned int z80_maskable_interrupt()
     }
 }
 
-unsigned int z80_run_one()
+int z80_run_one()
 {
     if (z80_nonmaskable_interrupt_flag)
     {
@@ -643,7 +653,7 @@ void ula_point(const int x, const int y, const int c, const bool b)
     glEnd();
 }
 
-unsigned int ula_draw_line(int y)
+int ula_draw_line(int y)
 {
     if (y > 63 && y < 256)
     {
