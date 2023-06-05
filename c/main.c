@@ -135,17 +135,29 @@ void time_sync(unsigned long *t_states_all, int t_states)
     nanosleep(&ts, &ts);
 }
 
-void register_exchange16(REG16 *reg, REG16 *alt) {
+void register_exchange16(REG16 *reg, REG16 *alt)
+{
     REG16 temp = *reg;
     *reg = *alt;
     *alt = temp;
 }
 
-void register_left8_with_flags(REG8 *reg, int mask, bool b) {
+void register_left8_with_flags(REG8 *reg, int mask, bool b)
+{
     register_set_or_unset_flag(FLAG_C & mask, reg->byte_value & MAX7);
     register_set_or_unset_flag(FLAG_HC & mask, false);
     register_set_or_unset_flag(FLAG_N & mask, false);
-    reg->byte_value = (reg->byte_value << 1) + b;
+    reg->byte_value <<= 1;
+    set_or_unset_bit(reg->byte_value, MAX0, b);
+}
+
+void register_right8_with_flags(REG8 *reg, int mask, bool b)
+{
+    register_set_or_unset_flag(FLAG_C & mask, reg->byte_value & MAX0);
+    register_set_or_unset_flag(FLAG_HC & mask, false);
+    register_set_or_unset_flag(FLAG_N & mask, false);
+    reg->byte_value >>= 1;
+    set_or_unset_bit(reg->byte_value, MAX7, b);
 }
 
 void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
@@ -571,7 +583,7 @@ int z80_execute(REG8 reg)
         z80_reg_bc.bytes.high = z80_next8();
         return 7;
     case 0x07: // RLCA
-        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, sign(z80_reg_af.bytes.high.value));
+        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX7));
         return t;
     case 0x08: // EX AF,AF’
         register_exchange16(&z80_reg_af, &z80_reg_af_2);
@@ -595,6 +607,7 @@ int z80_execute(REG8 reg)
         z80_reg_bc.bytes.low = z80_next8();
         return 7;
     case 0x0F: // RRCA
+        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX0));
         return t;
     default:
         return 0; // fail
