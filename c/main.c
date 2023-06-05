@@ -576,6 +576,26 @@ int z80_execute(REG8 reg)
     case 0x08: // EX AF,AF’
         register_exchange16(&z80_reg_af, &z80_reg_af_2);
         return t;
+    case 0x09: // ADD HL,ss
+    case 0x19:
+    case 0x29:
+    case 0x39:
+        register_add16_with_flags(&z80_reg_hl, *z80_decode16(reg, 4), MASK_ALL);
+        return 11;
+    case 0x0A: // LD A,(BC)
+        z80_reg_af.bytes.high = memory_read8(z80_reg_bc);
+        return 7;
+    case 0x0B: // DEC ss
+    case 0x1B:
+    case 0x2B:
+    case 0x3B:
+        register_sub16_with_flags(z80_decode16(reg, 4), REG16_ONE, MASK_NONE);
+        return 6;
+    case 0x0E: // LD C,NN
+        z80_reg_bc.bytes.low = z80_next8();
+        return 7;
+    case 0x0F: // RRCA
+        return t;
     default:
         return 0; // fail
     }
