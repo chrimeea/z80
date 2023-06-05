@@ -637,6 +637,20 @@ int z80_execute(REG8 reg)
     case 0x1A: // LD A,(DE)
         z80_reg_af.bytes.high = memory_read8(z80_reg_de);
         return 7;
+    case 0x1F: // RRA
+        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
+        return 4;
+    case 0x20: // JR NZ,NN
+        alt = z80_next8();
+        if (register_is_flag(FLAG_Z)) {
+            return 7;
+        } else {
+            z80_reg_pc.byte_value += alt.value;
+            return 12;
+        }
+    case 0x22: // LD (HHLL),HL
+        memory_write16(z80_next16(), z80_reg_hl);
+        return 16;
     default:
         return 0; // fail
     }
