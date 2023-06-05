@@ -45,6 +45,7 @@
 #define zero(X) (X == 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_bit(R, B) (is_bit(R.byte_value, B))
+#define register_is_flag(B) (is_bit(z80_reg_af.bytes.low.byte_value, B))
 #define set_bit(I, B) (I |= (B))
 #define unset_bit(I, B) (I &= ~(B))
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
@@ -580,9 +581,17 @@ int z80_execute(REG8 reg)
     case 0x3D:
         register_sub8_with_flags(z80_decode8(reg, 3, 7, &t), REG8_ONE, MASK_SZHVN);
         return t;
-    case 0x06: // LD B,NN
-        z80_reg_bc.bytes.high = z80_next8();
-        return 7;
+    case 0x06: // LD r,NN
+    case 0x0E:
+    case 0x16:
+    case 0x1E:
+    case 0x26:
+    case 0x2E:
+    case 0x36:
+    case 0x3E:
+        t = 7;
+        *z80_decode8(reg, 3, 3, &t) = z80_next8();
+        return t;
     case 0x07: // RLCA
         register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX7));
         return t;
@@ -604,9 +613,6 @@ int z80_execute(REG8 reg)
     case 0x3B:
         register_sub16_with_flags(z80_decode16(reg, 4), REG16_ONE, MASK_NONE);
         return 6;
-    case 0x0E: // LD C,NN
-        z80_reg_bc.bytes.low = z80_next8();
-        return 7;
     case 0x0F: // RRCA
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX0));
         return t;
@@ -622,8 +628,14 @@ int z80_execute(REG8 reg)
     case 0x12: // LD (DE),A
         memory_write8(z80_reg_de, z80_reg_af.bytes.high);
         return 7;
-    case 0x16: // LD D,NN
-        z80_reg_de.bytes.high = z80_next8();
+    case 0x17: // RLA
+        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
+        return 4;
+    case 0x18: // JR NN
+        z80_reg_pc.byte_value += 1 + z80_next8().value;
+        return 12;
+    case 0x1A: // LD A,(DE)
+        z80_reg_af.bytes.high = memory_read8(z80_reg_de);
         return 7;
     default:
         return 0; // fail
