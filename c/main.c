@@ -540,6 +540,7 @@ REG16 *z80_decode16(REG8 reg, int pos)
 int z80_execute(REG8 reg)
 {
     int t = 4;
+    REG8 alt;
     switch (reg.byte_value)
     {
     case 0x00: // NOP
@@ -609,6 +610,21 @@ int z80_execute(REG8 reg)
     case 0x0F: // RRCA
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX0));
         return t;
+    case 0x10: // DJNZ NN
+        alt = z80_next8();
+        z80_reg_bc.bytes.high.byte_value--;
+        if (zero(z80_reg_bc.bytes.high.value)) {
+            return 8;
+        } else {
+            z80_reg_pc.byte_value += alt.value;
+            return 13;
+        }
+    case 0x12: // LD (DE),A
+        memory_write8(z80_reg_de, z80_reg_af.bytes.high);
+        return 7;
+    case 0x16: // LD D,NN
+        z80_reg_de.bytes.high = z80_next8();
+        return 7;
     default:
         return 0; // fail
     }
