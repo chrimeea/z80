@@ -32,7 +32,7 @@
 #define FLAG_HC 0x10
 #define FLAG_Z 0x40
 #define FLAG_S 0x80
-#define MASK_SZHVNC 0xD7
+#define MASK_ALL 0xFF
 #define MASK_SZHVN 0xD6
 #define MASK_NONE 0x00
 
@@ -135,6 +135,13 @@ void time_sync(unsigned long *t_states_all, unsigned int t_states)
     nanosleep(&ts, &ts);
 }
 
+void register_left8_with_flags(REG8 *reg, int mask, bool b) {
+    register_set_or_unset_flag(FLAG_C & mask, reg->byte_value & MAX7);
+    register_set_or_unset_flag(FLAG_HC & mask, false);
+    register_set_or_unset_flag(FLAG_N & mask, false);
+    reg->byte_value = (reg->byte_value << 1) + b;
+}
+
 void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
 {
     int r = reg->byte_value + alt.byte_value;
@@ -164,17 +171,17 @@ void register_sub8_with_flags(REG8 *reg, REG8 alt, int mask)
 void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
     int r = reg->byte_value + alt.byte_value;
-    register_set_or_unset_flag(FLAG_C, r >= MAX16);
-    register_set_or_unset_flag(FLAG_HC, (r & 0xFFF) >= MAX12);
-    register_set_or_unset_flag(FLAG_N, false);
+    register_set_or_unset_flag(FLAG_C & mask, r >= MAX16);
+    register_set_or_unset_flag(FLAG_HC & mask, (r & 0xFFF) >= MAX12);
+    register_set_or_unset_flag(FLAG_N & mask, false);
     reg->byte_value = r;
 }
 
 void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
-    register_set_or_unset_flag(FLAG_C, alt.byte_value > reg->byte_value);
-    register_set_or_unset_flag(FLAG_HC, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
-    register_set_or_unset_flag(FLAG_N, true);
+    register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
+    register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
+    register_set_or_unset_flag(FLAG_N & mask, true);
     reg->byte_value -= alt.byte_value;
 }
 
@@ -554,9 +561,12 @@ unsigned int z80_execute(REG8 reg)
     case 0x3D:
         register_sub8_with_flags(z80_decode8(reg, 3, 7, &t), REG8_ONE, MASK_SZHVN);
         return t;
-    case 0x06:
+    case 0x06: // LD B,NN
         z80_reg_bc.bytes.high = z80_next8();
         return 7;
+    case 0x07: // RLCA
+        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, sign(z80_reg_af.bytes.high.value));
+        return 4;
     }
     return 0;
 }
