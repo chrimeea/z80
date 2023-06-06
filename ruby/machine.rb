@@ -801,6 +801,7 @@ module Z80
                     v = 0x9A
                     @f.flag_c = true
                 end
+                @a.store(@a.byte_value + v);
                 @f.s_z_p(@a)
             when 0x28 #JR Z,NN
                 reg = self.next8

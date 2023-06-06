@@ -53,6 +53,9 @@
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
 #define register_split_8_to_4(R) (div(R.byte_value, MAX3))
 #define register_set_8_from_4(R, Q, M) (R.byte_value = Q * MAX3 + M)
+#define register_set_flag_s(R) (register_set_or_unset_flag(FLAG_S, sign(R.value)))
+#define register_set_flag_z(R) (register_set_or_unset_flag(FLAG_Z, zero(R.value)))
+#define register_set_flag_p(R) (register_set_or_unset_flag(FLAG_PV, __builtin_parity(R.byte_value)))
 
 typedef union
 {
@@ -542,6 +545,8 @@ int z80_execute(REG8 reg)
 {
     int t = 4;
     REG8 alt;
+    div_t qr;
+    bool c, hc;
     switch (reg.byte_value)
     {
     case 0x00: // NOP
@@ -651,6 +656,54 @@ int z80_execute(REG8 reg)
     case 0x22: // LD (HHLL),HL
         memory_write16(z80_next16(), z80_reg_hl);
         return 16;
+    case 0x27: // DAA
+        qr = register_split_8_to_4(z80_reg_af.bytes.high);
+        c = register_is_flag(FLAG_C);
+        hc = register_is_flag(FLAG_HC);
+        if (c == false && hc == false && qr.quot == 0x90 && qr.rem == 0x09) {
+            z80_reg_af.bytes.high.byte_value += 0x00;
+            register_set_or_unset_flag(FLAG_C, false);
+        } else if (c == false && hc == false && qr.quot ==0x08 && qr.rem == 0xAF) {
+            z80_reg_af.bytes.high.byte_value += 0x06;
+            register_set_or_unset_flag(FLAG_C, false);
+        } else if (c == false && hc == true && qr.quot == 0x09 && qr.rem == 0x03) {
+            z80_reg_af.bytes.high.byte_value += 0x06;
+            register_set_or_unset_flag(FLAG_C, false);
+        } else if (c == false && hc == false && qr.quot == 0xAF && qr.rem == 0x09) {
+            z80_reg_af.bytes.high.byte_value += 0x60;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == false && hc == false && qr.quot == 0x9F && qr.rem == 0xAF) {
+            z80_reg_af.bytes.high.byte_value += 0x66;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == false && hc == true && qr.quot == 0xAF && qr.rem == 0x03) {
+            z80_reg_af.bytes.high.byte_value += 0x66;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0x09) {
+            z80_reg_af.bytes.high.byte_value += 0x60;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0xAF) {
+            z80_reg_af.bytes.high.byte_value += 0x66;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == false && hc == true && qr.quot == 0x03 && qr.rem == 0x03) {
+            z80_reg_af.bytes.high.byte_value += 0x66;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == false && hc == false && qr.quot == 0x09 && qr.rem == 0x09) {
+            z80_reg_af.bytes.high.byte_value += 0x00;
+            register_set_or_unset_flag(FLAG_C, false);
+        } else if (c == false && hc == true && qr.quot == 0x08 && qr.rem == 0x6F) {
+            z80_reg_af.bytes.high.byte_value += 0xFA;
+            register_set_or_unset_flag(FLAG_C, false);
+        } else if (c == true && hc == false && qr.quot == 0x7F && qr.rem == 0x09) {
+            z80_reg_af.bytes.high.byte_value += 0xA0;
+            register_set_or_unset_flag(FLAG_C, true);
+        } else if (c == true && hc == true && qr.quot == 0x67 && qr.rem == 0x6F) {
+            z80_reg_af.bytes.high.byte_value += 0x9A;
+            register_set_or_unset_flag(FLAG_C, true);
+        }
+        register_set_flag_s(z80_reg_af.bytes.high);
+        register_set_flag_z(z80_reg_af.bytes.high);
+        register_set_flag_p(z80_reg_af.bytes.high);
+        return t;
     default:
         return 0; // fail
     }
