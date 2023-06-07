@@ -736,6 +736,7 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_HC, c);
         register_set_or_unset_flag(FLAG_C, !c);
         register_set_or_unset_flag(FLAG_N, false);
+        return t;
     default:
         return 0; // fail
     }
