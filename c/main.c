@@ -541,6 +541,16 @@ REG16 *z80_decode16(REG8 reg, int pos)
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
+int z80_jump_with_condition(int flag, bool v) {
+    REG8 alt = z80_next8();
+    if (register_is_flag(flag) == v) {
+        z80_reg_pc.byte_value += alt.value;
+        return 12;
+    } else {
+        return 7;
+    }
+}
+
 int z80_execute(REG8 reg)
 {
     int t = 4;
@@ -635,7 +645,7 @@ int z80_execute(REG8 reg)
         return 7;
     case 0x17: // RLA
         register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
-        return 4;
+        return t;
     case 0x18: // JR NN
         z80_reg_pc.byte_value += 1 + z80_next8().value;
         return 12;
@@ -644,15 +654,9 @@ int z80_execute(REG8 reg)
         return 7;
     case 0x1F: // RRA
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
-        return 4;
+        return t;
     case 0x20: // JR NZ,NN
-        alt = z80_next8();
-        if (register_is_flag(FLAG_Z)) {
-            return 7;
-        } else {
-            z80_reg_pc.byte_value += alt.value;
-            return 12;
-        }
+        return z80_jump_with_condition(FLAG_Z, false);
     case 0x22: // LD (HHLL),HL
         memory_write16(z80_next16(), z80_reg_hl);
         return 16;
@@ -704,6 +708,34 @@ int z80_execute(REG8 reg)
         register_set_flag_z(z80_reg_af.bytes.high);
         register_set_flag_p(z80_reg_af.bytes.high);
         return t;
+    case 0x28: // JR Z,NN
+        return z80_jump_with_condition(FLAG_Z, true);
+    case 0x2A: // LD HL,(HHLL)
+        z80_reg_hl = memory_read16(z80_next16());
+        return 16;
+    case 0x2F: // CPL
+        z80_reg_af.bytes.high.byte_value = ~z80_reg_af.bytes.high.byte_value;
+        register_set_or_unset_flag(FLAG_N | FLAG_HC, true);
+        return t;
+    case 0x30: // JR NC,NN
+        return z80_jump_with_condition(FLAG_C, false);
+    case 0x32: //LD (HHLL),A
+        memory_write8(z80_next16(), z80_reg_af.bytes.high);
+        return 16;
+    case 0x37: // SCF
+        register_set_or_unset_flag(FLAG_C, true);
+        register_set_or_unset_flag(FLAG_N | FLAG_HC, false);
+        return t;
+    case 0x38: // JR C,NN
+        return z80_jump_with_condition(FLAG_C, true);
+    case 0x3A: //LD A,(HHLL)
+        z80_reg_af.bytes.high = memory_read8(z80_next16());
+        return 13;
+    case 0x3F: // CCF
+        c = register_is_flag(FLAG_C);
+        register_set_or_unset_flag(FLAG_HC, c);
+        register_set_or_unset_flag(FLAG_C, !c);
+        register_set_or_unset_flag(FLAG_N, false);
     default:
         return 0; // fail
     }
