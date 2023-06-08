@@ -547,7 +547,7 @@ REG16 *z80_decode16(REG8 reg, int pos)
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
-int z80_jump_with_condition(int flag, bool v) {
+int z80_jump_rel_with_condition(int flag, bool v) {
     REG8 alt = z80_next8();
     if (register_is_flag(flag) == v) {
         z80_reg_pc.byte_value += alt.value;
@@ -662,7 +662,7 @@ int z80_execute(REG8 reg)
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
         return t;
     case 0x20: // JR NZ,NN
-        return z80_jump_with_condition(FLAG_Z, false);
+        return z80_jump_rel_with_condition(FLAG_Z, false);
     case 0x22: // LD (HHLL),HL
         memory_write16(z80_next16(), z80_reg_hl);
         return 16;
@@ -713,7 +713,7 @@ int z80_execute(REG8 reg)
         register_a_set_flag_s_z_p();
         return t;
     case 0x28: // JR Z,NN
-        return z80_jump_with_condition(FLAG_Z, true);
+        return z80_jump_rel_with_condition(FLAG_Z, true);
     case 0x2A: // LD HL,(HHLL)
         z80_reg_hl = memory_read16(z80_next16());
         return 16;
@@ -722,7 +722,7 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_N | FLAG_HC, true);
         return t;
     case 0x30: // JR NC,NN
-        return z80_jump_with_condition(FLAG_C, false);
+        return z80_jump_rel_with_condition(FLAG_C, false);
     case 0x32: //LD (HHLL),A
         memory_write8(z80_next16(), z80_reg_af.bytes.high);
         return 16;
@@ -731,7 +731,7 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_N | FLAG_HC, false);
         return t;
     case 0x38: // JR C,NN
-        return z80_jump_with_condition(FLAG_C, true);
+        return z80_jump_rel_with_condition(FLAG_C, true);
     case 0x3A: //LD A,(HHLL)
         z80_reg_af.bytes.high = memory_read8(z80_next16());
         return 13;
@@ -884,6 +884,17 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value |= z80_decode8(reg, 0, 3, &t)->byte_value;
         register_a_set_flag_s_z_p();
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
+        return t;
+    case 0xB8: //CP A,r
+    case 0xB9:
+    case 0xBA:
+    case 0xBB:
+    case 0xBC:
+    case 0xBD:
+    case 0xBE:
+    case 0xBF:
+        alt = z80_reg_af.bytes.high;
+        register_sub8_with_flags(&alt, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
     default:
         return 0; // fail
