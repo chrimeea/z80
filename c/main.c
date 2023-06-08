@@ -53,9 +53,9 @@
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
 #define register_split_8_to_4(R) (div(R.byte_value, MAX3))
 #define register_set_8_from_4(R, Q, M) (R.byte_value = Q * MAX3 + M)
-#define register_set_flag_s(R) (register_set_or_unset_flag(FLAG_S, sign(R.value)))
-#define register_set_flag_z(R) (register_set_or_unset_flag(FLAG_Z, zero(R.value)))
-#define register_set_flag_p(R) (register_set_or_unset_flag(FLAG_PV, __builtin_parity(R.byte_value)))
+#define register_a_set_flag_s() (register_set_or_unset_flag(FLAG_S, sign(z80_reg_af.bytes.high.value)))
+#define register_a_set_flag_z() (register_set_or_unset_flag(FLAG_Z, zero(z80_reg_af.bytes.high.value)))
+#define register_a_set_flag_p() (register_set_or_unset_flag(FLAG_PV, __builtin_parity(z80_reg_af.bytes.high.byte_value)))
 
 typedef union
 {
@@ -144,6 +144,12 @@ void register_exchange16(REG16 *reg, REG16 *alt)
     REG16 temp = *reg;
     *reg = *alt;
     *alt = temp;
+}
+
+void register_a_set_flag_s_z_p() {
+    register_a_set_flag_s();
+    register_a_set_flag_z();
+    register_a_set_flag_p();
 }
 
 void register_left8_with_flags(REG8 *reg, int mask, bool b)
@@ -704,9 +710,7 @@ int z80_execute(REG8 reg)
             z80_reg_af.bytes.high.byte_value += 0x9A;
             register_set_or_unset_flag(FLAG_C, true);
         }
-        register_set_flag_s(z80_reg_af.bytes.high);
-        register_set_flag_z(z80_reg_af.bytes.high);
-        register_set_flag_p(z80_reg_af.bytes.high);
+        register_a_set_flag_s_z_p();
         return t;
     case 0x28: // JR Z,NN
         return z80_jump_with_condition(FLAG_Z, true);
