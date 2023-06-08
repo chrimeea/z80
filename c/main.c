@@ -802,6 +802,48 @@ int z80_execute(REG8 reg)
     case 0x7F:
         *z80_decode8(reg, 3, 3, &t) = *z80_decode8(reg, 0, 3, &t);
         return t;
+    case 0x80: // ADD A,r
+    case 0x81:
+    case 0x82:
+    case 0x83:
+    case 0x84:
+    case 0x85:
+    case 0x86:
+    case 0x87:
+        register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
+    case 0x88: //ADC A,r
+    case 0x89:
+    case 0x8A:
+    case 0x8B:
+    case 0x8C:
+    case 0x8D:
+    case 0x8E:
+    case 0x8F:
+        z80_reg_af.bytes.high.byte_value += register_is_flag(FLAG_C);
+        register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
+    case 0x90: //SUB A,r
+    case 0x91:
+    case 0x92:
+    case 0x93:
+    case 0x94:
+    case 0x95:
+    case 0x96:
+    case 0x97:
+        register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
+    case 0x98: // SBC A,r
+    case 0x99:
+    case 0x9A:
+    case 0x9B:
+    case 0x9C:
+    case 0x9D:
+    case 0x9E:
+    case 0x9F:
+        z80_reg_af.bytes.high.byte_value -= register_is_flag(FLAG_C);
+        register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
     default:
         return 0; // fail
     }

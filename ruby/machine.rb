@@ -866,7 +866,7 @@ module Z80
                 @a.increase if @f.flag_c
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
-            when 0x90, 0x91, 0x92, 0x93, 0x94, 0x94, 0x96, 0x97 #SUB A,r
+            when 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97 #SUB A,r
                 @a.substract(self.decode_register8(opcode, 0))
                 @f.flag_c = @a.carry
                 @f.s_z_v_hc_n(@a)
