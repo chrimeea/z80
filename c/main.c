@@ -146,7 +146,8 @@ void register_exchange16(REG16 *reg, REG16 *alt)
     *alt = temp;
 }
 
-void register_a_set_flag_s_z_p() {
+void register_a_set_flag_s_z_p()
+{
     register_a_set_flag_s();
     register_a_set_flag_z();
     register_a_set_flag_p();
@@ -547,21 +548,33 @@ REG16 *z80_decode16(REG8 reg, int pos)
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
-int z80_jump_rel_with_condition(int flag, bool v) {
-    REG8 alt = z80_next8();
-    if (register_is_flag(flag) == v) {
-        z80_reg_pc.byte_value += alt.value;
+int z80_jump_with_condition(REG16 reg, int flag, bool v)
+{
+    if (register_is_flag(flag) == v)
+    {
+        z80_reg_pc = reg;
         return 12;
-    } else {
+    }
+    else
+    {
         return 7;
     }
 }
 
-int z80_ret_with_condition(int flag, bool v) {
-    if (register_is_flag(flag) == v) {
+int z80_jump_rel_with_condition(int flag, bool v)
+{
+    return z80_jump_with_condition((REG16){.byte_value = z80_reg_pc.byte_value + z80_next8().value}, flag, v);
+}
+
+int z80_ret_with_condition(int flag, bool v)
+{
+    if (register_is_flag(flag) == v)
+    {
         z80_reg_pc = z80_pop16();
         return 15;
-    } else {
+    }
+    else
+    {
         return 11;
     }
 }
@@ -649,9 +662,12 @@ int z80_execute(REG8 reg)
     case 0x10: // DJNZ NN
         alt = z80_next8();
         z80_reg_bc.bytes.high.byte_value--;
-        if (zero(z80_reg_bc.bytes.high.value)) {
+        if (zero(z80_reg_bc.bytes.high.value))
+        {
             return 8;
-        } else {
+        }
+        else
+        {
             z80_reg_pc.byte_value += alt.value;
             return 13;
         }
@@ -679,43 +695,68 @@ int z80_execute(REG8 reg)
         qr = register_split_8_to_4(z80_reg_af.bytes.high);
         c = register_is_flag(FLAG_C);
         hc = register_is_flag(FLAG_HC);
-        if (c == false && hc == false && qr.quot == 0x90 && qr.rem == 0x09) {
+        if (c == false && hc == false && qr.quot == 0x90 && qr.rem == 0x09)
+        {
             z80_reg_af.bytes.high.byte_value += 0x00;
             register_set_or_unset_flag(FLAG_C, false);
-        } else if (c == false && hc == false && qr.quot ==0x08 && qr.rem == 0xAF) {
+        }
+        else if (c == false && hc == false && qr.quot == 0x08 && qr.rem == 0xAF)
+        {
             z80_reg_af.bytes.high.byte_value += 0x06;
             register_set_or_unset_flag(FLAG_C, false);
-        } else if (c == false && hc == true && qr.quot == 0x09 && qr.rem == 0x03) {
+        }
+        else if (c == false && hc == true && qr.quot == 0x09 && qr.rem == 0x03)
+        {
             z80_reg_af.bytes.high.byte_value += 0x06;
             register_set_or_unset_flag(FLAG_C, false);
-        } else if (c == false && hc == false && qr.quot == 0xAF && qr.rem == 0x09) {
+        }
+        else if (c == false && hc == false && qr.quot == 0xAF && qr.rem == 0x09)
+        {
             z80_reg_af.bytes.high.byte_value += 0x60;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == false && hc == false && qr.quot == 0x9F && qr.rem == 0xAF) {
+        }
+        else if (c == false && hc == false && qr.quot == 0x9F && qr.rem == 0xAF)
+        {
             z80_reg_af.bytes.high.byte_value += 0x66;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == false && hc == true && qr.quot == 0xAF && qr.rem == 0x03) {
+        }
+        else if (c == false && hc == true && qr.quot == 0xAF && qr.rem == 0x03)
+        {
             z80_reg_af.bytes.high.byte_value += 0x66;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0x09) {
+        }
+        else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0x09)
+        {
             z80_reg_af.bytes.high.byte_value += 0x60;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0xAF) {
+        }
+        else if (c == true && hc == false && qr.quot == 0x02 && qr.rem == 0xAF)
+        {
             z80_reg_af.bytes.high.byte_value += 0x66;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == false && hc == true && qr.quot == 0x03 && qr.rem == 0x03) {
+        }
+        else if (c == false && hc == true && qr.quot == 0x03 && qr.rem == 0x03)
+        {
             z80_reg_af.bytes.high.byte_value += 0x66;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == false && hc == false && qr.quot == 0x09 && qr.rem == 0x09) {
+        }
+        else if (c == false && hc == false && qr.quot == 0x09 && qr.rem == 0x09)
+        {
             z80_reg_af.bytes.high.byte_value += 0x00;
             register_set_or_unset_flag(FLAG_C, false);
-        } else if (c == false && hc == true && qr.quot == 0x08 && qr.rem == 0x6F) {
+        }
+        else if (c == false && hc == true && qr.quot == 0x08 && qr.rem == 0x6F)
+        {
             z80_reg_af.bytes.high.byte_value += 0xFA;
             register_set_or_unset_flag(FLAG_C, false);
-        } else if (c == true && hc == false && qr.quot == 0x7F && qr.rem == 0x09) {
+        }
+        else if (c == true && hc == false && qr.quot == 0x7F && qr.rem == 0x09)
+        {
             z80_reg_af.bytes.high.byte_value += 0xA0;
             register_set_or_unset_flag(FLAG_C, true);
-        } else if (c == true && hc == true && qr.quot == 0x67 && qr.rem == 0x6F) {
+        }
+        else if (c == true && hc == true && qr.quot == 0x67 && qr.rem == 0x6F)
+        {
             z80_reg_af.bytes.high.byte_value += 0x9A;
             register_set_or_unset_flag(FLAG_C, true);
         }
@@ -732,7 +773,7 @@ int z80_execute(REG8 reg)
         return t;
     case 0x30: // JR NC,NN
         return z80_jump_rel_with_condition(FLAG_C, false);
-    case 0x32: //LD (HHLL),A
+    case 0x32: // LD (HHLL),A
         memory_write8(z80_next16(), z80_reg_af.bytes.high);
         return 16;
     case 0x37: // SCF
@@ -741,7 +782,7 @@ int z80_execute(REG8 reg)
         return t;
     case 0x38: // JR C,NN
         return z80_jump_rel_with_condition(FLAG_C, true);
-    case 0x3A: //LD A,(HHLL)
+    case 0x3A: // LD A,(HHLL)
         z80_reg_af.bytes.high = memory_read8(z80_next16());
         return 13;
     case 0x3F: // CCF
@@ -750,7 +791,7 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_C, !c);
         register_set_or_unset_flag(FLAG_N, false);
         return t;
-    case 0x40: //LD r,r
+    case 0x40: // LD r,r
     case 0x41:
     case 0x42:
     case 0x43:
@@ -825,7 +866,7 @@ int z80_execute(REG8 reg)
     case 0x87:
         register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0x88: //ADC A,r
+    case 0x88: // ADC A,r
     case 0x89:
     case 0x8A:
     case 0x8B:
@@ -836,7 +877,7 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value += register_is_flag(FLAG_C);
         register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0x90: //SUB A,r
+    case 0x90: // SUB A,r
     case 0x91:
     case 0x92:
     case 0x93:
@@ -846,7 +887,7 @@ int z80_execute(REG8 reg)
     case 0x97:
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0x98: //SBC A,r
+    case 0x98: // SBC A,r
     case 0x99:
     case 0x9A:
     case 0x9B:
@@ -857,7 +898,7 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value -= register_is_flag(FLAG_C);
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0xA0: //AND A,r
+    case 0xA0: // AND A,r
     case 0xA1:
     case 0xA2:
     case 0xA3:
@@ -870,7 +911,7 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
         return t;
-    case 0xA8: //XOR A,r
+    case 0xA8: // XOR A,r
     case 0xA9:
     case 0xAA:
     case 0xAB:
@@ -882,7 +923,7 @@ int z80_execute(REG8 reg)
         register_a_set_flag_s_z_p();
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return t;
-    case 0xB0: //OR A,r
+    case 0xB0: // OR A,r
     case 0xB1:
     case 0xB2:
     case 0xB3:
@@ -894,7 +935,7 @@ int z80_execute(REG8 reg)
         register_a_set_flag_s_z_p();
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return t;
-    case 0xB8: //CP A,r
+    case 0xB8: // CP A,r
     case 0xB9:
     case 0xBA:
     case 0xBB:
@@ -905,9 +946,9 @@ int z80_execute(REG8 reg)
         alt = z80_reg_af.bytes.high;
         register_sub8_with_flags(&alt, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0xC0: //RET NZ
+    case 0xC0: // RET NZ
         return z80_ret_with_condition(FLAG_Z, false);
-    case 0xC1: //POP qq
+    case 0xC1: // POP qq
     case 0xD1:
     case 0xE1:
     case 0xF1:
