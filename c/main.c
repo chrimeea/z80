@@ -837,7 +837,7 @@ int z80_execute(REG8 reg)
     case 0x97:
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
         return t;
-    case 0x98: // SBC A,r
+    case 0x98: //SBC A,r
     case 0x99:
     case 0x9A:
     case 0x9B:
@@ -847,6 +847,43 @@ int z80_execute(REG8 reg)
     case 0x9F:
         z80_reg_af.bytes.high.byte_value -= register_is_flag(FLAG_C);
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
+    case 0xA0: //AND A,r
+    case 0xA1:
+    case 0xA2:
+    case 0xA3:
+    case 0xA4:
+    case 0xA5:
+    case 0xA6:
+    case 0xA7:
+        z80_reg_af.bytes.high.byte_value &= z80_decode8(reg, 0, 3, &t)->byte_value;
+        register_a_set_flag_s_z_p();
+        register_set_or_unset_flag(FLAG_N | FLAG_C, false);
+        register_set_or_unset_flag(FLAG_HC, true);
+        return t;
+    case 0xA8: //XOR A,r
+    case 0xA9:
+    case 0xAA:
+    case 0xAB:
+    case 0xAC:
+    case 0xAD:
+    case 0xAE:
+    case 0xAF:
+        z80_reg_af.bytes.high.byte_value ^= z80_decode8(reg, 0, 3, &t)->byte_value;
+        register_a_set_flag_s_z_p();
+        register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
+        return t;
+    case 0xB0: //OR A,r
+    case 0xB1:
+    case 0xB2:
+    case 0xB3:
+    case 0xB4:
+    case 0xB5:
+    case 0xB6:
+    case 0xB7:
+        z80_reg_af.bytes.high.byte_value |= z80_decode8(reg, 0, 3, &t)->byte_value;
+        register_a_set_flag_s_z_p();
+        register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return t;
     default:
         return 0; // fail
