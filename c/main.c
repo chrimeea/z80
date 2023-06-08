@@ -557,6 +557,15 @@ int z80_jump_rel_with_condition(int flag, bool v) {
     }
 }
 
+int z80_ret_with_condition(int flag, bool v) {
+    if (register_is_flag(flag) == v) {
+        z80_reg_pc = z80_pop16();
+        return 15;
+    } else {
+        return 11;
+    }
+}
+
 int z80_execute(REG8 reg)
 {
     int t = 4;
@@ -895,6 +904,16 @@ int z80_execute(REG8 reg)
     case 0xBF:
         alt = z80_reg_af.bytes.high;
         register_sub8_with_flags(&alt, *z80_decode8(reg, 0, 3, &t), MASK_ALL);
+        return t;
+    case 0xC0: //RET NZ
+        return z80_ret_with_condition(FLAG_Z, false);
+    case 0xC1: //POP qq
+    case 0xD1:
+    case 0xE1:
+    case 0xF1:
+        z80_all16[3] = &z80_reg_af;
+        *z80_decode16(reg, 4) = z80_pop16();
+        z80_all16[3] = &z80_reg_sp;
         return t;
     default:
         return 0; // fail
