@@ -548,22 +548,26 @@ REG16 *z80_decode16(REG8 reg, int pos)
     return z80_all16[reg.byte_value >> pos & 0x03];
 }
 
-int z80_jump_with_condition(REG16 reg, int flag, bool v)
+int z80_jump_with_condition(int flag, bool v)
 {
+	REG16 reg = z80_next16();
     if (register_is_flag(flag) == v)
     {
         z80_reg_pc = reg;
-        return 12;
     }
-    else
-    {
-        return 7;
-    }
+    return 10;
 }
 
 int z80_jump_rel_with_condition(int flag, bool v)
 {
-    return z80_jump_with_condition((REG16){.byte_value = z80_reg_pc.byte_value + z80_next8().value}, flag, v);
+	REG8 reg = z80_next8();
+    if (register_is_flag(flag) == v)
+    {
+        z80_reg_pc.byte_value += reg.value;
+        return 12;
+    } else {
+		return 7;
+	}
 }
 
 int z80_ret_with_condition(int flag, bool v)
@@ -956,6 +960,8 @@ int z80_execute(REG8 reg)
         *z80_decode16(reg, 4) = z80_pop16();
         z80_all16[3] = &z80_reg_sp;
         return t;
+    case 0xC2: //JP NZ,HHLL
+		return z80_jump_with_condition(FLAG_Z, false);
     default:
         return 0; // fail
     }
