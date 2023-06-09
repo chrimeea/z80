@@ -45,7 +45,7 @@
 #define zero(X) (X == 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_bit(R, B) (is_bit(R.byte_value, B))
-#define register_is_flag(B) (is_bit(z80_reg_af.bytes.low.byte_value, B))
+#define register_is_flag(B) (register_is_bit(z80_reg_af.bytes.low, B))
 #define set_bit(I, B) (I |= (B))
 #define unset_bit(I, B) (I &= ~(B))
 #define set_or_unset_bit(I, B, V) (V ? set_bit(I, B) : unset_bit(I, B))
@@ -682,8 +682,7 @@ int z80_execute(REG8 reg)
         register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
         return t;
     case 0x18: // JR NN
-        z80_reg_pc.byte_value += 1 + z80_next8().value;
-        return 12;
+		return z80_jump_rel_with_condition(MASK_NONE, false);
     case 0x1A: // LD A,(DE)
         z80_reg_af.bytes.high = memory_read8(z80_reg_de);
         return 7;
