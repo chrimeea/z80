@@ -961,6 +961,8 @@ int z80_execute(REG8 reg)
         return t;
     case 0xC2: //JP NZ,HHLL
 		return z80_jump_with_condition(FLAG_Z, false);
+	case 0xC3: //JP HHLL
+		return z80_jump_with_condition(MASK_NONE, false);
     default:
         return 0; // fail
     }
