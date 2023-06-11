@@ -995,6 +995,7 @@ int z80_execute(REG8 reg)
     case 0xE2:
     case 0xEA:
     case 0xF2:
+    case 0xFA:
 		return z80_jump_with_condition(z80_decode_condition(reg));
 	case 0xC3: //JP HHLL
 		return z80_jump_with_condition(true);
@@ -1005,6 +1006,7 @@ int z80_execute(REG8 reg)
 	case 0xE4:
 	case 0xEC:
 	case 0xF4:
+	case 0xFC:
 		return z80_call_with_condition(z80_decode_condition(reg));
 	case 0xC5: //PUSH qq
 	case 0xD5:
@@ -1021,6 +1023,7 @@ int z80_execute(REG8 reg)
 	case 0xE7:
 	case 0xEF:
 	case 0xF7:
+	case 0xFF:
 		z80_push16(z80_reg_pc);
 		z80_reg_pc.value = z80_rst_addr[reg.byte_value >> 3 & 0x07];
 		return 11;
@@ -1090,14 +1093,29 @@ int z80_execute(REG8 reg)
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return 7;
     case 0xF3: //DI
-		z80_iff1 = false;
-		z80_iff2 = false;
+		z80_iff1 = z80_iff2 = false;
 		return t;
 	case 0xF6: //OR A,NN
         z80_reg_af.bytes.high.byte_value |= z80_next8().byte_value;
         register_a_set_flag_s_z_p();
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return 7;
+    case 0xF9: //LD SP,HL
+		z80_reg_sp = z80_reg_hl;
+		return t;
+	case 0xFB: //EI
+		z80_iff1 = z80_iff2 = true;
+		return t;
+	case 0xFD: //FD
+		reg = z80_fetch_opcode();
+		switch (reg.byte_value) {
+			default:
+				return 0; //fail
+		}
+    case 0xFE: //CP A,NN
+        alt = z80_reg_af.bytes.high;
+        register_sub8_with_flags(&alt, z80_next8(), MASK_ALL);
+        return t;
     default:
         return 0; // fail
     }
