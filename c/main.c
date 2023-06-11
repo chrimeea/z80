@@ -1021,6 +1021,10 @@ int z80_execute(REG8 reg)
 		}
 	case 0xCD: //CALL HHLL
 		return z80_call_with_condition(true);
+	case 0xCE: //ADC A,NN
+        z80_reg_af.bytes.high.byte_value += register_is_flag(FLAG_C);
+        register_add8_with_flags(&z80_reg_af.bytes.high, z80_next8(), MASK_ALL);
+        return 7;
     default:
         return 0; // fail
     }
