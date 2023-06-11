@@ -976,6 +976,7 @@ int z80_execute(REG8 reg)
     case 0xC0: //RET CC
     case 0xC8:
     case 0xD0:
+    case 0xD8:
         return z80_ret_with_condition(z80_decode_condition(reg));
     case 0xC1: //POP qq
     case 0xD1:
@@ -991,6 +992,7 @@ int z80_execute(REG8 reg)
 		return z80_jump_with_condition(true);
 	case 0xC4: //CALL CC,HHLL
 	case 0xCC:
+	case 0xD4:
 		return z80_call_with_condition(z80_decode_condition(reg));
 	case 0xC5: //PUSH qq
 	case 0xD5:
@@ -1002,6 +1004,7 @@ int z80_execute(REG8 reg)
 		register_add8_with_flags(&z80_reg_af.bytes.high, z80_next8(), MASK_ALL);
 		return 7;
 	case 0xC7: //RST p
+	case 0xD7:
 		z80_push16(z80_reg_pc);
 		z80_reg_pc.value = z80_rst_addr[reg.byte_value >> 3 & 0x07];
 		return 11;
@@ -1020,6 +1023,12 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value += register_is_flag(FLAG_C);
         register_add8_with_flags(&z80_reg_af.bytes.high, z80_next8(), MASK_ALL);
         return 7;
+    case 0xD3: //OUT (NN),A
+		port_write8((REG16){.bytes.high = z80_reg_af.bytes.high, .bytes.low = z80_next8()}, z80_reg_af.bytes.high);
+		return 11;
+    case 0xD6: //SUB A,NN
+		register_sub8_with_flags(&z80_reg_af.bytes.high, z80_next8(), MASK_ALL);
+		return 7;
     default:
         return 0; // fail
     }
