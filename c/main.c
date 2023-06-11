@@ -987,6 +987,7 @@ int z80_execute(REG8 reg)
     case 0xC2: //JP CC,HHLL
     case 0xCA:
     case 0xD2:
+    case 0xDA:
 		return z80_jump_with_condition(z80_decode_condition(reg));
 	case 0xC3: //JP HHLL
 		return z80_jump_with_condition(true);
@@ -1029,6 +1030,14 @@ int z80_execute(REG8 reg)
     case 0xD6: //SUB A,NN
 		register_sub8_with_flags(&z80_reg_af.bytes.high, z80_next8(), MASK_ALL);
 		return 7;
+	case 0xD9: //EXX
+		register_exchange16(&z80_reg_bc, &z80_reg_bc_2);
+		register_exchange16(&z80_reg_de, &z80_reg_de_2);
+		register_exchange16(&z80_reg_hl, &z80_reg_hl_2);
+		return t;
+	case 0xDB: //IN A,(NN)
+		z80_reg_af.bytes.high = port_read8((REG16){.bytes.high = z80_reg_af.bytes.high, .bytes.low = z80_next8()});
+		return 11;
     default:
         return 0; // fail
     }
