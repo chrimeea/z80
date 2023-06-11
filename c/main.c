@@ -975,6 +975,7 @@ int z80_execute(REG8 reg)
         return t;
     case 0xC0: //RET CC
     case 0xC8:
+    case 0xD0:
         return z80_ret_with_condition(z80_decode_condition(reg));
     case 0xC1: //POP qq
     case 0xD1:
@@ -984,6 +985,7 @@ int z80_execute(REG8 reg)
         return t;
     case 0xC2: //JP CC,HHLL
     case 0xCA:
+    case 0xD2:
 		return z80_jump_with_condition(z80_decode_condition(reg));
 	case 0xC3: //JP HHLL
 		return z80_jump_with_condition(true);
