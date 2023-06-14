@@ -7,7 +7,6 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-
 #define MAX0 0x01
 #define MAX1 0x02
 #define MAX2 0x04
@@ -645,7 +644,7 @@ int z80_execute(REG8 reg)
     case 0x34:
     case 0x3C:
         register_add8_with_flags(z80_decode_reg8(reg, 3, &hl), REG8_ONE, MASK_SZHVN);
-        return hl ? 4 : 11;
+        return hl ? 11 : 4;
     case 0x05: // DEC r
     case 0x0D:
     case 0x15:
@@ -655,7 +654,7 @@ int z80_execute(REG8 reg)
     case 0x35:
     case 0x3D:
         register_sub8_with_flags(z80_decode_reg8(reg, 3, &hl), REG8_ONE, MASK_SZHVN);
-        return hl ? 4 : 11;
+        return hl ? 11 : 4;
     case 0x06: //LD r,NN
     case 0x0E:
     case 0x16:
@@ -665,7 +664,7 @@ int z80_execute(REG8 reg)
     case 0x36:
     case 0x3E:
         *z80_decode_reg8(reg, 3, &hl) = z80_next8();
-        return hl ? 7 : 10;
+        return hl ? 10 : 7;
     case 0x07: //RLCA
         register_left8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_bit(z80_reg_af.bytes.high, MAX7));
         return 4;
@@ -883,7 +882,7 @@ int z80_execute(REG8 reg)
     case 0x7F:
 		alt = z80_decode_reg8(reg, 0, &hl);
         *z80_decode_reg8(reg, 3, &hl) = *alt;
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0x76: //HALT
 		z80_reg_pc.byte_value--;
 		return 4;
@@ -896,7 +895,7 @@ int z80_execute(REG8 reg)
     case 0x86:
     case 0x87:
         register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), MASK_ALL);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0x88: //ADC A,r
     case 0x89:
     case 0x8A:
@@ -907,7 +906,7 @@ int z80_execute(REG8 reg)
     case 0x8F:
         z80_reg_af.bytes.high.byte_value += register_is_flag(FLAG_C);
         register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), MASK_ALL);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0x90: //SUB A,r
     case 0x91:
     case 0x92:
@@ -917,7 +916,7 @@ int z80_execute(REG8 reg)
     case 0x96:
     case 0x97:
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), MASK_ALL);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0x98: //SBC A,r
     case 0x99:
     case 0x9A:
@@ -928,7 +927,7 @@ int z80_execute(REG8 reg)
     case 0x9F:
         z80_reg_af.bytes.high.byte_value -= register_is_flag(FLAG_C);
         register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), MASK_ALL);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0xA0: //AND A,r
     case 0xA1:
     case 0xA2:
@@ -941,7 +940,7 @@ int z80_execute(REG8 reg)
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0xA8: //XOR A,r
     case 0xA9:
     case 0xAA:
@@ -953,7 +952,7 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value ^= z80_decode_reg8(reg, 0, &hl)->byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0xB0: //OR A,r
     case 0xB1:
     case 0xB2:
@@ -965,7 +964,7 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high.byte_value |= z80_decode_reg8(reg, 0, &hl)->byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0xB8: //CP A,r
     case 0xB9:
     case 0xBA:
@@ -976,7 +975,7 @@ int z80_execute(REG8 reg)
     case 0xBF:
         alt = &z80_reg_af.bytes.high;
         register_sub8_with_flags(alt, *z80_decode_reg8(reg, 0, &hl), MASK_ALL);
-        return hl ? 4 : 7;
+        return hl ? 7 : 4;
     case 0xC0: //RET CC
     case 0xC8:
     case 0xD0:
@@ -1047,7 +1046,7 @@ int z80_execute(REG8 reg)
 			case 0x06:
 			case 0x07:
 				register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-				return 8;
+				return hl ? 15 : 8;
 			case 0x08: //RRC r
 			case 0x09:
 			case 0x0A:
@@ -1057,7 +1056,7 @@ int z80_execute(REG8 reg)
 			case 0x0E:
 			case 0x0F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
-				return 8;
+				return hl ? 15 : 8;
 			case 0x10: //RL r
 			case 0x11:
 			case 0x12:
@@ -1067,7 +1066,7 @@ int z80_execute(REG8 reg)
 			case 0x16:
 			case 0x17:
 				register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-				return 8;
+				return hl ? 15 : 8;
 			case 0x18: //RR r
 			case 0x19:
 			case 0x1A:
@@ -1077,7 +1076,7 @@ int z80_execute(REG8 reg)
 			case 0x1E:
 			case 0x1F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-				return 8;
+				return hl ? 15 : 8;
 			case 0x20: //SLA r
 			case 0x21:
 			case 0x22:
@@ -1087,7 +1086,7 @@ int z80_execute(REG8 reg)
 			case 0x26:
 			case 0x27:
 				register_left8_with_flags(alt, MASK_ALL, false);
-				return 8;
+				return hl ? 15 : 8;
 			case 0x28: //SRA r
 			case 0x29:
 			case 0x2A:
@@ -1097,7 +1096,7 @@ int z80_execute(REG8 reg)
 			case 0x2E:
 			case 0x2F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-				return 8;
+				return hl ? 15 : 8;
 			case 0x30: //SLL r
 			case 0x31:
 			case 0x32:
@@ -1107,7 +1106,7 @@ int z80_execute(REG8 reg)
 			case 0x36:
 			case 0x37:
 				register_left8_with_flags(alt, MASK_ALL, true);
-				return 8;
+				return hl ? 15 : 8;
 			case 0x38: //SRL r
 			case 0x39:
 			case 0x3A:
@@ -1117,7 +1116,75 @@ int z80_execute(REG8 reg)
 			case 0x3E:
 			case 0x3F:
 				register_right8_with_flags(alt, MASK_ALL, false);
-				return 8;
+				return hl ? 15 : 8;
+			case 0x40: //BIT b,r
+			case 0x41:
+			case 0x42:
+			case 0x43:
+			case 0x44:
+			case 0x45:
+			case 0x46:
+			case 0x47:
+			case 0x48:
+			case 0x49:
+			case 0x4A:
+			case 0x4B:
+			case 0x4C:
+			case 0x4D:
+			case 0x4E:
+			case 0x4F:
+			case 0x50:
+			case 0x51:
+			case 0x52:
+			case 0x53:
+			case 0x54:
+			case 0x55:
+			case 0x56:
+			case 0x57:
+			case 0x58:
+			case 0x59:
+			case 0x5A:
+			case 0x5B:
+			case 0x5C:
+			case 0x5D:
+			case 0x5E:
+			case 0x5F:
+			case 0x60:
+			case 0x61:
+			case 0x62:
+			case 0x63:
+			case 0x64:
+			case 0x65:
+			case 0x66:
+			case 0x67:
+			case 0x68:
+			case 0x69:
+			case 0x6A:
+			case 0x6B:
+			case 0x6C:
+			case 0x6D:
+			case 0x6E:
+			case 0x6F:
+			case 0x70:
+			case 0x71:
+			case 0x72:
+			case 0x73:
+			case 0x74:
+			case 0x75:
+			case 0x76:
+			case 0x77:
+			case 0x78:
+			case 0x79:
+			case 0x7A:
+			case 0x7B:
+			case 0x7C:
+			case 0x7D:
+			case 0x7E:
+			case 0x7F:
+				register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
+				register_set_or_unset_flag(FLAG_HC, true);
+				register_set_or_unset_flag(FLAG_N, false);
+				return hl ? 12 : 8;
 			default:
 				return 0; //fail
 		}
