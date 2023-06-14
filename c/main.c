@@ -34,6 +34,7 @@
 #define FLAG_S 0x80
 #define MASK_ALL 0xFF
 #define MASK_SZHVN 0xD6
+#define MASK_HNC 0x0B
 #define MASK_NONE 0x00
 
 #define REG8_ONE \
@@ -53,9 +54,6 @@
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
 #define register_split_8_to_4(R) (div(R.byte_value, MAX3))
 #define register_set_8_from_4(R, Q, M) (R.byte_value = Q * MAX3 + M)
-#define register_set_flag_s(R) (register_set_or_unset_flag(FLAG_S, sign((R).value)))
-#define register_set_flag_z(R) (register_set_or_unset_flag(FLAG_Z, zero((R).value)))
-#define register_set_flag_p(R) (register_set_or_unset_flag(FLAG_PV, __builtin_parity((R).byte_value)))
 
 typedef union
 {
@@ -148,11 +146,11 @@ void register_exchange16(REG16 *reg, REG16 *alt)
     *alt = temp;
 }
 
-void register_set_flag_s_z_p(REG8 reg)
+void register_set_flag_s_z_p(REG8 reg, int mask)
 {
-    register_set_flag_s(reg);
-    register_set_flag_z(reg);
-    register_set_flag_p(reg);
+	register_set_or_unset_flag(FLAG_S & mask, sign(reg.value));
+	register_set_or_unset_flag(FLAG_Z & mask, zero(reg.value));
+	register_set_or_unset_flag(FLAG_PV & mask, __builtin_parity(reg.byte_value));
 }
 
 void register_left8_with_flags(REG8 *reg, int mask, bool b)
@@ -162,6 +160,7 @@ void register_left8_with_flags(REG8 *reg, int mask, bool b)
     register_set_or_unset_flag(FLAG_N & mask, false);
     reg->byte_value <<= 1;
     set_or_unset_bit(reg->byte_value, MAX0, b);
+    register_set_flag_s_z_p(*reg, mask);
 }
 
 void register_right8_with_flags(REG8 *reg, int mask, bool b)
@@ -171,6 +170,7 @@ void register_right8_with_flags(REG8 *reg, int mask, bool b)
     register_set_or_unset_flag(FLAG_N & mask, false);
     reg->byte_value >>= 1;
     set_or_unset_bit(reg->byte_value, MAX7, b);
+    register_set_flag_s_z_p(*reg, mask);
 }
 
 void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
@@ -667,7 +667,7 @@ int z80_execute(REG8 reg)
         *z80_decode_reg8(reg, 3, &hl) = z80_next8();
         return hl ? 7 : 10;
     case 0x07: //RLCA
-        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX7));
+        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_bit(z80_reg_af.bytes.high, MAX7));
         return 4;
     case 0x08: //EX AF,AF’
         register_exchange16(&z80_reg_af, &z80_reg_af_2);
@@ -688,7 +688,7 @@ int z80_execute(REG8 reg)
         register_sub16_with_flags(z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03], REG16_ONE, MASK_NONE);
         return 6;
     case 0x0F: //RRCA
-        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_bit(z80_reg_af.bytes.high, MAX0));
+        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_bit(z80_reg_af.bytes.high, MAX0));
         return 4;
     case 0x10: //DJNZ NN
         temp = z80_next8();
@@ -706,7 +706,7 @@ int z80_execute(REG8 reg)
         memory_write8(z80_reg_de, z80_reg_af.bytes.high);
         return 7;
     case 0x17: //RLA
-        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
+        register_left8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_flag(FLAG_C));
         return 4;
     case 0x18: //JR NN
 		return z80_jump_rel_with_condition(true);
@@ -714,7 +714,7 @@ int z80_execute(REG8 reg)
         z80_reg_af.bytes.high = memory_read8(z80_reg_de);
         return 7;
     case 0x1F: //RRA
-        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_ALL, register_is_flag(FLAG_C));
+        register_right8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_flag(FLAG_C));
         return 4;
     case 0x20: //JR CC,NN
     case 0x28:
@@ -793,7 +793,7 @@ int z80_execute(REG8 reg)
             z80_reg_af.bytes.high.byte_value += 0x9A;
             register_set_or_unset_flag(FLAG_C, true);
         }
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         return 4;
     case 0x2A: //LD HL,(HHLL)
         z80_reg_hl = memory_read16(z80_next16());
@@ -938,7 +938,7 @@ int z80_execute(REG8 reg)
     case 0xA6:
     case 0xA7:
         z80_reg_af.bytes.high.byte_value &= z80_decode_reg8(reg, 0, &hl)->byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
         return hl ? 4 : 7;
@@ -951,7 +951,7 @@ int z80_execute(REG8 reg)
     case 0xAE:
     case 0xAF:
         z80_reg_af.bytes.high.byte_value ^= z80_decode_reg8(reg, 0, &hl)->byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return hl ? 4 : 7;
     case 0xB0: //OR A,r
@@ -963,7 +963,7 @@ int z80_execute(REG8 reg)
     case 0xB6:
     case 0xB7:
         z80_reg_af.bytes.high.byte_value |= z80_decode_reg8(reg, 0, &hl)->byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return hl ? 4 : 7;
     case 0xB8: //CP A,r
@@ -1047,7 +1047,6 @@ int z80_execute(REG8 reg)
 			case 0x06:
 			case 0x07:
 				register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x08: //RRC r
 			case 0x09:
@@ -1058,7 +1057,6 @@ int z80_execute(REG8 reg)
 			case 0x0E:
 			case 0x0F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x10: //RL r
 			case 0x11:
@@ -1069,7 +1067,6 @@ int z80_execute(REG8 reg)
 			case 0x16:
 			case 0x17:
 				register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x18: //RR r
 			case 0x19:
@@ -1080,7 +1077,6 @@ int z80_execute(REG8 reg)
 			case 0x1E:
 			case 0x1F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x20: //SLA r
 			case 0x21:
@@ -1091,7 +1087,6 @@ int z80_execute(REG8 reg)
 			case 0x26:
 			case 0x27:
 				register_left8_with_flags(alt, MASK_ALL, false);
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x28: //SRA r
 			case 0x29:
@@ -1102,7 +1097,6 @@ int z80_execute(REG8 reg)
 			case 0x2E:
 			case 0x2F:
 				register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x30: //SLL r
 			case 0x31:
@@ -1113,7 +1107,6 @@ int z80_execute(REG8 reg)
 			case 0x36:
 			case 0x37:
 				register_left8_with_flags(alt, MASK_ALL, true);
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			case 0x38: //SRL r
 			case 0x39:
@@ -1124,7 +1117,6 @@ int z80_execute(REG8 reg)
 			case 0x3E:
 			case 0x3F:
 				register_right8_with_flags(alt, MASK_ALL, false);
-				register_set_flag_s_z_p(*alt);
 				return 8;
 			default:
 				return 0; //fail
@@ -1164,7 +1156,7 @@ int z80_execute(REG8 reg)
 		return 19;
 	case 0xE6: //AND A,NN
         z80_reg_af.bytes.high.byte_value &= z80_next8().byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
 		return 7;
@@ -1182,7 +1174,7 @@ int z80_execute(REG8 reg)
 		}
 	case 0xEE: //XOR A,NN
         z80_reg_af.bytes.high.byte_value ^= z80_next8().byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return 7;
     case 0xF3: //DI
@@ -1190,7 +1182,7 @@ int z80_execute(REG8 reg)
 		return 4;
 	case 0xF6: //OR A,NN
         z80_reg_af.bytes.high.byte_value |= z80_next8().byte_value;
-        register_set_flag_s_z_p(z80_reg_af.bytes.high);
+        register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_C | FLAG_N | FLAG_HC, false);
         return 7;
     case 0xF9: //LD SP,HL
