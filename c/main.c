@@ -612,8 +612,8 @@ int z80_call_with_condition(bool c)
 
 int z80_execute(REG8 reg)
 {
-	REG8 temp;
     REG8 *alt;
+    REG16 *other = &z80_reg_iy;
     div_t qr;
     bool c, hc, hl;
     switch (reg.byte_value)
@@ -690,7 +690,7 @@ int z80_execute(REG8 reg)
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_bit(z80_reg_af.bytes.high, MAX0));
         return 4;
     case 0x10: //DJNZ NN
-        temp = z80_next8();
+        alt = &(REG8) {.value = z80_next8().value};
         z80_reg_bc.bytes.high.byte_value--;
         if (zero(z80_reg_bc.bytes.high.value))
         {
@@ -698,7 +698,7 @@ int z80_execute(REG8 reg)
         }
         else
         {
-            z80_reg_pc.byte_value += temp.value;
+            z80_reg_pc.byte_value += alt->value;
             return 13;
         }
     case 0x12: //LD (DE),A
@@ -1341,6 +1341,8 @@ int z80_execute(REG8 reg)
 		z80_reg_af.bytes.high = port_read8((REG16){.bytes.high = z80_reg_af.bytes.high, .bytes.low = z80_next8()});
 		return 11;
 	case 0xDD: //DD
+		other = &z80_reg_ix;
+	case 0xFD: //FD
 		reg = z80_fetch_opcode();
 		switch (reg.byte_value) {
 			default:
@@ -1390,12 +1392,6 @@ int z80_execute(REG8 reg)
 	case 0xFB: //EI
 		z80_iff1 = z80_iff2 = true;
 		return 4;
-	case 0xFD: //FD
-		reg = z80_fetch_opcode();
-		switch (reg.byte_value) {
-			default:
-				return 0; //fail
-		}
     case 0xFE: //CP A,NN
         alt = &z80_reg_af.bytes.high;
         register_sub8_with_flags(alt, z80_next8(), MASK_ALL);
