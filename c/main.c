@@ -1375,6 +1375,18 @@ int z80_execute(REG8 reg)
 			case 0x35: //DEC (IX+d)
 				register_sub8_with_flags(memory_ref8_indexed(*other, z80_next8()), REG8_ONE, MASK_SZHVN);
 				return 23;
+			case 0x36: //LD (IX+d),n
+				memory_write8_indexed(*other, z80_next8(), z80_next8());
+				return 19;
+			case 0x46: //LD r,(IX+d)
+			case 0x4E:
+			case 0x56:
+			case 0x5E:
+			case 0x66:
+			case 0x6E:
+			case 0x7E:
+				*z80_decode_reg8(reg, 3, &hl) = memory_read8_indexed(*other, z80_next8());
+				return 19;
 			default:
 				return 0; //fail
 		}
