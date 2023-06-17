@@ -1097,7 +1097,7 @@ module Z80
                 when 0x36 #LD (IX+d),n
                     @t_states = 19
                     @memory.read8_indexed(@ix, self.next8).copy(self.next8)
-                when 0x46, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
+                when 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E #LD r,(IX+d)
                     @t_states = 19
                     self.decode_register8(opcode).copy(@memory.read8_indexed(@ix, self.next8))
                 when 0x86, 0x8E #ADD/ADC A,(IX+d)
