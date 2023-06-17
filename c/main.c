@@ -210,10 +210,11 @@ void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
 
 void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
+	int r = reg->byte_value - alt.byte_value;
     register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
     register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
     register_set_or_unset_flag(FLAG_N & mask, true);
-    reg->byte_value -= alt.byte_value;
+    reg->byte_value = r;
 }
 
 void memory_load_rom(const char *filename)
@@ -676,7 +677,7 @@ int z80_execute(REG8 reg)
     case 0x19:
     case 0x29:
     case 0x39:
-        register_add16_with_flags(&z80_reg_hl, *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03], MASK_ALL);
+        register_add16_with_flags(&z80_reg_hl, *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03], MASK_HNC);
         return 11;
     case 0x0A: //LD A,(BC)
         z80_reg_af.bytes.high = memory_read8(z80_reg_bc);
@@ -1351,7 +1352,7 @@ int z80_execute(REG8 reg)
 			case 0x19:
 			case 0x29:
 			case 0x39:
-				register_add16_with_flags(other, *z80_bc_de___sp[reg.byte_value >> 4 & 0x03], MASK_ALL);
+				register_add16_with_flags(other, *z80_bc_de___sp[reg.byte_value >> 4 & 0x03], MASK_HNC);
 				return 15;
 			case 0x21: //LD IX,nn
 				*other = z80_next16();
@@ -1368,6 +1369,12 @@ int z80_execute(REG8 reg)
 			case 0x2B: //DEC IX 
 				register_sub16_with_flags(other, REG16_ONE, MASK_NONE);
 				return 10;
+			case 0x34: //INC (IX+d)
+				register_add8_with_flags(memory_ref8_indexed(*other, z80_next8()), REG8_ONE, MASK_SZHVN);
+				return 23;
+			case 0x35: //DEC (IX+d)
+				register_sub8_with_flags(memory_ref8_indexed(*other, z80_next8()), REG8_ONE, MASK_SZHVN);
+				return 23;
 			default:
 				return 0; //fail
 		}
