@@ -103,7 +103,7 @@ REG8 *z80_all8[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
                     &z80_reg_hl.bytes.high, &z80_reg_hl.bytes.low,
                     NULL, &z80_reg_af.bytes.high};
 REG16 *z80_bc_de_hl_sp[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_sp};
-REG16 *z80_bc_de_ix_sp[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_ix, &z80_reg_sp};
+REG16 *z80_bc_de___sp[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_ix, &z80_reg_sp};
 REG16 *z80_bc_de_hl_af[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_af};
 int z80_rst_addr[] = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38};
 bool running;
@@ -1344,17 +1344,30 @@ int z80_execute(REG8 reg)
 	case 0xDD: //DD
 		other = &z80_reg_ix;
 	case 0xFD: //FD
+		z80_bc_de___sp[2] = other;
 		reg = z80_fetch_opcode();
 		switch (reg.byte_value) {
 			case 0x09: //ADD IX,pp
 			case 0x19:
 			case 0x29:
 			case 0x39:
-				register_add16_with_flags(other, *z80_bc_de_ix_sp[reg.byte_value >> 4 & 0x03], MASK_ALL);
+				register_add16_with_flags(other, *z80_bc_de___sp[reg.byte_value >> 4 & 0x03], MASK_ALL);
 				return 15;
 			case 0x21: //LD IX,nn
-				z80_reg_ix = z80_next16();
+				*other = z80_next16();
 				return 14;
+			case 0x22: //LD (nn),IX
+				memory_write16(z80_next16(), *other);
+				return 20;
+			case 0x23: //INC IX
+				register_add16_with_flags(other, REG16_ONE, MASK_NONE);
+				return 10;
+			case 0x2A: //LD IX,(nn)
+				*other = memory_read16(z80_next16());
+				return 20;
+			case 0x2B: //DEC IX 
+				register_sub16_with_flags(other, REG16_ONE, MASK_NONE);
+				return 10;
 			default:
 				return 0; //fail
 		}
