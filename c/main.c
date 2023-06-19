@@ -1409,6 +1409,25 @@ int z80_execute(REG8 reg)
         case 0x9E: // SBC A,(IX+d)
             register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()).value + register_is_flag(FLAG_C), MASK_ALL);
             return 19;
+        case 0xA6: // AND A,(IX+d)
+            z80_reg_af.bytes.high.byte_value &= memory_read8_indexed(*other, z80_next8()).byte_value;
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_N | FLAG_C, false);
+            register_set_or_unset_flag(FLAG_HC, true);
+            return 19;
+        case 0xAE: // XOR A,(IX+d)
+            z80_reg_af.bytes.high.byte_value ^= memory_read8_indexed(*other, z80_next8()).byte_value;
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
+            return 19;
+        case 0xB6: // OR A,(IX+d)
+            z80_reg_af.bytes.high.byte_value |= memory_read8_indexed(*other, z80_next8()).byte_value;
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
+            return 19;
+        case 0xBE: // CP A,(IX+d)
+            register_sub8_with_flags(&(REG8){.value = z80_reg_af.bytes.high.value}, memory_read8_indexed(*other, z80_next8()).value, MASK_ALL);
+            return 19;
         default:
             return 0; // fail
         }
