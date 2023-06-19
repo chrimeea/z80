@@ -1403,6 +1403,12 @@ int z80_execute(REG8 reg)
         case 0x8E: // ADC A,(IX+d)
             register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()).value + register_is_flag(FLAG_C), MASK_ALL);
             return 19;
+        case 0x96: // SUB A,(IX+d)
+            register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()).value, MASK_ALL);
+            return 19;
+        case 0x9E: // SBC A,(IX+d)
+            register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()).value + register_is_flag(FLAG_C), MASK_ALL);
+            return 19;
         default:
             return 0; // fail
         }
