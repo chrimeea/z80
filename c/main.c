@@ -1428,6 +1428,28 @@ int z80_execute(REG8 reg)
         case 0xBE: // CP A,(IX+d)
             register_sub8_with_flags(&(REG8){.value = z80_reg_af.bytes.high.value}, memory_read8_indexed(*other, z80_next8()).value, MASK_ALL);
             return 19;
+        case 0xCB: // DDCB
+            reg = z80_fetch_opcode();
+            switch (reg.byte_value)
+            {
+                default:
+                    return 0; // fail
+            }
+        case 0xE1: // POP IX
+            *other = z80_pop16();
+            return 19;
+        case 0xE3: // EX (SP),IX
+            register_exchange16(other, memory_ref16(z80_reg_sp));
+            return 23;
+        case 0xE5: // PUSH IX
+            z80_push16(*other);
+            return 15;
+        case 0xE9: // JP (IX)
+            z80_reg_pc = *other;
+            return 8;
+        case 0xF9: // LD SP,IX
+            z80_reg_sp = *other;
+            return 10;
         default:
             return 0; // fail
         }
