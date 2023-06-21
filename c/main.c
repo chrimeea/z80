@@ -1445,6 +1445,18 @@ int z80_execute(REG8 reg)
                 case 0x1E: // RR (IX+d)
                     register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
                     return 23;
+                case 0x26: // SLA (IX+d)
+                    register_left8_with_flags(alt, MASK_ALL, false);
+                    return 23;
+                case 0x2E: // SRA (IX+d)
+                    register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
+                    return 23;
+                case 0x36: // SLL (IX+d)
+                    register_left8_with_flags(alt, MASK_ALL, true);
+                    return 23;
+                case 0x3E: // SRL (IX+d)
+                    register_right8_with_flags(alt, MASK_ALL, false);
+                    return 23;
                 default:
                     return 0; // fail
             }
