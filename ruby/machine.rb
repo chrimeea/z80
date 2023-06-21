@@ -1136,7 +1136,7 @@ module Z80
                     opcode = self.next8
                     reg = @memory.read8_indexed(@ix, self.next8)
                     case opcode.byte_value
-                    when 0x06 #RLC (IX+d)	
+                    when 0x06 #RLC (IX+d)
                         @t_states = 23
                         reg.rotate_left
                         @f.s_z_p_hc_n_c(reg)
