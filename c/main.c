@@ -1263,7 +1263,7 @@ int z80_execute(REG8 reg)
         case 0xBF:
             register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
             return hl ? 15 : 8;
-        case 0xC0: // RES b,r
+        case 0xC0: // SET b,r
         case 0xC1:
         case 0xC2:
         case 0xC3:
@@ -1457,6 +1457,38 @@ int z80_execute(REG8 reg)
                 case 0x3E: // SRL (IX+d)
                     register_right8_with_flags(alt, MASK_ALL, false);
                     return 23;
+                case 0x46: // BIT b,(IX+d)
+                case 0x4E:
+                case 0x56:
+                case 0x5E:
+                case 0x66:
+                case 0x6E:
+                case 0x76:
+                case 0x7E:
+                    register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
+                    register_set_or_unset_flag(FLAG_HC, true);
+                    register_set_or_unset_flag(FLAG_N, false);
+                    return 20;
+                case 0x86: // RES b,(IX+d)
+                case 0x8E:
+                case 0x96:
+                case 0x9E:
+                case 0xA6:
+                case 0xAE:
+                case 0xB6:
+                case 0xBE:
+                    register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
+                    return 23;
+                case 0xC6:  // SET b,(IX+d)
+                case 0xCE:
+                case 0xD6:
+                case 0xDE:
+                case 0xE6:
+                case 0xEE:
+                case 0xF6:
+                case 0xFE:
+                    register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
+                    return 20;
                 default:
                     return 0; // fail
             }
