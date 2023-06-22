@@ -1533,8 +1533,29 @@ int z80_execute(REG8 reg)
         reg = z80_fetch_opcode();
         switch (reg.byte_value)
         {
-        default:
-            return 0; // fail
+            case 0x40: // IN r,(C)
+            case 0x48:
+            case 0x50:
+            case 0x58:
+            case 0x60:
+            case 0x68:
+            case 0x78:
+                alt = z80_decode_reg8(reg, 3, &hl);
+                *alt = port_read8(z80_reg_bc);
+                register_set_flag_s_z_p(*alt, MASK_ALL);
+                register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+                return 12;
+            case 0x41:  // OUT (C),r
+            case 0x49:
+            case 0x51:
+            case 0x59:
+            case 0x61:
+            case 0x69:
+            case 0x79:
+                port_write8(z80_reg_bc, *z80_decode_reg8(reg, 3, &hl));
+                return 12;
+            default:
+                return 0; // fail
         }
     case 0xEE: // XOR A,NN
         z80_reg_af.bytes.high.byte_value ^= z80_next8().byte_value;
