@@ -1433,64 +1433,64 @@ int z80_execute(REG8 reg)
             alt = memory_ref8_indexed(*other, z80_next8());
             switch (reg.byte_value)
             {
-                case 0x06: // RLC (IX+d)
-                    register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-                    return 23;
-                case 0x0E: // RRC (IX+d)
-                    register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
-                    return 23;
-                case 0x16: // RL (IX+d)
-                    register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-                    return 23;
-                case 0x1E: // RR (IX+d)
-                    register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
-                    return 23;
-                case 0x26: // SLA (IX+d)
-                    register_left8_with_flags(alt, MASK_ALL, false);
-                    return 23;
-                case 0x2E: // SRA (IX+d)
-                    register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
-                    return 23;
-                case 0x36: // SLL (IX+d)
-                    register_left8_with_flags(alt, MASK_ALL, true);
-                    return 23;
-                case 0x3E: // SRL (IX+d)
-                    register_right8_with_flags(alt, MASK_ALL, false);
-                    return 23;
-                case 0x46: // BIT b,(IX+d)
-                case 0x4E:
-                case 0x56:
-                case 0x5E:
-                case 0x66:
-                case 0x6E:
-                case 0x76:
-                case 0x7E:
-                    register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
-                    register_set_or_unset_flag(FLAG_HC, true);
-                    register_set_or_unset_flag(FLAG_N, false);
-                    return 20;
-                case 0x86: // RES b,(IX+d)
-                case 0x8E:
-                case 0x96:
-                case 0x9E:
-                case 0xA6:
-                case 0xAE:
-                case 0xB6:
-                case 0xBE:
-                    register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
-                    return 23;
-                case 0xC6:  // SET b,(IX+d)
-                case 0xCE:
-                case 0xD6:
-                case 0xDE:
-                case 0xE6:
-                case 0xEE:
-                case 0xF6:
-                case 0xFE:
-                    register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
-                    return 20;
-                default:
-                    return 0; // fail
+            case 0x06: // RLC (IX+d)
+                register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
+                return 23;
+            case 0x0E: // RRC (IX+d)
+                register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
+                return 23;
+            case 0x16: // RL (IX+d)
+                register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
+                return 23;
+            case 0x1E: // RR (IX+d)
+                register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
+                return 23;
+            case 0x26: // SLA (IX+d)
+                register_left8_with_flags(alt, MASK_ALL, false);
+                return 23;
+            case 0x2E: // SRA (IX+d)
+                register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
+                return 23;
+            case 0x36: // SLL (IX+d)
+                register_left8_with_flags(alt, MASK_ALL, true);
+                return 23;
+            case 0x3E: // SRL (IX+d)
+                register_right8_with_flags(alt, MASK_ALL, false);
+                return 23;
+            case 0x46: // BIT b,(IX+d)
+            case 0x4E:
+            case 0x56:
+            case 0x5E:
+            case 0x66:
+            case 0x6E:
+            case 0x76:
+            case 0x7E:
+                register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
+                register_set_or_unset_flag(FLAG_HC, true);
+                register_set_or_unset_flag(FLAG_N, false);
+                return 20;
+            case 0x86: // RES b,(IX+d)
+            case 0x8E:
+            case 0x96:
+            case 0x9E:
+            case 0xA6:
+            case 0xAE:
+            case 0xB6:
+            case 0xBE:
+                register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
+                return 23;
+            case 0xC6: // SET b,(IX+d)
+            case 0xCE:
+            case 0xD6:
+            case 0xDE:
+            case 0xE6:
+            case 0xEE:
+            case 0xF6:
+            case 0xFE:
+                register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
+                return 20;
+            default:
+                return 0; // fail
             }
         case 0xE1: // POP IX
             *other = z80_pop16();
@@ -1533,29 +1533,35 @@ int z80_execute(REG8 reg)
         reg = z80_fetch_opcode();
         switch (reg.byte_value)
         {
-            case 0x40: // IN r,(C)
-            case 0x48:
-            case 0x50:
-            case 0x58:
-            case 0x60:
-            case 0x68:
-            case 0x78:
-                alt = z80_decode_reg8(reg, 3, &hl);
-                *alt = port_read8(z80_reg_bc);
-                register_set_flag_s_z_p(*alt, MASK_ALL);
-                register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
-                return 12;
-            case 0x41:  // OUT (C),r
-            case 0x49:
-            case 0x51:
-            case 0x59:
-            case 0x61:
-            case 0x69:
-            case 0x79:
-                port_write8(z80_reg_bc, *z80_decode_reg8(reg, 3, &hl));
-                return 12;
-            default:
-                return 0; // fail
+        case 0x40: // IN r,(C)
+        case 0x48:
+        case 0x50:
+        case 0x58:
+        case 0x60:
+        case 0x68:
+        case 0x78:
+            alt = z80_decode_reg8(reg, 3, &hl);
+            *alt = port_read8(z80_reg_bc);
+            register_set_flag_s_z_p(*alt, MASK_ALL);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            return 12;
+        case 0x41: // OUT (C),r
+        case 0x49:
+        case 0x51:
+        case 0x59:
+        case 0x61:
+        case 0x69:
+        case 0x79:
+            port_write8(z80_reg_bc, *z80_decode_reg8(reg, 3, &hl));
+            return 12;
+        case 0x42: // SBC HL,ss
+        case 0x52:
+        case 0x62:
+        case 0x72:
+            register_sub8_with_flags(&z80_reg_hl.bytes.high, z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03]->value + register_is_flag(FLAG_C), MASK_ALL);
+            return 15;
+        default:
+            return 0; // fail
         }
     case 0xEE: // XOR A,NN
         z80_reg_af.bytes.high.byte_value ^= z80_next8().byte_value;
