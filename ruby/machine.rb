@@ -1282,7 +1282,7 @@ module Z80
                     @memory.read16(self.next16).copy(self.decode_register16(opcode))
                 when 0x44 #NEG
                     @t_states = 8
-                    @a.negate
+                    @a.store(0 - @a.two_complement);
                     @f.s_z_v_hc_n(@a)
                     @f.flag_c = @a.byte_value.nonzero?
                 when 0x45 #RETN

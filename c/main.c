@@ -629,6 +629,7 @@ int z80_execute(REG8 reg)
     REG8 *alt;
     REG16 *other = &z80_reg_iy;
     div_t qr;
+    int i;
     bool c, hc, hl;
     switch (reg.byte_value)
     {
@@ -1560,6 +1561,17 @@ int z80_execute(REG8 reg)
         case 0x72:
             register_sub8_with_flags(&z80_reg_hl.bytes.high, z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03]->value + register_is_flag(FLAG_C), MASK_ALL);
             return 15;
+        case 0x43: // LD (nn),dd
+        case 0x53:
+        case 0x63:
+        case 0x73:
+            memory_write16(z80_next16(), *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03]);
+            return 20;
+        case 0x44: // NEG
+            i = z80_reg_af.bytes.high.value;
+            z80_reg_af.bytes.high.value = 0;
+            register_sub8_with_flags(&z80_reg_af.bytes.high, i, MASK_ALL);
+            return 8;
         default:
             return 0; // fail
         }
