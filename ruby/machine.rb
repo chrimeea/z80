@@ -1317,7 +1317,7 @@ module Z80
                     @t_states = 9
                     @a.copy(@i)
                     @f.s_z(@a)
-                    @f.flag_pv, @f.flag_n = @iff2, false
+                    @f.flag_pv, @f.flag_n, @f.flag_hc = @iff2, false, false;
                 when 0x5E #IM 2
                     @t_states = 8
                     @imode = 2

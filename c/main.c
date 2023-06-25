@@ -1603,6 +1603,12 @@ int z80_execute(REG8 reg)
         case 0x56: // IM 1
             z80_imode = 1;
             return 8;
+        case 0x57: // LD A,I
+            z80_reg_af.bytes.high = z80_reg_i;
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_PV, z80_iff2);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            return 9;
         default:
             return 0; // fail
         }
