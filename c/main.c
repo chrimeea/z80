@@ -1588,6 +1588,21 @@ int z80_execute(REG8 reg)
         case 0x7A:
             register_add8_with_flags(&z80_reg_hl.bytes.high, z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03]->value + register_is_flag(FLAG_C), MASK_ALL);
             return 15;
+        case 0x4B: // LD dd,(nn)
+        case 0x5B:
+        case 0x6B:
+        case 0x7B:
+            *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03] = memory_read16(z80_next16());
+            return 20;
+        case 0x4D: // RETI
+            z80_reg_pc = z80_pop16();
+            return 14;
+        case 0x4F: // LD R,A
+            z80_reg_r = z80_reg_af.bytes.high;
+            return 9;
+        case 0x56: // IM 1
+            z80_imode = 1;
+            return 8;
         default:
             return 0; // fail
         }

@@ -1308,6 +1308,7 @@ module Z80
                     @pc.copy(self.pop16)
                     #TODO: signal devices that interrupt routine is completed
                 when 0x4F #LD R,A
+                    @t_states = 9
                     @r.copy(@a)
                 when 0x56 #IM 1
                     @t_states = 8
