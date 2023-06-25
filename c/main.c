@@ -1572,6 +1572,16 @@ int z80_execute(REG8 reg)
             z80_reg_af.bytes.high.value = 0;
             register_sub8_with_flags(&z80_reg_af.bytes.high, i, MASK_ALL);
             return 8;
+        case 0x45: // RETN
+            z80_reg_pc = z80_pop16();
+            z80_iff1 = z80_iff2;
+            return 14;
+        case 0x46: // IM 0
+            z80_imode = 0;
+            return 8;
+        case 0x47: // LD I,A
+            z80_reg_i = z80_reg_af.bytes.high;
+            return 9;
         default:
             return 0; // fail
         }
