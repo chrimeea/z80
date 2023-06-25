@@ -1582,6 +1582,12 @@ int z80_execute(REG8 reg)
         case 0x47: // LD I,A
             z80_reg_i = z80_reg_af.bytes.high;
             return 9;
+        case 0x4A: // ADC HL,ss
+        case 0x5A:
+        case 0x6A:
+        case 0x7A:
+            register_add8_with_flags(&z80_reg_hl.bytes.high, z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03]->value + register_is_flag(FLAG_C), MASK_ALL);
+            return 15;
         default:
             return 0; // fail
         }
