@@ -628,7 +628,7 @@ int z80_execute(REG8 reg)
 {
     REG8 *alt;
     REG16 *other = &z80_reg_iy;
-    div_t qr;
+    div_t qr, qr_alt;
     int i;
     bool c, hc, hl;
     switch (reg.byte_value)
@@ -1618,6 +1618,24 @@ int z80_execute(REG8 reg)
             register_set_or_unset_flag(FLAG_PV, z80_iff2);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 9;
+        case 0x67: // RRD
+            alt = memory_ref8(z80_reg_hl);
+            qr = register_split_8_to_4(*alt);
+            qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
+            register_set_8_from_4(z80_reg_af.bytes.high, qr_alt.quot, qr.rem);
+            register_set_8_from_4(*alt, qr_alt.rem, qr.quot);
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            return 18;
+        case 0x6F: // RLD
+            alt = memory_ref8(z80_reg_hl);
+            qr = register_split_8_to_4(*alt);
+            qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
+            register_set_8_from_4(z80_reg_af.bytes.high, qr_alt.quot, qr.quot);
+            register_set_8_from_4(*alt, qr.rem, qr_alt.rem);
+            register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            return 18;
         default:
             return 0; // fail
         }
