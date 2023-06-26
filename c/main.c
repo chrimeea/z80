@@ -1636,6 +1636,110 @@ int z80_execute(REG8 reg)
             register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 18;
+        case 0xA0: // LDI & LDIR
+        case 0xB0:
+            memory_write8(z80_reg_de, memory_read8(z80_reg_hl));
+            z80_reg_de.value++;
+            z80_reg_hl.value++;
+            z80_reg_bc.value--;
+            register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            if (reg.byte_value == 0xB0 && register_is_flag(FLAG_PV)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xA1: // CPI & CPIR
+        case 0xB1:
+            register_sub8_with_flags(&(REG8){.value = z80_reg_af.bytes.high.value}, memory_read8(z80_reg_hl).value, MASK_ALL);
+            z80_reg_hl.value++;
+            z80_reg_bc.value--;
+            register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
+            if (reg.byte_value == 0xB1 && register_is_flag(FLAG_PV)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xA2: // INI & INIR
+        case 0xB2:
+            memory_write8(z80_reg_hl, port_read8(z80_reg_bc));
+            z80_reg_bc.bytes.high.value--;
+            z80_reg_hl.value++;
+            register_set_or_unset_flag(FLAG_Z, z80_reg_bc.bytes.high.value == 0);
+            register_set_or_unset_flag(FLAG_N, true);
+            if (reg.byte_value == 0xB2 && register_is_flag(FLAG_Z)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xA3: // OUTI & OTIR
+        case 0xB3:
+            z80_reg_bc.bytes.high.value--;
+            port_write8(z80_reg_bc, memory_read8(z80_reg_hl));
+            z80_reg_hl.value++;
+            register_set_or_unset_flag(FLAG_Z, z80_reg_bc.bytes.high.value == 0);
+            register_set_or_unset_flag(FLAG_N, true);
+            if (reg.byte_value == 0xB3 && register_is_flag(FLAG_Z)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xA8: // LDD & LDDR
+        case 0xB8:
+            memory_write8(z80_reg_de, memory_read8(z80_reg_hl));
+            z80_reg_de.value--;
+            z80_reg_hl.value--;
+            z80_reg_bc.value--;
+            register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
+            register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+            if (reg.byte_value == 0xB8 && register_is_flag(FLAG_PV)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xA9: // CPD & CPDR
+        case 0xB9:
+            register_sub8_with_flags(&(REG8){.value = z80_reg_af.bytes.high.value}, memory_read8(z80_reg_hl).value, MASK_ALL);
+            z80_reg_hl.value--;
+            z80_reg_bc.value--;
+            register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
+            if (reg.byte_value == 0xB9 && register_is_flag(FLAG_PV)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xAA: // IND & INDR
+        case 0xBA:
+            memory_write8(z80_reg_hl, port_read8(z80_reg_bc));
+            z80_reg_bc.bytes.high.value--;
+            z80_reg_hl.value--;
+            register_set_or_unset_flag(FLAG_Z, z80_reg_bc.bytes.high.value == 0);
+            register_set_or_unset_flag(FLAG_N, true);
+            if (reg.byte_value == 0xBA && register_is_flag(FLAG_Z)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
+        case 0xAB: // OUTD & OTDR
+        case 0xBB:
+            z80_reg_bc.bytes.high.value--;
+            port_write8(z80_reg_bc, memory_read8(z80_reg_hl));
+            z80_reg_hl.value--;
+            register_set_or_unset_flag(FLAG_Z, z80_reg_bc.bytes.high.value == 0);
+            register_set_or_unset_flag(FLAG_N, true);
+            if (reg.byte_value == 0xBB && register_is_flag(FLAG_Z)) {
+                z80_reg_pc.value -= 2;
+                return 21;
+            } else {
+                return 16;
+            }
         default:
             return 0; // fail
         }

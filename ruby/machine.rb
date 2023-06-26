@@ -1366,7 +1366,6 @@ module Z80
                     @bc.decrease
                     @f.s_z_v_hc_n(reg)
                     @f.flag_pv = @bc.byte_value.nonzero?
-                    @f.flag_n = true
                     if opcode.byte_value == 0xB1 && @f.flag_pv
                         @t_states = 21
                         @pc.decrease
@@ -1442,7 +1441,7 @@ module Z80
                     @hl.decrease
                     @f.flag_z(@b)
                     @f.flag_n = true
-                    if opcode.byte_value == 0xB3 && @f.flag_z
+                    if opcode.byte_value == 0xBB && @f.flag_z
                         @t_states = 21
                         @pc.decrease
                         @pc.decrease
