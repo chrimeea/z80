@@ -50,7 +50,6 @@
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit((R).byte_value, B, V))
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
 #define register_split_8_to_4(R) (div((R).byte_value, MAX3))
-#define register_set_8_from_4(R, Q, M) ((R).byte_value = Q * MAX3 + M)
 
 typedef union
 {
@@ -137,6 +136,9 @@ void time_sync(unsigned long *t_states_all, int t_states)
     nanosleep(&ts, &ts);
 }
 
+void register_set_8_from_4(REG8 *reg, div_t d) {
+    reg->byte_value = d.quot * MAX3 + d.rem;
+}
 void register_exchange16(REG16 *reg, REG16 *alt)
 {
     REG16 temp = *reg;
@@ -1622,8 +1624,8 @@ int z80_execute(REG8 reg)
             alt = memory_ref8(z80_reg_hl);
             qr = register_split_8_to_4(*alt);
             qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
-            register_set_8_from_4(z80_reg_af.bytes.high, qr_alt.quot, qr.rem);
-            register_set_8_from_4(*alt, qr_alt.rem, qr.quot);
+            register_set_8_from_4(&z80_reg_af.bytes.high, (div_t){.quot = qr_alt.quot, .rem = qr.rem});
+            register_set_8_from_4(alt, (div_t) {.quot = qr_alt.rem, .rem = qr.quot});
             register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 18;
@@ -1631,8 +1633,8 @@ int z80_execute(REG8 reg)
             alt = memory_ref8(z80_reg_hl);
             qr = register_split_8_to_4(*alt);
             qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
-            register_set_8_from_4(z80_reg_af.bytes.high, qr_alt.quot, qr.quot);
-            register_set_8_from_4(*alt, qr.rem, qr_alt.rem);
+            register_set_8_from_4(&z80_reg_af.bytes.high, (div_t){.quot = qr_alt.quot, .rem = qr.quot});
+            register_set_8_from_4(alt, (div_t) {.quot = qr.rem, .rem = qr_alt.rem});
             register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 18;
