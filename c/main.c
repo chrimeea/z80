@@ -124,14 +124,14 @@ long double time_in_seconds()
 void time_seconds_to_timespec(struct timespec *ts, long double s)
 {
     long double temp;
-    ts->tv_nsec = modfl(s, &temp) * 1000000000;
+    ts->tv_nsec = modfl(s, &temp) * 1000000000L;
     ts->tv_sec = temp;
 }
 
 void time_sync(unsigned long *t_states_all, int t_states)
 {
-    *t_states_all += t_states;
     struct timespec ts;
+    *t_states_all += t_states;
     time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
     nanosleep(&ts, &ts);
 }
