@@ -136,7 +136,8 @@ void time_sync(unsigned long *t_states_all, int t_states)
     nanosleep(&ts, &ts);
 }
 
-void register_set_8_from_4(REG8 *reg, div_t d) {
+void register_set_8_from_4(REG8 *reg, div_t d)
+{
     reg->byte_value = d.quot * MAX3 + d.rem;
 }
 void register_exchange16(REG16 *reg, REG16 *alt)
@@ -1625,7 +1626,7 @@ int z80_execute(REG8 reg)
             qr = register_split_8_to_4(*alt);
             qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
             register_set_8_from_4(&z80_reg_af.bytes.high, (div_t){.quot = qr_alt.quot, .rem = qr.rem});
-            register_set_8_from_4(alt, (div_t) {.quot = qr_alt.rem, .rem = qr.quot});
+            register_set_8_from_4(alt, (div_t){.quot = qr_alt.rem, .rem = qr.quot});
             register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 18;
@@ -1634,7 +1635,7 @@ int z80_execute(REG8 reg)
             qr = register_split_8_to_4(*alt);
             qr_alt = register_split_8_to_4(z80_reg_af.bytes.high);
             register_set_8_from_4(&z80_reg_af.bytes.high, (div_t){.quot = qr_alt.quot, .rem = qr.quot});
-            register_set_8_from_4(alt, (div_t) {.quot = qr.rem, .rem = qr_alt.rem});
+            register_set_8_from_4(alt, (div_t){.quot = qr.rem, .rem = qr_alt.rem});
             register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
             return 18;
@@ -1646,10 +1647,13 @@ int z80_execute(REG8 reg)
             z80_reg_bc.value--;
             register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
-            if (reg.byte_value == 0xB0 && register_is_flag(FLAG_PV)) {
+            if (reg.byte_value == 0xB0 && register_is_flag(FLAG_PV))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xA1: // CPI & CPIR
@@ -1658,10 +1662,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value++;
             z80_reg_bc.value--;
             register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
-            if (reg.byte_value == 0xB1 && register_is_flag(FLAG_PV)) {
+            if (reg.byte_value == 0xB1 && register_is_flag(FLAG_PV))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xA2: // INI & INIR
@@ -1671,10 +1678,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value++;
             register_set_or_unset_flag(FLAG_Z, register_is_zero(z80_reg_bc.bytes.high));
             register_set_or_unset_flag(FLAG_N, true);
-            if (reg.byte_value == 0xB2 && register_is_flag(FLAG_Z)) {
+            if (reg.byte_value == 0xB2 && register_is_flag(FLAG_Z))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xA3: // OUTI & OTIR
@@ -1684,10 +1694,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value++;
             register_set_or_unset_flag(FLAG_Z, register_is_zero(z80_reg_bc.bytes.high));
             register_set_or_unset_flag(FLAG_N, true);
-            if (reg.byte_value == 0xB3 && register_is_flag(FLAG_Z)) {
+            if (reg.byte_value == 0xB3 && register_is_flag(FLAG_Z))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xA8: // LDD & LDDR
@@ -1698,10 +1711,13 @@ int z80_execute(REG8 reg)
             z80_reg_bc.value--;
             register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
             register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
-            if (reg.byte_value == 0xB8 && register_is_flag(FLAG_PV)) {
+            if (reg.byte_value == 0xB8 && register_is_flag(FLAG_PV))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xA9: // CPD & CPDR
@@ -1710,10 +1726,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value--;
             z80_reg_bc.value--;
             register_set_or_unset_flag(FLAG_PV, z80_reg_bc.value != 0);
-            if (reg.byte_value == 0xB9 && register_is_flag(FLAG_PV)) {
+            if (reg.byte_value == 0xB9 && register_is_flag(FLAG_PV))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xAA: // IND & INDR
@@ -1723,10 +1742,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value--;
             register_set_or_unset_flag(FLAG_Z, register_is_zero(z80_reg_bc.bytes.high));
             register_set_or_unset_flag(FLAG_N, true);
-            if (reg.byte_value == 0xBA && register_is_flag(FLAG_Z)) {
+            if (reg.byte_value == 0xBA && register_is_flag(FLAG_Z))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         case 0xAB: // OUTD & OTDR
@@ -1736,10 +1758,13 @@ int z80_execute(REG8 reg)
             z80_reg_hl.value--;
             register_set_or_unset_flag(FLAG_Z, register_is_zero(z80_reg_bc.bytes.high));
             register_set_or_unset_flag(FLAG_N, true);
-            if (reg.byte_value == 0xBB && register_is_flag(FLAG_Z)) {
+            if (reg.byte_value == 0xBB && register_is_flag(FLAG_Z))
+            {
                 z80_reg_pc.value -= 2;
                 return 21;
-            } else {
+            }
+            else
+            {
                 return 16;
             }
         default:
