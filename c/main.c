@@ -50,6 +50,7 @@
 #define register_set_or_unset_bit(R, B, V) (set_or_unset_bit((R).byte_value, B, V))
 #define register_set_or_unset_flag(B, V) (register_set_or_unset_bit(z80_reg_af.bytes.low, B, V))
 #define register_split_8_to_4(R) (div((R).byte_value, MAX3))
+#define time_ts_to_seconds(T) (T.tv_sec + T.tv_nsec / 1000000000.0L)
 
 typedef union
 {
@@ -118,13 +119,14 @@ long double time_in_seconds()
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec + ts.tv_nsec / 1000000000L;
+    return time_ts_to_seconds(ts);
 }
 
 void time_seconds_to_timespec(struct timespec *ts, long double s)
 {
     long double temp;
-    ts->tv_nsec = modfl(s, &temp) * 1000000000L;
+    s = fmaxl(s, 0.0L);
+    ts->tv_nsec = modfl(s, &temp) * 1000000000.0L;
     ts->tv_sec = temp;
 }
 
@@ -1909,7 +1911,6 @@ int ula_draw_line(int y)
         register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, MAX6));
         register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, MAX7));
     }
-    glFlush();
     return 224;
 }
 
@@ -1921,15 +1922,16 @@ void ula_draw_screen_once()
     {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
+    glFlush();
 }
 
-void ula_draw_screen() { 
+void ula_draw_screen() {
     if (running)
     {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
         ula_draw_counter = (ula_draw_counter + 1) % 16;
-    } 
+    }
     glutPostRedisplay();
 }
 
@@ -1959,6 +1961,10 @@ int main(int argc, char **argv)
         pthread_create(&z80_id, NULL, z80_run, NULL);
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
+        // for (int i = 0; i < 10; i++) {
+        //     printf("%x\n", z80_reg_pc.byte_value);
+        //     z80_run_one();
+        // }
     }
     running = false;
     return 0;
