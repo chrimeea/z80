@@ -1865,7 +1865,7 @@ void ula_point(const int x, const int y, const int c, const bool b)
     RGB color = b ? ula_bright_colors[c] : ula_colors[c];
     glColor3f(color.red, color.green, color.blue);
     glBegin(GL_POINTS);
-    glVertex2f((x + 48.0f) / 304.0f, (y + 48.0f) / 288.0f);
+    glVertex2f((x + 48.0f) / 304.0f - 0.5f, 0.5f - (y + 48.0f) / 288.0f);
     glEnd();
 }
 
@@ -1909,6 +1909,7 @@ int ula_draw_line(int y)
         register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, MAX6));
         register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, MAX7));
     }
+    glFlush();
     return 224;
 }
 
@@ -1920,23 +1921,21 @@ void ula_draw_screen_once()
     {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
-    glFlush();
 }
 
-void *ula_draw_screen(void *args)
-{
-    while (running)
+void ula_draw_screen() { 
+    if (running)
     {
         z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
         ula_draw_counter = (ula_draw_counter + 1) % 16;
-    }
-    return NULL;
+    } 
+    glutPostRedisplay();
 }
 
 int main(int argc, char **argv)
 {
-    pthread_t z80_id, ula_id;
+    pthread_t z80_id;
     if (system_little_endian())
     {
         glutInit(&argc, argv);
@@ -1958,7 +1957,7 @@ int main(int argc, char **argv)
         }
         z80_reset();
         pthread_create(&z80_id, NULL, z80_run, NULL);
-        pthread_create(&ula_id, NULL, ula_draw_screen, NULL);
+        glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
     }
     running = false;
