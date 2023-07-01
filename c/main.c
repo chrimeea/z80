@@ -109,6 +109,19 @@ bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
 int z80_imode;
 
+void to_binary(unsigned char c, char *o)
+{
+    o[8] = 0;
+    o[7] = (c & MAX0) ? '1' : '0';
+    o[6] = (c & MAX1) ? '1' : '0';
+    o[5] = (c & MAX2) ? '1' : '0';
+    o[4] = (c & MAX3) ? '1' : '0';
+    o[3] = (c & MAX4) ? '1' : '0';
+    o[2] = (c & MAX5) ? '1' : '0';
+    o[1] = (c & MAX6) ? '1' : '0';
+    o[0] = (c & MAX7) ? '1' : '0';
+}
+
 int system_little_endian()
 {
     int x = 1;
@@ -480,6 +493,27 @@ REG8 port_read8(const REG16 reg)
 
 void port_write8(const REG16 reg, const REG8 alt)
 {
+}
+
+void z80_print()
+{
+    char o[9];
+    to_binary(z80_reg_af.bytes.low.byte_value, o);
+    printf("  BC   DE   HL   AF   PC   SP   IX   IY  I  RIM  IFF1 SZ5H3PNC\n");
+    printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s\n",
+        z80_reg_bc.byte_value,
+        z80_reg_de.byte_value,
+        z80_reg_hl.byte_value,
+        z80_reg_af.byte_value,
+        z80_reg_pc.byte_value,
+        z80_reg_sp.byte_value,
+        z80_reg_ix.byte_value,
+        z80_reg_iy.byte_value,
+        z80_reg_i.byte_value,
+        z80_reg_r.byte_value,
+        z80_imode,
+        z80_iff1 ? "true" : "false",
+        o);
 }
 
 void z80_reset()
@@ -1949,8 +1983,6 @@ int main(int argc, char **argv)
         glPointSize(1.0f);
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        // glutDisplayFunc(renderScene);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
         if (argc == 2)
@@ -1962,7 +1994,7 @@ int main(int argc, char **argv)
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
         // for (int i = 0; i < 10; i++) {
-        //     printf("%x\n", z80_reg_pc.byte_value);
+        //     z80_print();
         //     z80_run_one();
         // }
     }
