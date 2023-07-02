@@ -1903,7 +1903,7 @@ void ula_point(const int x, const int y, const int c, const bool b)
 {
     RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
     glColor3f(color.red, color.green, color.blue);
-    glVertex2f((x + 48.0f) / 304.0f - 0.5f, 0.5f - (y + 48.0f) / 288.0f);
+    glVertex2i(x + 24, y + 24);
 }
 
 int ula_draw_line(int y)
@@ -1984,9 +1984,15 @@ int main(int argc, char **argv)
 
         // glutInitWindowPosition(200, 100);
         glutCreateWindow("Cristian Mocanu Z80");
-        glPointSize(1.0f);
+        // glPointSize(1.0f);
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        // glMatrixMode(GL_PROJECTION);
+        // glLoadIdentity();
+        // glMatrixMode(GL_MODELVIEW);
+        // glLoadIdentity();
+        glTranslatef(-1.0, -1.0, 0.0);
+        glScalef(2.0f / 304.0f, 2.0f / 288.0f, 0.0f);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
         if (argc == 2)
@@ -2016,5 +2022,5 @@ int main(int argc, char **argv)
 
 // TODO: bright colors
 // TODO: keyboard caps lock and shift
-// TODO: border, UART, sound, tape
+// TODO: border color, UART, sound, tape
 // TODO: debugger
