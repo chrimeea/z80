@@ -769,11 +769,14 @@ int z80_execute(REG8 reg)
     case 0x1F: // RRA
         register_right8_with_flags(&z80_reg_af.bytes.high, MASK_HNC, register_is_flag(FLAG_C));
         return 4;
-    case 0x20: // JR CC,NN
-    case 0x28:
-    case 0x30:
-    case 0x38:
-        return z80_jump_rel_with_condition(z80_decode_condition(reg));
+    case 0x20: // JR NZ,NN
+        return z80_jump_rel_with_condition(!register_is_flag(FLAG_Z));
+    case 0x28: // JR Z,NN
+        return z80_jump_rel_with_condition(register_is_flag(FLAG_Z));
+    case 0x30: // JR NC,NN
+        return z80_jump_rel_with_condition(!register_is_flag(FLAG_C));
+    case 0x38: // JR C,NN
+        return z80_jump_rel_with_condition(register_is_flag(FLAG_C));
     case 0x22: // LD (HHLL),HL
         memory_write16(z80_next16(), z80_reg_hl);
         return 16;
@@ -1993,6 +1996,14 @@ int main(int argc, char **argv)
         pthread_create(&z80_id, NULL, z80_run, NULL);
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
+        // for (int i = 0; i < 17; i++) {
+        //     z80_run_one();
+        // }
+        // z80_print();
+        // printf(".......\n");
+        // for (int i = 0; i < 196600; i++) {
+        //     z80_run_one();
+        // }
         // for (int i = 0; i < 10; i++) {
         //     z80_print();
         //     z80_run_one();
