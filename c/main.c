@@ -1911,6 +1911,7 @@ int ula_draw_line(int y)
     if (y > 63 && y < 256)
     {
         int x = 0;
+        y -= 64;
         ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
         for (int i = 0; i < 32; i++)
         {
@@ -1937,14 +1938,14 @@ int ula_draw_line(int y)
             x += 8;
         }
         y++;
-        register_set_or_unset_bit(ula_addr_bitmap, 5, is_bit(y, MAX3));
-        register_set_or_unset_bit(ula_addr_bitmap, 6, is_bit(y, MAX4));
-        register_set_or_unset_bit(ula_addr_bitmap, 7, is_bit(y, MAX5));
-        register_set_or_unset_bit(ula_addr_bitmap, 8, is_bit(y, MAX0));
-        register_set_or_unset_bit(ula_addr_bitmap, 9, is_bit(y, MAX1));
-        register_set_or_unset_bit(ula_addr_bitmap, 10, is_bit(y, MAX2));
-        register_set_or_unset_bit(ula_addr_bitmap, 11, is_bit(y, MAX6));
-        register_set_or_unset_bit(ula_addr_bitmap, 12, is_bit(y, MAX7));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX5, is_bit(y, MAX3));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX6, is_bit(y, MAX4));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX7, is_bit(y, MAX5));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX8, is_bit(y, MAX0));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX9, is_bit(y, MAX1));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX10, is_bit(y, MAX2));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX11, is_bit(y, MAX6));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX12, is_bit(y, MAX7));
     }
     return 224;
 }
@@ -1952,7 +1953,6 @@ int ula_draw_line(int y)
 void ula_draw_screen_once()
 {
     ula_addr_bitmap.byte_value = 0x4000;
-    ula_addr_attrib.byte_value = 0;
     glBegin(GL_POINTS);
     for (int i = 0; i < 312; i++)
     {
