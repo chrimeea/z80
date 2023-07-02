@@ -1901,11 +1901,9 @@ void *z80_run(void *args)
 
 void ula_point(const int x, const int y, const int c, const bool b)
 {
-    RGB color = b ? ula_bright_colors[c] : ula_colors[c];
+    RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
     glColor3f(color.red, color.green, color.blue);
-    glBegin(GL_POINTS);
     glVertex2f((x + 48.0f) / 304.0f - 0.5f, 0.5f - (y + 48.0f) / 288.0f);
-    glEnd();
 }
 
 int ula_draw_line(int y)
@@ -1955,10 +1953,12 @@ void ula_draw_screen_once()
 {
     ula_addr_bitmap.byte_value = 0x4000;
     ula_addr_attrib.byte_value = 0;
+    glBegin(GL_POINTS);
     for (int i = 0; i < 312; i++)
     {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
+    glEnd();
     glFlush();
 }
 
