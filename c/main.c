@@ -501,19 +501,19 @@ void z80_print()
     to_binary(z80_reg_af.bytes.low.byte_value, o);
     printf("  BC   DE   HL   AF   PC   SP   IX   IY  I  RIM  IFF1 SZ5H3PNC\n");
     printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s\n",
-        z80_reg_bc.byte_value,
-        z80_reg_de.byte_value,
-        z80_reg_hl.byte_value,
-        z80_reg_af.byte_value,
-        z80_reg_pc.byte_value,
-        z80_reg_sp.byte_value,
-        z80_reg_ix.byte_value,
-        z80_reg_iy.byte_value,
-        z80_reg_i.byte_value,
-        z80_reg_r.byte_value,
-        z80_imode,
-        z80_iff1 ? "true" : "false",
-        o);
+           z80_reg_bc.byte_value,
+           z80_reg_de.byte_value,
+           z80_reg_hl.byte_value,
+           z80_reg_af.byte_value,
+           z80_reg_pc.byte_value,
+           z80_reg_sp.byte_value,
+           z80_reg_ix.byte_value,
+           z80_reg_iy.byte_value,
+           z80_reg_i.byte_value,
+           z80_reg_r.byte_value,
+           z80_imode,
+           z80_iff1 ? "true" : "false",
+           o);
 }
 
 void z80_reset()
@@ -1962,7 +1962,8 @@ void ula_draw_screen_once()
     glFlush();
 }
 
-void ula_draw_screen() {
+void ula_draw_screen()
+{
     if (running)
     {
         z80_maskable_interrupt_flag = true;
