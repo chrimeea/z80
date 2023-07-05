@@ -89,7 +89,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
 const unsigned int memory_size = MAX16;
-long double time_start, state_duration = 0.00000035L;
+long double time_start, state_duration = 0.00000025L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
 REG16 ula_addr_bitmap, ula_addr_attrib;
@@ -138,7 +138,6 @@ long double time_in_seconds()
 void time_seconds_to_timespec(struct timespec *ts, long double s)
 {
     long double temp;
-    s = fmaxl(s, 0.0L);
     ts->tv_nsec = modfl(s, &temp) * 1000000000.0L;
     ts->tv_sec = temp;
 }
@@ -146,9 +145,13 @@ void time_seconds_to_timespec(struct timespec *ts, long double s)
 void time_sync(unsigned long *t_states_all, int t_states)
 {
     struct timespec ts;
+    long double s;
     *t_states_all += t_states;
-    time_seconds_to_timespec(&ts, time_start + *t_states_all * state_duration - time_in_seconds());
-    nanosleep(&ts, &ts);
+    s = time_start + *t_states_all * state_duration - time_in_seconds();
+    if (s > 0.0L) {
+        time_seconds_to_timespec(&ts, s);
+        nanosleep(&ts, &ts);
+    }
 }
 
 void register_set_8_from_4(REG8 *reg, div_t d)
