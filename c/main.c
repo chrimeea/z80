@@ -1470,6 +1470,16 @@ int z80_execute(REG8 reg)
         case 0x7E:
             *z80_decode_reg8(reg, 3, &hl) = memory_read8_indexed(*other, z80_next8());
             return 19;
+        case 0x70: // LD (IX+d),r
+        case 0x71:
+        case 0x72:
+        case 0x73:
+        case 0x74:
+        case 0x75:
+        case 0x77:
+            alt = z80_decode_reg8(reg, 0, &hl);
+            memory_write8_indexed(z80_reg_iy, z80_next8(), *alt);
+            return 19;
         case 0x86: // ADD A,(IX+d)
             register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
             return 19;
@@ -2057,7 +2067,7 @@ int main(int argc, char **argv)
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
         // while (true) {
-        //     if (z80_reg_pc.byte_value == 0x1287) {
+        //     if (z80_reg_pc.byte_value == 0x0eeb) {
         //         z80_print();
         //         break;
         //     } else {
