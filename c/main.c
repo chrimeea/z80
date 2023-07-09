@@ -201,7 +201,7 @@ void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
     int r = reg->byte_value + alt.byte_value;
     bool s = sign((char)r);
     register_set_or_unset_flag(FLAG_C & mask, r >= MAX8);
-    register_set_or_unset_flag(FLAG_HC & mask, (r & 0x0F) >= MAX4);
+    register_set_or_unset_flag(FLAG_HC & mask, (reg->byte_value & 0x0F) + (alt.byte_value & 0x0F) >= MAX4);
     register_set_or_unset_flag(FLAG_N & mask, false);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) == sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
@@ -227,7 +227,7 @@ void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
     int r = reg->byte_value + alt.byte_value;
     bool s = sign((short)r);
     register_set_or_unset_flag(FLAG_C & mask, r >= MAX16);
-    register_set_or_unset_flag(FLAG_HC & mask, (r & 0xFFF) >= MAX12);
+    register_set_or_unset_flag(FLAG_HC & mask, (reg->byte_value & 0xFFF) + (alt.byte_value & 0xFFF) >= MAX12);
     register_set_or_unset_flag(FLAG_N & mask, false);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) == sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
@@ -1261,7 +1261,7 @@ int z80_execute(REG8 reg)
         case 0x7D:
         case 0x7E:
         case 0x7F:
-            register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
+            register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07)));
             register_set_or_unset_flag(FLAG_HC, true);
             register_set_or_unset_flag(FLAG_N, false);
             return hl ? 12 : 8;
@@ -1329,7 +1329,7 @@ int z80_execute(REG8 reg)
         case 0xBD:
         case 0xBE:
         case 0xBF:
-            register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
+            register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), false);
             return hl ? 15 : 8;
         case 0xC0: // SET b,r
         case 0xC1:
@@ -1395,7 +1395,7 @@ int z80_execute(REG8 reg)
         case 0xFD:
         case 0xFE:
         case 0xFF:
-            register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
+            register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), true);
             return hl ? 15 : 8;
         default:
             return 0; // fail
@@ -1558,7 +1558,7 @@ int z80_execute(REG8 reg)
             case 0x6E:
             case 0x76:
             case 0x7E:
-                register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, reg.byte_value >> 3 & 0x07));
+                register_set_or_unset_flag(FLAG_Z, !register_is_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07)));
                 register_set_or_unset_flag(FLAG_HC, true);
                 register_set_or_unset_flag(FLAG_N, false);
                 return 20;
@@ -1570,7 +1570,7 @@ int z80_execute(REG8 reg)
             case 0xAE:
             case 0xB6:
             case 0xBE:
-                register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, false);
+                register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), false);
                 return 23;
             case 0xC6: // SET b,(IX+d)
             case 0xCE:
@@ -1580,7 +1580,7 @@ int z80_execute(REG8 reg)
             case 0xEE:
             case 0xF6:
             case 0xFE:
-                register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
+                register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), true);
                 return 23;
             default:
                 return 0; // fail
@@ -2067,7 +2067,7 @@ int main(int argc, char **argv)
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
         // while (true) {
-        //     if (z80_reg_pc.byte_value == 0x0eeb) {
+        //     if (z80_reg_pc.byte_value == 0x0d51) {
         //         z80_print();
         //         break;
         //     } else {
