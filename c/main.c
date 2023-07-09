@@ -526,7 +526,7 @@ void z80_print()
            z80_reg_i.byte_value,
            z80_reg_r.byte_value,
            z80_imode,
-           z80_iff1 ? "true" : "false",
+           z80_iff1 ? " true" : "false",
            o);
 }
 
@@ -1512,8 +1512,8 @@ int z80_execute(REG8 reg)
             register_sub8_with_flags(&duplicate_a, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
             return 19;
         case 0xCB: // DDCB
-            reg = z80_fetch_opcode();
             alt = memory_ref8_indexed(*other, z80_next8());
+            reg = z80_next8();
             switch (reg.byte_value)
             {
             case 0x06: // RLC (IX+d)
@@ -1571,7 +1571,7 @@ int z80_execute(REG8 reg)
             case 0xF6:
             case 0xFE:
                 register_set_or_unset_bit(*alt, reg.byte_value >> 3 & 0x07, true);
-                return 20;
+                return 23;
             default:
                 return 0; // fail
             }
@@ -2057,7 +2057,7 @@ int main(int argc, char **argv)
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
         // while (true) {
-        //     if (z80_reg_pc.byte_value == 0x11e2) {
+        //     if (z80_reg_pc.byte_value == 0x1287) {
         //         z80_print();
         //         break;
         //     } else {

@@ -1133,8 +1133,8 @@ module Z80
                     @f.s_z_v_hc_n_c(reg)
                     @f.flags_3_5(@a)
                 when 0xCB #DDCB
-                    opcode = self.next8
                     reg = @memory.read8_indexed(@ix, self.next8)
+                    opcode = self.next8
                     case opcode.byte_value
                     when 0x06 #RLC (IX+d)
                         @t_states = 23
@@ -1176,7 +1176,7 @@ module Z80
                         @t_states = 23
                         reg.reset_bit(opcode.byte_value >> 3 & 0x07)
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IX+d)
-                        @t_states = 20
+                        @t_states = 23
                         reg.set_bit(opcode.byte_value >> 3 & 0x07)
                     end
                 when 0xE1 #POP IX
@@ -1625,7 +1625,7 @@ module Z80
                         @t_states = 23
                         reg.reset_bit(opcode.byte_value >> 3 & 0x07)
                     when 0xC6, 0xCE, 0xD6, 0xDE, 0xE6, 0xEE, 0xF6, 0xFE #SET b,(IY+d)
-                        @t_states = 20
+                        @t_states = 23
                         reg.set_bit(opcode.byte_value >> 3 & 0x07)
                     end
                 when 0xE1 #POP IY
