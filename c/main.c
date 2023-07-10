@@ -262,19 +262,39 @@ void memory_load_rom(const char *filename)
     fclose(f);
 }
 
-REG8 *memory_ref8(const REG16 reg)
-{
-    return &memory[reg.byte_value];
-}
-
 REG8 memory_read8(const REG16 reg)
 {
-    return *memory_ref8(reg);
+    return memory[reg.byte_value];
 }
 
 void memory_write8(const REG16 reg, const REG8 alt)
 {
-    *memory_ref8(reg) = alt;
+    memory[reg.byte_value] = alt;
+}
+
+REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8)
+{
+    return memory[reg16.byte_value + reg8.value];
+}
+
+void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt)
+{
+    memory[reg16.byte_value + reg8.value] = alt;
+}
+
+REG16 memory_read16(REG16 reg)
+{
+    return *((REG16 *)&memory[reg.byte_value]);
+}
+
+void memory_write16(REG16 reg, REG16 alt)
+{
+    *((REG16 *)&memory[reg.byte_value]) = alt;
+}
+
+REG8 *memory_ref8(const REG16 reg)
+{
+    return &memory[reg.byte_value];
 }
 
 REG8 *memory_ref8_indexed(const REG16 reg16, const REG8 reg8)
@@ -282,29 +302,9 @@ REG8 *memory_ref8_indexed(const REG16 reg16, const REG8 reg8)
     return &memory[reg16.byte_value + reg8.value];
 }
 
-REG8 memory_read8_indexed(const REG16 reg16, const REG8 reg8)
-{
-    return *memory_ref8_indexed(reg16, reg8);
-}
-
-void memory_write8_indexed(const REG16 reg16, const REG8 reg8, REG8 alt)
-{
-    *memory_ref8_indexed(reg16, reg8) = alt;
-}
-
 REG16 *memory_ref16(REG16 reg)
 {
     return (REG16 *)memory_ref8(reg);
-}
-
-REG16 memory_read16(REG16 reg)
-{
-    return *memory_ref16(reg);
-}
-
-void memory_write16(REG16 reg, REG16 alt)
-{
-    *memory_ref16(reg) = alt;
 }
 
 REG8 keyboard_read8(const REG16 reg)
