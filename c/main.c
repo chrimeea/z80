@@ -1459,7 +1459,8 @@ int z80_execute(REG8 reg)
             register_sub8_with_flags(memory_ref8_indexed(*other, z80_next8()), REG8_ONE, MASK_SZHVN);
             return 23;
         case 0x36: // LD (IX+d),n
-            memory_write8_indexed(*other, z80_next8(), z80_next8());
+            duplicate_a = z80_next8();
+            memory_write8_indexed(*other, duplicate_a, z80_next8());
             return 19;
         case 0x46: // LD r,(IX+d)
         case 0x4E:
@@ -2054,8 +2055,8 @@ int main(int argc, char **argv)
         // glLoadIdentity();
         // glMatrixMode(GL_MODELVIEW);
         // glLoadIdentity();
-        glTranslatef(-1.0, -1.0, 0.0);
-        glScalef(2.0f / 304.0f, 2.0f / 288.0f, 0.0f);
+        glTranslatef(-1.0, 1.0, 0.0);
+        glScalef(2.0f / 304.0f, -2.0f / 288.0f, 0.0f);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
         if (argc == 2)
@@ -2074,7 +2075,7 @@ int main(int argc, char **argv)
         //         z80_run_one();
         //     }
         // }
-        // for (int i = 0; i < 100; i++) {
+        // for (int i = 0; i < 10; i++) {
         //     z80_run_one();
         //     z80_print();
         // }
