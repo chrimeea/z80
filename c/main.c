@@ -485,17 +485,17 @@ void keyboard_press(unsigned char key, const bool value)
 
 void keyboard_press_down(unsigned char key, int x, int y)
 {
-    keyboard_press(key, true);
+    keyboard_press(key, false);
 }
 
 void keyboard_press_up(unsigned char key, int x, int y)
 {
-    keyboard_press(key, false);
+    keyboard_press(key, true);
 }
 
 REG8 port_read8(const REG16 reg)
 {
-    if (reg.byte_value == 0xFE)
+    if (reg.bytes.low.byte_value == 0xFE)
     {
         return keyboard_read8(reg);
     }
@@ -2067,17 +2067,19 @@ int main(int argc, char **argv)
         pthread_create(&z80_id, NULL, z80_run, NULL);
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
+        // unsigned long x = 0;
         // while (true) {
-        //     if (z80_reg_pc.byte_value == 0x0d51) {
+        //     if (z80_reg_pc.byte_value == 0x0038) {
         //         z80_print();
         //         break;
         //     } else {
-        //         z80_run_one();
+        //         x += z80_run_one();
         //     }
         // }
-        // for (int i = 0; i < 10; i++) {
-        //     z80_run_one();
+        // for (int i = 0; i < 100; i++) {
+        //     x += z80_run_one();
         //     z80_print();
+        //     printf("%ld\n", x);
         // }
     }
     running = false;
