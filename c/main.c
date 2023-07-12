@@ -111,6 +111,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute;
 int z80_imode;
+// int debug = 10;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -198,54 +199,60 @@ void register_right8_with_flags(REG8 *reg, int mask, bool b)
 
 void register_add8_with_flags(REG8 *reg, REG8 alt, int mask)
 {
+    REG8 other;
     int r = reg->byte_value + alt.byte_value;
-    bool s = sign((char)r);
+    other.byte_value = r;
+    bool s = sign(other.value);
     register_set_or_unset_flag(FLAG_C & mask, r >= MAX8);
     register_set_or_unset_flag(FLAG_HC & mask, (reg->byte_value & 0x0F) + (alt.byte_value & 0x0F) >= MAX4);
     register_set_or_unset_flag(FLAG_N & mask, false);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) == sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
-    register_set_or_unset_flag(FLAG_Z & mask, r == 0);
-    reg->byte_value = r;
+    register_set_or_unset_flag(FLAG_Z & mask, other.value == 0);
+    *reg = other;
 }
 
 void register_sub8_with_flags(REG8 *reg, REG8 alt, int mask)
 {
-    int r = reg->byte_value - alt.byte_value;
-    bool s = sign((char)r);
+    REG8 other;
+    other.value = reg->value - alt.value;
+    bool s = sign(other.value);
     register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
     register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0x0F) > (reg->byte_value & 0x0F));
     register_set_or_unset_flag(FLAG_N & mask, true);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) != sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
-    register_set_or_unset_flag(FLAG_Z & mask, r == 0);
-    reg->byte_value = r;
+    register_set_or_unset_flag(FLAG_Z & mask, other.value == 0);
+    *reg = other;
 }
 
 void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
+    REG16 other;
     int r = reg->byte_value + alt.byte_value;
-    bool s = sign((short)r);
+    other.byte_value = r;
+    bool s = sign(other.value);
     register_set_or_unset_flag(FLAG_C & mask, r >= MAX16);
     register_set_or_unset_flag(FLAG_HC & mask, (reg->byte_value & 0xFFF) + (alt.byte_value & 0xFFF) >= MAX12);
     register_set_or_unset_flag(FLAG_N & mask, false);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) == sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
-    register_set_or_unset_flag(FLAG_Z & mask, r == 0);
-    reg->byte_value = r;
+    register_set_or_unset_flag(FLAG_Z & mask, other.value == 0);
+    *reg = other;
 }
 
 void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
-    int r = reg->byte_value - alt.byte_value;
-    bool s = sign((short)r);
+    REG16 other;
+    other.value= reg->value - alt.value;
+    bool s = sign(other.value);
     register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
     register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
     register_set_or_unset_flag(FLAG_N & mask, true);
     register_set_or_unset_flag(FLAG_PV & mask, sign(reg->value) != sign(alt.value) && s != sign(reg->value));
     register_set_or_unset_flag(FLAG_S & mask, s);
-    register_set_or_unset_flag(FLAG_Z & mask, r == 0);
-    reg->byte_value = r;
+    register_set_or_unset_flag(FLAG_Z & mask, other.value == 0);
+    *reg = other;
 }
 
 void memory_load_rom(const char *filename)
@@ -1949,6 +1956,10 @@ int z80_run_one()
     }
     else if (z80_can_execute)
     {
+        // if (debug < 10) {
+        //     z80_print();
+        //     debug++;
+        // }
         return z80_execute(z80_fetch_opcode());
     }
     return 0;
@@ -2067,20 +2078,6 @@ int main(int argc, char **argv)
         pthread_create(&z80_id, NULL, z80_run, NULL);
         glutDisplayFunc(ula_draw_screen);
         glutMainLoop();
-        // unsigned long x = 0;
-        // while (true) {
-        //     if (z80_reg_pc.byte_value == 0x0038) {
-        //         z80_print();
-        //         break;
-        //     } else {
-        //         x += z80_run_one();
-        //     }
-        // }
-        // for (int i = 0; i < 100; i++) {
-        //     x += z80_run_one();
-        //     z80_print();
-        //     printf("%ld\n", x);
-        // }
     }
     running = false;
     return 0;
