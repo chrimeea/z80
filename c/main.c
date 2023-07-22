@@ -33,7 +33,7 @@
 #define FLAG_S 0x80
 #define MASK_ALL 0xFF
 #define MASK_SZHVN 0xD6
-#define MASK_HNC 0x0B
+#define MASK_HNC 0x13
 #define MASK_HVNC 0x17
 #define MASK_NONE 0x00
 
@@ -327,6 +327,9 @@ REG8 keyboard_read8(const REG16 reg)
         }
         b <<= 1;
     }
+    // if (alt.byte_value == 0x1e && reg.byte_value == 0xbffe) {
+    //     debug = 0;
+    // }
     return alt;
 }
 
@@ -2087,3 +2090,4 @@ int main(int argc, char **argv)
 // TODO: keyboard caps lock and shift
 // TODO: border color, UART, sound, tape
 // TODO: debugger
+// br $029d
