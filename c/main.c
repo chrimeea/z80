@@ -109,9 +109,9 @@ REG16 *z80_bc_de_hl_af[] = {&z80_reg_bc, &z80_reg_de, &z80_reg_hl, &z80_reg_af};
 int z80_rst_addr[] = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38};
 bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
-bool z80_iff1, z80_iff2, z80_can_execute;
+bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-// int debug = 10;
+// int debug = 4000;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -546,6 +546,7 @@ void z80_reset()
     z80_maskable_interrupt_flag = false;
     z80_iff1 = false;
     z80_iff2 = false;
+    z80_halt = false;
     z80_can_execute = true;
     z80_imode = 0;
     z80_reg_af.byte_value = 0xFFFF;
@@ -695,6 +696,11 @@ int z80_execute(REG8 reg)
     div_t qr, qr_alt;
     bool c, hc, hl;
     int mask = MASK_ALL;
+    if (z80_halt)
+    {
+        reg.byte_value = 0x00;
+        z80_reg_pc.byte_value--;
+    }
     switch (reg.byte_value)
     {
     case 0x00: // NOP
@@ -966,7 +972,7 @@ int z80_execute(REG8 reg)
         *z80_decode_reg8(reg, 3, &hl) = *alt;
         return hl ? 7 : 4;
     case 0x76: // HALT
-        z80_reg_pc.byte_value--;
+        z80_halt = true;
         return 4;
     case 0x80: // ADD A,r
     case 0x81:
@@ -1946,11 +1952,13 @@ int z80_run_one()
 {
     if (z80_nonmaskable_interrupt_flag)
     {
+        z80_halt = false;
         z80_nonmaskable_interrupt_flag = false;
         return z80_nonmaskable_interrupt();
     }
     else if (z80_maskable_interrupt_flag)
     {
+        z80_halt = false;
         z80_maskable_interrupt_flag = false;
         if (z80_iff1)
         {
@@ -1959,7 +1967,7 @@ int z80_run_one()
     }
     else if (z80_can_execute)
     {
-        // if (debug < 10) {
+        // if (debug < 4000) {
         //     z80_print();
         //     debug++;
         // }
@@ -2091,3 +2099,5 @@ int main(int argc, char **argv)
 // TODO: border color, UART, sound, tape
 // TODO: debugger
 // br $029d
+// finish
+// 3937
