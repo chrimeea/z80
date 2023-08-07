@@ -111,7 +111,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-// int debug = 4000;
+// int debug = 1000;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -524,7 +524,7 @@ void z80_print()
     char o[9];
     to_binary(z80_reg_af.bytes.low.byte_value, o);
     printf("  BC   DE   HL   AF   PC   SP   IX   IY  I  RIM  IFF1 SZ5H3PNC\n");
-    printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s\n",
+    printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s (%ld %ld)\n",
            z80_reg_bc.byte_value,
            z80_reg_de.byte_value,
            z80_reg_hl.byte_value,
@@ -537,7 +537,8 @@ void z80_print()
            z80_reg_r.byte_value,
            z80_imode,
            z80_iff1 ? " true" : "false",
-           o);
+           o,
+           z80_t_states_all, ula_t_states_all);
 }
 
 void z80_reset()
@@ -891,7 +892,7 @@ int z80_execute(REG8 reg)
         return 4;
     case 0x32: // LD (HHLL),A
         memory_write8(z80_next16(), z80_reg_af.bytes.high);
-        return 16;
+        return 13;
     case 0x37: // SCF
         register_set_or_unset_flag(FLAG_C, true);
         register_set_or_unset_flag(FLAG_N | FLAG_HC, false);
@@ -1904,7 +1905,7 @@ int z80_execute(REG8 reg)
         return 7;
     case 0xF9: // LD SP,HL
         z80_reg_sp = z80_reg_hl;
-        return 4;
+        return 6;
     case 0xFB: // EI
         z80_iff1 = z80_iff2 = true;
         return 4;
@@ -1967,7 +1968,10 @@ int z80_run_one()
     }
     else if (z80_can_execute)
     {
-        // if (debug < 4000) {
+        // if (z80_reg_pc.byte_value == 0x120c) {
+        //     debug = 0;
+        // }
+        // if (debug < 1000) {
         //     z80_print();
         //     debug++;
         // }
@@ -2100,4 +2104,3 @@ int main(int argc, char **argv)
 // TODO: debugger
 // br $029d
 // finish
-// 3937
