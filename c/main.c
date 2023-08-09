@@ -42,6 +42,9 @@
 #define REG16_ONE \
     (REG16) { .value = 1 }
 
+#define SCREEN_WIDTH 312
+#define SCREEN_HEIGHT 288
+
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_zero(X) ((X).value == 0)
@@ -80,6 +83,8 @@ typedef struct
 } RGB;
 
 REG8 memory[MAX16];
+RGB ula_screen[192][256];
+RGB ula_border[192 + 64 + 56];
 REG8 keyboard[] = {(REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}};
@@ -111,7 +116,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-// int debug = 1000;
+// int debug = 10;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -1966,18 +1971,19 @@ int z80_run_one()
             return z80_maskable_interrupt();
         }
     }
-    else if (z80_can_execute)
+    if (z80_can_execute)
     {
         // if (z80_reg_pc.byte_value == 0x120c) {
         //     debug = 0;
         // }
-        // if (debug < 1000) {
+        // if (debug < 10) {
         //     z80_print();
         //     debug++;
         // }
         return z80_execute(z80_fetch_opcode());
+    } else {
+        return 0;
     }
-    return 0;
 }
 
 void *z80_run(void *args)
@@ -1992,8 +1998,7 @@ void *z80_run(void *args)
 void ula_point(const int x, const int y, const int c, const bool b)
 {
     RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
-    glColor3f(color.red, color.green, color.blue);
-    glVertex2i(x + 24, y + 24);
+    ula_screen[y][x] = color;
 }
 
 int ula_draw_line(int y)
@@ -2042,35 +2047,47 @@ int ula_draw_line(int y)
 
 void ula_draw_screen_once()
 {
+    z80_maskable_interrupt_flag = true;
     ula_addr_bitmap.byte_value = 0x4000;
-    glBegin(GL_POINTS);
-    for (int i = 0; i < 312; i++)
+    for (int i = 0; i < SCREEN_WIDTH; i++)
     {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
-    glEnd();
-    glFlush();
+    ula_draw_counter = (ula_draw_counter + 1) % 16;
 }
 
-void ula_draw_screen()
+void *ula_run(void *args)
 {
-    if (running)
+    while (running)
     {
-        z80_maskable_interrupt_flag = true;
         ula_draw_screen_once();
-        ula_draw_counter = (ula_draw_counter + 1) % 16;
     }
+    return NULL;
+}
+
+void draw_screen()
+{
+    glBegin(GL_POINTS);
+    for (int y = 0; y < 192; y++) {
+        for (int x = 0; x < 256; x++) {
+            RGB color = ula_screen[y][x];
+            glColor3f(color.red, color.green, color.blue);
+            glVertex2i(x + 24, y + 24);
+        }
+    }
+    glEnd();
+    glFlush();
     glutPostRedisplay();
 }
 
 int main(int argc, char **argv)
 {
-    pthread_t z80_id;
+    pthread_t z80_id, ula_id;
     if (system_little_endian())
     {
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
-        glutInitWindowSize(304, 288);
+        glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
         // glutInitWindowPosition(200, 100);
         glutCreateWindow("Cristian Mocanu Z80");
@@ -2082,7 +2099,7 @@ int main(int argc, char **argv)
         // glMatrixMode(GL_MODELVIEW);
         // glLoadIdentity();
         glTranslatef(-1.0, 1.0, 0.0);
-        glScalef(2.0f / 304.0f, -2.0f / 288.0f, 0.0f);
+        glScalef(2.0f / SCREEN_WIDTH, -2.0f / SCREEN_HEIGHT, 0.0f);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
         if (argc == 2)
@@ -2091,16 +2108,20 @@ int main(int argc, char **argv)
         }
         z80_reset();
         pthread_create(&z80_id, NULL, z80_run, NULL);
-        glutDisplayFunc(ula_draw_screen);
+        pthread_create(&ula_id, NULL, ula_run, NULL);
+        glutDisplayFunc(draw_screen);
         glutMainLoop();
     }
     running = false;
     return 0;
 }
 
+// TODO: ula in the same thread advance beam after execute
 // TODO: bright colors
 // TODO: keyboard caps lock and shift
 // TODO: border color, UART, sound, tape
 // TODO: debugger
+// TODO: use pixel shader with drawArrays
+// https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // br $029d
 // finish
