@@ -98,7 +98,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
 const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000025L;
-unsigned long z80_t_states_all = 0, z80_t_states_all_2 = 0, ula_t_states_all = 0;
+unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
@@ -529,7 +529,7 @@ void z80_print()
     char o[9];
     to_binary(z80_reg_af.bytes.low.byte_value, o);
     printf("  BC   DE   HL   AF   PC   SP   IX   IY  I  RIM  IFF1 SZ5H3PNC\n");
-    printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s (%ld %ld)\n",
+    printf("%04x %04x %04x %04x %04x %04x %04x %04x %02x %02x %d %s %s\n",
            z80_reg_bc.byte_value,
            z80_reg_de.byte_value,
            z80_reg_hl.byte_value,
@@ -542,8 +542,7 @@ void z80_print()
            z80_reg_r.byte_value,
            z80_imode,
            z80_iff1 ? " true" : "false",
-           o,
-           z80_t_states_all, ula_t_states_all);
+           o);
 }
 
 void z80_reset()
@@ -1970,7 +1969,7 @@ int z80_run_one()
         z80_maskable_interrupt_flag = false;
         if (z80_iff1)
         {
-            // printf("OK %ld\n", z80_t_states_all_2);
+            // printf("OK %ld\n", z80_t_states_all);
             // printf("%04x\n", memory[z80_reg_pc.byte_value].byte_value);
             // debug = 0;
             return z80_maskable_interrupt();
@@ -1980,7 +1979,7 @@ int z80_run_one()
     {
         // if (z80_reg_pc.byte_value == 0x0e5b) {
         //     debug = 0;
-        //     printf("%ld\n", z80_t_states_all_2);
+        //     printf("%ld\n", z80_t_states_all);
         // }
         // if (debug < 10) {
         //     z80_print();
@@ -1996,13 +1995,7 @@ void *z80_run(void *args)
 {
     while (running)
     {
-        int i = z80_run_one();
-        time_sync(&z80_t_states_all, i);
-        z80_t_states_all_2 += i;
-        if (z80_t_states_all_2 >= 69888) {
-            z80_maskable_interrupt_flag = true;
-            z80_t_states_all_2 -= 69888;
-        }
+        time_sync(&z80_t_states_all, z80_run_one());
     }
     return NULL;
 }
@@ -2059,7 +2052,7 @@ int ula_draw_line(int y)
 
 void ula_draw_screen_once()
 {
-    // z80_maskable_interrupt_flag = true;
+    z80_maskable_interrupt_flag = true;
     ula_addr_bitmap.byte_value = 0x4000;
     for (int i = 0; i < SCREEN_WIDTH; i++)
     {
