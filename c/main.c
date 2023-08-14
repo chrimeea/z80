@@ -1124,6 +1124,7 @@ int z80_execute(REG8 reg)
         return 7;
     case 0xC7: // RST p
     case 0xD7:
+    case 0xCF:
     case 0xDF:
     case 0xE7:
     case 0xEF:
