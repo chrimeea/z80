@@ -2120,9 +2120,9 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: ula in the same thread advance beam after execute
-// TODO: bright colors
 // TODO: keyboard caps lock and shift
+// TODO: bright colors
+// TODO: ula in the same thread advance beam after execute
 // TODO: border color, UART, sound, tape
 // TODO: debugger
 // TODO: use pixel shader with drawArrays
