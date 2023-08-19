@@ -1,5 +1,5 @@
 // gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
-// SHIFT = SS; ALT = CS
+// SHIFT = SS; ALT = CS; ESC = SS + CS
 
 #include <GL/freeglut.h>
 #include <stdio.h>
@@ -345,13 +345,13 @@ REG8 keyboard_read8(const REG16 reg)
 void keyboard_press(unsigned char key, const bool value)
 {
     int modifier = glutGetModifiers();
-    if (modifier & GLUT_ACTIVE_SHIFT)
-    {
-        register_set_or_unset_bit(keyboard[7], MAX1, value);
-    }
-    if (modifier & GLUT_ACTIVE_ALT)
+    if (modifier & GLUT_ACTIVE_ALT || value)
     {
         register_set_or_unset_bit(keyboard[0], MAX0, value);
+    }
+    if (modifier & GLUT_ACTIVE_SHIFT || value)
+    {
+        register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
     switch(tolower(key))
     {
@@ -478,6 +478,10 @@ void keyboard_press(unsigned char key, const bool value)
         break;
     case 'b':
         register_set_or_unset_bit(keyboard[7], MAX4, value);
+        break;
+    case 27:
+        register_set_or_unset_bit(keyboard[0], MAX0, value);
+        register_set_or_unset_bit(keyboard[7], MAX1, value);
         break;
     }
 }
