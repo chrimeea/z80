@@ -1,4 +1,5 @@
 // gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
+// SHIFT = SS; ALT = CS
 
 #include <GL/freeglut.h>
 #include <stdio.h>
@@ -348,7 +349,7 @@ void keyboard_press(unsigned char key, const bool value)
     {
         register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
-    if (modifier & GLUT_ACTIVE_CTRL)
+    if (modifier & GLUT_ACTIVE_ALT)
     {
         register_set_or_unset_bit(keyboard[0], MAX0, value);
     }
