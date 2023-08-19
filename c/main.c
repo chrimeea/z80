@@ -343,7 +343,8 @@ REG8 keyboard_read8(const REG16 reg)
 
 void keyboard_press(unsigned char key, const bool value)
 {
-    if (isupper(key) || strchr("!@#$%^&*()", key))
+    int modifier = glutGetModifiers();
+    if (modifier & GLUT_ACTIVE_SHIFT)
     {
         register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
