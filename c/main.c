@@ -348,10 +348,12 @@ void keyboard_press(unsigned char key, const bool value)
     {
         register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
+    if (modifier & GLUT_ACTIVE_CTRL)
+    {
+        register_set_or_unset_bit(keyboard[0], MAX0, value);
+    }
     switch(tolower(key))
     {
-    // if (strcmp(key, "Caps_Lock") == 0) {
-    //     register_set_or_unset_bit(keyboard[0], MAX0, value);
     case 'z':
         register_set_or_unset_bit(keyboard[0], MAX1, value);
         break;
