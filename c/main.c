@@ -5,8 +5,10 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 #include <math.h>
+
 #define MAX0 0x01
 #define MAX1 0x02
 #define MAX2 0x04
@@ -341,161 +343,138 @@ REG8 keyboard_read8(const REG16 reg)
 
 void keyboard_press(unsigned char key, const bool value)
 {
+    if (isupper(key) || strchr("!@#$%^&*()", key))
+    {
+        register_set_or_unset_bit(keyboard[7], MAX1, value);
+    }
+    switch(tolower(key))
+    {
     // if (strcmp(key, "Caps_Lock") == 0) {
     //     register_set_or_unset_bit(keyboard[0], MAX0, value);
-    if (key == 'z' || key == 'Z')
-    {
+    case 'z':
         register_set_or_unset_bit(keyboard[0], MAX1, value);
-    }
-    else if (key == 'x' || key == 'X')
-    {
+        break;
+    case 'x':
         register_set_or_unset_bit(keyboard[0], MAX2, value);
-    }
-    else if (key == 'c' || key == 'C')
-    {
+        break;
+    case 'c':
         register_set_or_unset_bit(keyboard[0], MAX3, value);
-    }
-    else if (key == 'v' || key == 'V')
-    {
+        break;
+    case 'v':
         register_set_or_unset_bit(keyboard[0], MAX4, value);
-    }
-    else if (key == 'a' || key == 'A')
-    {
+        break;
+    case 'a':
         register_set_or_unset_bit(keyboard[1], MAX0, value);
-    }
-    else if (key == 's' || key == 'S')
-    {
+        break;
+    case 's':
         register_set_or_unset_bit(keyboard[1], MAX1, value);
-    }
-    else if (key == 'd' || key == 'D')
-    {
+        break;
+    case 'd':
         register_set_or_unset_bit(keyboard[1], MAX2, value);
-    }
-    else if (key == 'f' || key == 'F')
-    {
+        break;
+    case 'f':
         register_set_or_unset_bit(keyboard[1], MAX3, value);
-    }
-    else if (key == 'g' || key == 'G')
-    {
+        break;
+    case 'g':
         register_set_or_unset_bit(keyboard[1], MAX4, value);
-    }
-    else if (key == 'q' || key == 'Q')
-    {
+        break;
+    case 'q':
         register_set_or_unset_bit(keyboard[2], MAX0, value);
-    }
-    else if (key == 'w' || key == 'W')
-    {
+        break;
+    case 'w':
         register_set_or_unset_bit(keyboard[2], MAX1, value);
-    }
-    else if (key == 'e' || key == 'E')
-    {
+        break;
+    case 'e':
         register_set_or_unset_bit(keyboard[2], MAX2, value);
-    }
-    else if (key == 'r' || key == 'R')
-    {
+        break;
+    case 'r':
         register_set_or_unset_bit(keyboard[2], MAX3, value);
-    }
-    else if (key == 't' || key == 'T')
-    {
+        break;
+    case 't':
         register_set_or_unset_bit(keyboard[2], MAX4, value);
-    }
-    else if (key == '1')
-    {
+        break;
+    case '1':
+    case '!':
         register_set_or_unset_bit(keyboard[3], MAX0, value);
-    }
-    else if (key == '2')
-    {
+        break;
+    case '2':
+    case '@':
         register_set_or_unset_bit(keyboard[3], MAX1, value);
-    }
-    else if (key == '3')
-    {
+        break;
+    case '3':
+    case '#':
         register_set_or_unset_bit(keyboard[3], MAX2, value);
-    }
-    else if (key == '4')
-    {
+        break;
+    case '4':
+    case '$':
         register_set_or_unset_bit(keyboard[3], MAX3, value);
-    }
-    else if (key == '5')
-    {
+        break;
+    case '5':
+    case '%':
         register_set_or_unset_bit(keyboard[3], MAX4, value);
-    }
-    else if (key == '0')
-    {
+        break;
+    case '0':
+    case ')':
         register_set_or_unset_bit(keyboard[4], MAX0, value);
-    }
-    else if (key == '9')
-    {
+        break;
+    case '9':
+    case '(':
         register_set_or_unset_bit(keyboard[4], MAX1, value);
-    }
-    else if (key == '8')
-    {
+        break;
+    case '8':
+    case '*':
         register_set_or_unset_bit(keyboard[4], MAX2, value);
-    }
-    else if (key == '7')
-    {
+        break;
+    case '7':
+    case '&':
         register_set_or_unset_bit(keyboard[4], MAX3, value);
-    }
-    else if (key == '6')
-    {
+        break;
+    case '6':
+    case '^':
         register_set_or_unset_bit(keyboard[4], MAX4, value);
-    }
-    else if (key == 'p' || key == 'P')
-    {
+        break;
+    case 'p':
         register_set_or_unset_bit(keyboard[5], MAX0, value);
-    }
-    else if (key == 'o' || key == 'O')
-    {
+        break;
+    case 'o':
         register_set_or_unset_bit(keyboard[5], MAX1, value);
-    }
-    else if (key == 'i' || key == 'I')
-    {
+        break;
+    case 'i':
         register_set_or_unset_bit(keyboard[5], MAX2, value);
-    }
-    else if (key == 'u' || key == 'U')
-    {
+        break;
+    case 'u':
         register_set_or_unset_bit(keyboard[5], MAX3, value);
-    }
-    else if (key == 'y' || key == 'Y')
-    {
+        break;
+    case 'y':
         register_set_or_unset_bit(keyboard[5], MAX4, value);
-    }
-    else if (key == 13)
-    {
+        break;
+    case 13:
         register_set_or_unset_bit(keyboard[6], MAX0, value);
-    }
-    else if (key == 'l' || key == 'L')
-    {
+        break;
+    case 'l':
         register_set_or_unset_bit(keyboard[6], MAX1, value);
-    }
-    else if (key == 'k' || key == 'K')
-    {
+        break;
+    case 'k':
         register_set_or_unset_bit(keyboard[6], MAX2, value);
-    }
-    else if (key == 'j' || key == 'J')
-    {
+        break;
+    case 'j':
         register_set_or_unset_bit(keyboard[6], MAX3, value);
-    }
-    else if (key == 'h' || key == 'H')
-    {
+        break;
+    case 'h':
         register_set_or_unset_bit(keyboard[6], MAX4, value);
-    }
-    else if (key == ' ')
-    {
+        break;
+    case ' ':
         register_set_or_unset_bit(keyboard[7], MAX0, value);
-        // } else if (strcmp(key, "Shift_L") == 0 || strcmp(key, "Shift_R") == 0) {
-        //     register_set_or_unset_bit(keyboard[7], MAX1, value);
-    }
-    else if (key == 'm' || key == 'M')
-    {
+        break;
+    case 'm':
         register_set_or_unset_bit(keyboard[7], MAX2, value);
-    }
-    else if (key == 'n' || key == 'N')
-    {
+        break;
+    case 'n':
         register_set_or_unset_bit(keyboard[7], MAX3, value);
-    }
-    else if (key == 'b' || key == 'B')
-    {
+        break;
+    case 'b':
         register_set_or_unset_bit(keyboard[7], MAX4, value);
+        break;
     }
 }
 
@@ -2131,3 +2110,8 @@ int main(int argc, char **argv)
 // finish
 // first interrupt 0e5b / 0e5c
 // TODO: test daa and adc a,a - test flags
+
+// https://stackoverflow.com/questions/59060044/open-a-dock-type-window-with-x11-and-capture-key-press
+// https://stackoverflow.com/questions/3649874/how-can-i-get-the-keyboard-state-in-linux
+// https://learncgames.com/tutorials/getting-started-with-sdl-and-c/
+// https://www.glfw.org/docs/3.3/build_guide.html#build_include
