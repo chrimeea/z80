@@ -2102,7 +2102,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: keyboard caps lock and shift
 // TODO: bright colors
 // TODO: ula in the same thread advance beam after execute
 // TODO: border color, UART, sound, tape
@@ -2113,8 +2112,3 @@ int main(int argc, char **argv)
 // finish
 // first interrupt 0e5b / 0e5c
 // TODO: test daa and adc a,a - test flags
-
-// https://stackoverflow.com/questions/59060044/open-a-dock-type-window-with-x11-and-capture-key-press
-// https://stackoverflow.com/questions/3649874/how-can-i-get-the-keyboard-state-in-linux
-// https://learncgames.com/tutorials/getting-started-with-sdl-and-c/
-// https://www.glfw.org/docs/3.3/build_guide.html#build_include
