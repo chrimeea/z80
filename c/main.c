@@ -119,7 +119,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-// int debug = 10000;
+// int debug = 10;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -688,7 +688,6 @@ int z80_execute(REG8 reg)
     REG8 *alt;
     REG8 duplicate_a = z80_reg_af.bytes.high;
     REG16 *other = &z80_reg_iy;
-    REG16 duplicate_16;
     div_t qr, qr_alt;
     bool c, hc, hl;
     int mask = MASK_ALL;
@@ -988,12 +987,13 @@ int z80_execute(REG8 reg)
     case 0x8D:
     case 0x8E:
     case 0x8F:
-        duplicate_a = *z80_decode_reg8(reg, 0, &hl);
-        if (register_is_flag(FLAG_C))
+        c = register_is_flag(FLAG_C);
+        register_add8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), mask);
+        if (c)
         {
-            duplicate_a.byte_value++;
+            mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+            register_add8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        register_add8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
         return hl ? 7 : 4;
     case 0x90: // SUB A,r
     case 0x91:
@@ -1013,12 +1013,13 @@ int z80_execute(REG8 reg)
     case 0x9D:
     case 0x9E:
     case 0x9F:
-        duplicate_a = *z80_decode_reg8(reg, 0, &hl);
-        if (register_is_flag(FLAG_C))
+        c = register_is_flag(FLAG_C);
+        register_sub8_with_flags(&z80_reg_af.bytes.high, *z80_decode_reg8(reg, 0, &hl), mask);
+        if (c)
         {
-            duplicate_a.byte_value++;
+            mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+            register_sub8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        register_sub8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
         return hl ? 7 : 4;
     case 0xA0: // AND r
     case 0xA1:
@@ -1416,12 +1417,13 @@ int z80_execute(REG8 reg)
     case 0xCD: // CALL nn
         return z80_call_with_condition(true);
     case 0xCE: // ADC A,n
-        duplicate_a = z80_next8();
-        if (register_is_flag(FLAG_C))
+        c = register_is_flag(FLAG_C);
+        register_add8_with_flags(&z80_reg_af.bytes.high, z80_next8(), mask);
+        if (c)
         {
-            duplicate_a.byte_value++;
+            mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+            register_add8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        register_add8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
         return 7;
     case 0xD3: // OUT (n),A
         port_write8((REG16){.bytes.high = z80_reg_af.bytes.high, .bytes.low = z80_next8()}, z80_reg_af.bytes.high);
@@ -1498,23 +1500,25 @@ int z80_execute(REG8 reg)
             register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
             return 19;
         case 0x8E: // ADC A,(IX+d)
-            duplicate_a = memory_read8_indexed(*other, z80_next8());
-            if (register_is_flag(FLAG_C))
+            c = register_is_flag(FLAG_C);
+            register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), mask);
+            if (c)
             {
-                duplicate_a.byte_value++;
+                mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+                register_add8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
             }
-            register_add8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
             return 19;
         case 0x96: // SUB (IX+d)
             register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
             return 19;
         case 0x9E: // SBC (IX+d)
-            duplicate_a = memory_read8_indexed(*other, z80_next8());
-            if (register_is_flag(FLAG_C))
+            c = register_is_flag(FLAG_C);
+            register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), mask);
+            if (c)
             {
-                duplicate_a.byte_value++;
+                mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+                register_sub8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
             }
-            register_sub8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
             return 19;
         case 0xA6: // AND (IX+d)
             z80_reg_af.bytes.high.byte_value &= memory_read8_indexed(*other, z80_next8()).byte_value;
@@ -1618,12 +1622,13 @@ int z80_execute(REG8 reg)
             return 0; // fail
         }
     case 0xDE: // SBC A,n
-        duplicate_a = z80_next8();
-        if (register_is_flag(FLAG_C))
+        c = register_is_flag(FLAG_C);
+        register_sub8_with_flags(&z80_reg_af.bytes.high, z80_next8(), mask);
+        if (c)
         {
-            duplicate_a.byte_value++;
+            mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+            register_sub8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        register_sub8_with_flags(&z80_reg_af.bytes.high, duplicate_a, mask);
         return 7;
     case 0xE3: // EX (SP),HL
         register_exchange16(memory_ref16(z80_reg_sp), &z80_reg_hl);
@@ -1669,12 +1674,13 @@ int z80_execute(REG8 reg)
         case 0x52:
         case 0x62:
         case 0x72:
-            duplicate_16 = *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03];
-            if (register_is_flag(FLAG_C))
+            c = register_is_flag(FLAG_C);
+            register_sub16_with_flags(&z80_reg_hl, *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03], mask);
+            if (c)
             {
-                duplicate_16.byte_value++;
+                mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+                register_sub16_with_flags(&z80_reg_hl, REG16_ONE, mask);
             }
-            register_sub16_with_flags(&z80_reg_hl, duplicate_16, mask);
             return 15;
         case 0x43: // LD (nn),dd
         case 0x53:
@@ -1700,12 +1706,13 @@ int z80_execute(REG8 reg)
         case 0x5A:
         case 0x6A:
         case 0x7A:
-            duplicate_16 = *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03];
-            if (register_is_flag(FLAG_C))
+            c = register_is_flag(FLAG_C);
+            register_add16_with_flags(&z80_reg_hl, *z80_bc_de_hl_sp[reg.byte_value >> 4 & 0x03], mask);
+            if (c)
             {
-                duplicate_16.byte_value++;
+                mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
+                register_add16_with_flags(&z80_reg_hl, REG16_ONE, mask);
             }
-            register_add16_with_flags(&z80_reg_hl, duplicate_16, mask);
             return 15;
         case 0x4B: // LD dd,(nn)
         case 0x5B:
@@ -1964,10 +1971,10 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0x0bbc) {
+        // if (z80_reg_pc.byte_value == 0xea60) {
         //     debug = 0;
         // }
-        // if (debug < 10000) {
+        // if (debug < 10) {
         //     z80_print();
         //     debug++;
         // }
@@ -2116,4 +2123,4 @@ int main(int argc, char **argv)
 // br $029d
 // finish
 // first interrupt 0e5b / 0e5c
-// TODO: test daa and adc a,a - test flags
+
