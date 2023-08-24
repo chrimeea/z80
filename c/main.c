@@ -91,14 +91,14 @@ RGB ula_border[192 + 64 + 56];
 REG8 keyboard[] = {(REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}};
-RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
-                    (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
-                    (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
-                    (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 0.9f},
+                    (RGB){0.5f, 0.0f, 0.0f}, (RGB){0.4f, 0.0f, 0.4f},
+                    (RGB){0.0f, 0.9f, 0.0f}, (RGB){0.0f, 0.4f, 0.4f},
+                    (RGB){0.9f, 0.9f, 0.0f}, (RGB){0.9f, 0.9f, 0.9f}};
 RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){1.0f, 0.0f, 0.0f}, (RGB){0.5f, 0.0f, 0.5f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
-                           (RGB){1.0f, 1.0f, 0.0f}, (RGB){0.5f, 0.5f, 0.5f}};
+                           (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000025L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
@@ -2099,7 +2099,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: bright colors
 // TODO: ula in the same thread advance beam after execute
 // TODO: border color, UART, sound, tape
 // TODO: debugger
