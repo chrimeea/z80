@@ -45,8 +45,8 @@
 #define REG16_ONE \
     (REG16) { .value = 1 }
 
-#define SCREEN_WIDTH 312
-#define SCREEN_HEIGHT 288
+#define SCREEN_WIDTH 352
+#define SCREEN_HEIGHT 312
 
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
@@ -86,8 +86,8 @@ typedef struct
 } RGB;
 
 REG8 memory[MAX16];
-RGB ula_screen[192][256];
-RGB ula_border[192 + 64 + 56];
+RGB ula_screen[SCREEN_HEIGHT][SCREEN_WIDTH];
+RGB ula_border[SCREEN_HEIGHT];
 REG8 keyboard[] = {(REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
                    (REG8){.value = 0x1F}};
@@ -103,6 +103,7 @@ const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000025L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
+int ula_border_color;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
@@ -498,7 +499,7 @@ void keyboard_press_up(unsigned char key, int x, int y)
 
 REG8 port_read8(const REG16 reg)
 {
-    if (reg.bytes.low.byte_value == 0xFE)
+    if (reg.bytes.low.byte_value % 2 == 0)
     {
         return keyboard_read8(reg);
     }
@@ -510,6 +511,12 @@ REG8 port_read8(const REG16 reg)
 
 void port_write8(const REG16 reg, const REG8 alt)
 {
+    if (reg.bytes.low.byte_value % 2 == 0)
+    {
+        ula_border_color = alt.byte_value & 0x07;
+        alt.byte_value & MAX3; // mic
+        alt.byte_value & MAX4; // ear
+    }
 }
 
 void z80_print()
@@ -1986,12 +1993,17 @@ void ula_point(const int x, const int y, const int c, const bool b)
 
 int ula_draw_line(int y)
 {
+    int i, j, x = 0;
     if (y > 63 && y < 256)
     {
-        int x = 0;
         y -= 64;
+        for (j = 0; j < 48; j++)
+        {
+            ula_point(x + j, y + 64, ula_border_color, false);
+        }
+        x = 48;
         ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
-        for (int i = 0; i < 32; i++)
+        for (i = 0; i < 32; i++)
         {
             REG8 reg_bitmap = memory_read8(ula_addr_bitmap);
             REG8 reg_attrib = memory_read8(ula_addr_attrib);
@@ -2008,12 +2020,16 @@ int ula_draw_line(int y)
             int b = MAX7;
             for (int j = 0; j < 8; j++)
             {
-                ula_point(x + j, y, register_is_bit(reg_bitmap, b) ? ink : paper, brightness);
+                ula_point(x + j, y + 64, register_is_bit(reg_bitmap, b) ? ink : paper, brightness);
                 b >>= 1;
             }
             ula_addr_bitmap.byte_value++;
             ula_addr_attrib.byte_value++;
             x += 8;
+        }
+        for (j = 0; j < 48; j++)
+        {
+            ula_point(x + j, y + 64, ula_border_color, false);
         }
         y++;
         register_set_or_unset_bit(ula_addr_bitmap, MAX5, is_bit(y, MAX3));
@@ -2024,6 +2040,12 @@ int ula_draw_line(int y)
         register_set_or_unset_bit(ula_addr_bitmap, MAX10, is_bit(y, MAX2));
         register_set_or_unset_bit(ula_addr_bitmap, MAX11, is_bit(y, MAX6));
         register_set_or_unset_bit(ula_addr_bitmap, MAX12, is_bit(y, MAX7));
+    } else
+    {
+        for (j = 0; j < SCREEN_WIDTH; j++)
+        {
+            ula_point(j, y, ula_border_color, false);
+        }
     }
     return 224;
 }
@@ -2032,7 +2054,7 @@ void ula_draw_screen_once()
 {
     z80_maskable_interrupt_flag = true;
     ula_addr_bitmap.byte_value = 0x4000;
-    for (int i = 0; i < SCREEN_WIDTH; i++)
+    for (int i = 0; i < SCREEN_HEIGHT; i++)
     {
         time_sync(&ula_t_states_all, ula_draw_line(i));
     }
@@ -2051,11 +2073,11 @@ void *ula_run(void *args)
 void draw_screen()
 {
     glBegin(GL_POINTS);
-    for (int y = 0; y < 192; y++) {
-        for (int x = 0; x < 256; x++) {
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        for (int x = 0; x < SCREEN_WIDTH; x++) {
             RGB color = ula_screen[y][x];
             glColor3f(color.red, color.green, color.blue);
-            glVertex2i(x + 24, y + 24);
+            glVertex2i(x, y);
         }
     }
     glEnd();
@@ -2100,7 +2122,7 @@ int main(int argc, char **argv)
 }
 
 // TODO: ula in the same thread advance beam after execute
-// TODO: border color, UART, sound, tape
+// TODO: sound, tape, UART
 // TODO: debugger
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
