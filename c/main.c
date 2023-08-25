@@ -514,7 +514,7 @@ void port_write8(const REG16 reg, const REG8 alt)
     if (reg.bytes.low.byte_value % 2 == 0)
     {
         ula_border_color = alt.byte_value & 0x07;
-        alt.byte_value & MAX3; // mic
+        alt.byte_value & MAX3 == 0; // mic
         alt.byte_value & MAX4; // ear
     }
 }
