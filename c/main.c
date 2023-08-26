@@ -1,7 +1,7 @@
 // gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
 // SHIFT = SS; ALT = CS; ESC = SS + CS
 
-#include <GL/freeglut.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -9,6 +9,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <math.h>
+#include <sys/ioctl.h>
+#include <GL/freeglut.h>
+#include <linux/kd.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -104,6 +107,8 @@ long double time_start, state_duration = 0.00000025L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
 unsigned int ula_draw_counter = 0;
 int ula_border_color;
+int sound_console_fd;
+bool sound_ear = false, sound_mic = false;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
@@ -497,6 +502,19 @@ void keyboard_press_up(unsigned char key, int x, int y)
     keyboard_press(key, true);
 }
 
+void sound_ear_on_off(bool on)
+{
+    if (on && !sound_ear)
+    {
+        sound_ear = true;
+        ioctl(sound_console_fd, KIOCSOUND, 2147483647);
+    } else if (!on && sound_ear)
+    {
+        sound_ear = false;
+        ioctl(sound_console_fd, KIOCSOUND, 0);
+    }
+}
+
 REG8 port_read8(const REG16 reg)
 {
     if (reg.bytes.low.byte_value % 2 == 0)
@@ -514,8 +532,8 @@ void port_write8(const REG16 reg, const REG8 alt)
     if (reg.bytes.low.byte_value % 2 == 0)
     {
         ula_border_color = alt.byte_value & 0x07;
-        alt.byte_value & MAX3 == 0; // mic
-        alt.byte_value & MAX4; // ear
+        sound_mic = ((alt.byte_value & MAX3) == 0);
+        sound_ear_on_off(alt.byte_value & MAX4);
     }
 }
 
@@ -544,8 +562,7 @@ void z80_reset()
 {
     z80_nonmaskable_interrupt_flag = false;
     z80_maskable_interrupt_flag = false;
-    z80_iff1 = false;
-    z80_iff2 = false;
+    z80_iff1 = z80_iff2 = false;
     z80_halt = false;
     z80_can_execute = true;
     z80_imode = 0;
@@ -555,8 +572,9 @@ void z80_reset()
     z80_reg_r.byte_value = 0;
     running = true;
     time_start = time_in_seconds();
-    z80_t_states_all = 0;
-    ula_t_states_all = 0;
+    z80_t_states_all = ula_t_states_all = 0;
+    sound_mic = false;
+    sound_ear_on_off(false);
 }
 
 void z80_memory_refresh()
@@ -2091,6 +2109,8 @@ int main(int argc, char **argv)
     pthread_t z80_id, ula_id;
     if (system_little_endian())
     {
+        sound_console_fd = open("/dev/console", O_WRONLY);
+        atexit(z80_reset);
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
         glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
