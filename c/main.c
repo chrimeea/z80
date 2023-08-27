@@ -2143,6 +2143,7 @@ int main(int argc, char **argv)
 }
 
 // TODO: ula in the same thread advance beam after execute
+// https://worldofspectrum.org/faq/reference/48kreference.htm
 // TODO: tape
 // TODO: uart
 // TODO: debugger
@@ -2155,3 +2156,4 @@ int main(int argc, char **argv)
 // https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
 // br $029d
 // first interrupt 0e5b / 0e5c
+// https://jnz.dk/z80/um0080.pdf
