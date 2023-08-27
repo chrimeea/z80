@@ -507,11 +507,11 @@ void sound_ear_on_off(bool on)
     if (on && !sound_ear)
     {
         sound_ear = true;
-        ioctl(sound_console_fd, KIOCSOUND, 2147483647);
+        // ioctl(sound_console_fd, KIOCSOUND, 2147483647);
     } else if (!on && sound_ear)
     {
         sound_ear = false;
-        ioctl(sound_console_fd, KIOCSOUND, 0);
+        // ioctl(sound_console_fd, KIOCSOUND, 0);
     }
 }
 
@@ -2109,7 +2109,7 @@ int main(int argc, char **argv)
     pthread_t z80_id, ula_id;
     if (system_little_endian())
     {
-        sound_console_fd = open("/dev/console", O_WRONLY);
+        // sound_console_fd = open("/dev/console", O_WRONLY);
         atexit(z80_reset);
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
