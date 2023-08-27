@@ -9,9 +9,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <math.h>
-#include <sys/ioctl.h>
 #include <GL/freeglut.h>
-#include <linux/kd.h>
+// #include <sys/ioctl.h>
+// #include <linux/kd.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -2110,7 +2110,7 @@ int main(int argc, char **argv)
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
-        atexit(z80_reset);
+        // atexit(z80_reset);
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
         glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
