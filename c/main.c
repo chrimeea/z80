@@ -2143,13 +2143,15 @@ int main(int argc, char **argv)
 }
 
 // TODO: ula in the same thread advance beam after execute
-// TODO: sound, tape, UART
+// TODO: tape
+// TODO: uart
 // TODO: debugger
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
-// https://linux.die.net/man/3/xbell or /etc/modprobe.d/pc-speaker.conf
+// https://linux.die.net/man/3/xbell
+// TODO: sound
+// /etc/modprobe.d/pc-speaker.conf
+// https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
 // br $029d
-// finish
 // first interrupt 0e5b / 0e5c
-
