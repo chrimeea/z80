@@ -2147,6 +2147,8 @@ int main(int argc, char **argv)
 // TODO: debugger
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
+// TODO: replace glut with x calls to create window and read keyboard
+// https://linux.die.net/man/3/xbell
 // br $029d
 // finish
 // first interrupt 0e5b / 0e5c
