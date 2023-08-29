@@ -519,7 +519,9 @@ REG8 port_read8(const REG16 reg)
 {
     if (reg.bytes.low.byte_value % 2 == 0)
     {
-        return keyboard_read8(reg);
+        REG8 alt = keyboard_read8(reg);
+        register_set_or_unset_bit(alt, MAX5, sound_ear);
+        return alt;
     }
     else
     {
