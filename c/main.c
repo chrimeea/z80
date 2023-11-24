@@ -271,15 +271,8 @@ void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 
 void memory_load_rom(const char *filename)
 {
-    int n, remaining = memory_size;
-    REG8 *m = memory;
     FILE *f = fopen(filename, "rb");
-    do
-    {
-        n = fread(m, 1, remaining, f);
-        m += n;
-        remaining -= n;
-    } while (n != 0);
+    fread(memory, 1, memory_size, f);
     fclose(f);
 }
 
