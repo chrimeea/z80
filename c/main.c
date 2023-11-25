@@ -128,7 +128,7 @@ bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
 int tape_pause, tape_block_size;
-char tape_block[2097152];
+REG8 tape_block[2097152];
 // int debug = 10;
 
 void to_binary(unsigned char c, char *o)
@@ -164,7 +164,7 @@ void time_seconds_to_timespec(struct timespec *ts, long double s)
     ts->tv_sec = temp;
 }
 
-void time_sleep(long double s)
+void time_sleep_in_seconds(long double s)
 {
     struct timespec ts;
     if (s > 0.0L)
@@ -177,7 +177,7 @@ void time_sleep(long double s)
 void time_sync(unsigned long *t_states_all, int t_states)
 {
     *t_states_all += t_states;
-    time_sleep(time_start + *t_states_all * state_duration - time_in_seconds());
+    time_sleep_in_seconds(time_start + *t_states_all * state_duration - time_in_seconds());
 }
 
 void register_set_8_from_4(REG8 *reg, div_t d)
@@ -2115,19 +2115,37 @@ void draw_screen()
 void tape_play_pulse(int t_states)
 {
     sound_ear = true;
-    time_sleep(t_states * state_duration);
+    time_sleep_in_seconds(t_states * state_duration);
     sound_ear = false;
-    time_sleep(t_states * state_duration);
+    time_sleep_in_seconds(t_states * state_duration);
 }
 
 void tape_play_block()
 {
+    int i, j, b;
+    for (i = 0; i < 8063; i++)
+    {
+        tape_play_pulse(2168);
+    }
+    tape_play_pulse(667);
+    tape_play_pulse(735);
+    for (i = 0; i < tape_block_size; i++)
+    {
+        b = MAX7;
+        for (j = 0; j < 8; j++)
+        {
+            tape_play_pulse(register_is_bit(tape_block[i], i) ? 1710 : 855);
+            b >>= 1;
+        }
+    }
+    time_sleep_in_seconds(tape_pause / 1000.0);
 }
 
 void tape_read_block_10(FILE *f)
 {
     fread(&tape_pause, 1, 2, f);
     fread(&tape_block_size, 1, 2, f);
+    printf("10 %d\n", tape_block_size);
     fread(tape_block, 1, tape_block_size, f);
     tape_play_block();
 }
@@ -2139,30 +2157,33 @@ void tape_read_block_15(FILE *f)
     fread(&tape_pause, 1, 2, f);
     fread(&used, 1, 1, f);
     fread(&tape_block_size, 1, 3, f);
+    printf("15 %d\n", tape_block_size);
     fread(tape_block, 1, ceil(tape_block_size / 8.0), f);
-    tape_play_block();
+    // tape_play_block();
 }
 
 void tape_load_tzx(FILE *f)
 {
     char id;
-    fread(tape_block, 1, 11, f);
-    if (strncmp("ZXTape!\x1A", tape_block, 8) == 0 && tape_block[9] <= 20)
+    while (true)
     {
-        id = tape_block[10];
-        while (id != 0)
+        fread(tape_block, 1, 11, f);
+        if (strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].value <= 20)
         {
-            printf("%x\n", id);
-            switch (id)
+            id = tape_block[10].value;
+            while (id != 0)
             {
-            case 0x10:
-                tape_read_block_10(f);
-                break;
-            case 0x15:
-                tape_read_block_15(f);
-                break;
+                switch (id)
+                {
+                case 0x10:
+                    tape_read_block_10(f);
+                    break;
+                case 0x15:
+                    tape_read_block_15(f);
+                    break;
+                }
+                fread(&id, 1, 1, f);
             }
-            fread(&id, 1, 1, f);
         }
     }
 }
