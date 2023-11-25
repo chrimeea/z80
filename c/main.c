@@ -2099,9 +2099,60 @@ void draw_screen()
     glutPostRedisplay();
 }
 
+void tape_read_block_10(FILE *f)
+{
+    int pause, block_size;
+    char block[65536];
+    fread(&pause, 1, 2, f);
+    fread(&block_size, 1, 2, f);
+    fread(block, 1, block_size, f);
+}
+
+void tape_read_block_15(FILE *f)
+{
+    int states_per_sample, pause, used, block_size;
+    char block[2097152];
+    fread(&states_per_sample, 1, 2, f);
+    fread(&pause, 1, 2, f);
+    fread(&used, 1, 1, f);
+    fread(&block_size, 1, 3, f);
+    fread(block, 1, ceil(block_size / 8.0), f);
+}
+
+void tape_load_tzx(FILE *f)
+{
+    char id;
+    char block[65536];
+    fread(block, 1, 11, f);
+    if (strncmp("ZXTape!\x1A", block, 8) == 0 && block[9] <= 20)
+    {
+        id = block[10];
+        while (id != 0)
+        {
+            printf("%x\n", id);
+            switch(id)
+            {
+                case 0x10:
+                    tape_read_block_10(f);
+                    break;
+                case 0x15:
+                    tape_read_block_15(f);
+                    break;
+            }
+            fread(&id, 1, 1, f);
+        }
+    }
+}
+
+void *tape_run(void *args)
+{
+    tape_load_tzx(stdin);
+    return NULL;
+}
+
 int main(int argc, char **argv)
 {
-    pthread_t z80_id, ula_id;
+    pthread_t z80_id, ula_id, tape_id;
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
@@ -2130,6 +2181,7 @@ int main(int argc, char **argv)
         z80_reset();
         pthread_create(&z80_id, NULL, z80_run, NULL);
         pthread_create(&ula_id, NULL, ula_run, NULL);
+        pthread_create(&tape_id, NULL, tape_run, NULL);
         glutDisplayFunc(draw_screen);
         glutMainLoop();
     }
