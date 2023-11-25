@@ -1,5 +1,7 @@
-// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -Wall
+// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -Wall
 // SHIFT = SS; ALT = CS; ESC = SS + CS
+// mkfifo tape
+// cat file.tzx > tape
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -2146,7 +2148,12 @@ void tape_load_tzx(FILE *f)
 
 void *tape_run(void *args)
 {
-    tape_load_tzx(stdin);
+    FILE *f = fopen("tape", "rb");
+    if (f != NULL)
+    {
+        tape_load_tzx(f);
+        fclose(f);
+    }
     return NULL;
 }
 
