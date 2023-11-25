@@ -2122,8 +2122,9 @@ void tape_play_pulse(int t_states)
 
 void tape_play_block()
 {
-    int i, j, b;
-    for (i = 0; i < 8063; i++)
+    int i, j, b, v;
+    v = tape_block[0].value == 0x00 ? 8063 : 3223;
+    for (i = 0; i < v; i++)
     {
         tape_play_pulse(2168);
     }
@@ -2134,7 +2135,9 @@ void tape_play_block()
         b = MAX7;
         for (j = 0; j < 8; j++)
         {
-            tape_play_pulse(register_is_bit(tape_block[i], i) ? 1710 : 855);
+            v = register_is_bit(tape_block[i], i) ? 1710 : 855;
+            tape_play_pulse(v);
+            tape_play_pulse(v);
             b >>= 1;
         }
     }
