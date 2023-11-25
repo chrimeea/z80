@@ -260,7 +260,7 @@ void register_add16_with_flags(REG16 *reg, REG16 alt, int mask)
 void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
 {
     REG16 other;
-    other.value= reg->value - alt.value;
+    other.value = reg->value - alt.value;
     bool s = sign(other.value);
     register_set_or_unset_flag(FLAG_C & mask, alt.byte_value > reg->byte_value);
     register_set_or_unset_flag(FLAG_HC & mask, (alt.byte_value & 0xFFF) > (reg->byte_value & 0xFFF));
@@ -354,7 +354,7 @@ void keyboard_press(unsigned char key, const bool value)
     {
         register_set_or_unset_bit(keyboard[7], MAX1, value);
     }
-    switch(tolower(key))
+    switch (tolower(key))
     {
     case 'z':
         register_set_or_unset_bit(keyboard[0], MAX1, value);
@@ -503,7 +503,8 @@ void sound_ear_on_off(bool on)
     {
         sound_ear = true;
         // ioctl(sound_console_fd, KIOCSOUND, 2147483647);
-    } else if (!on && sound_ear)
+    }
+    else if (!on && sound_ear)
     {
         sound_ear = false;
         // ioctl(sound_console_fd, KIOCSOUND, 0);
@@ -1986,7 +1987,9 @@ int z80_run_one()
         //     debug++;
         // }
         return z80_execute(z80_fetch_opcode());
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
@@ -2055,7 +2058,8 @@ int ula_draw_line(int y)
         register_set_or_unset_bit(ula_addr_bitmap, MAX10, is_bit(y, MAX2));
         register_set_or_unset_bit(ula_addr_bitmap, MAX11, is_bit(y, MAX6));
         register_set_or_unset_bit(ula_addr_bitmap, MAX12, is_bit(y, MAX7));
-    } else
+    }
+    else
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
         {
@@ -2089,8 +2093,10 @@ void *ula_run(void *args)
 void draw_screen()
 {
     glBegin(GL_POINTS);
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
+    for (int y = 0; y < SCREEN_HEIGHT; y++)
+    {
+        for (int x = 0; x < SCREEN_WIDTH; x++)
+        {
             RGB color = ula_screen[y][x];
             glColor3f(color.red, color.green, color.blue);
             glVertex2i(x, y);
@@ -2132,14 +2138,14 @@ void tape_load_tzx(FILE *f)
         while (id != 0)
         {
             printf("%x\n", id);
-            switch(id)
+            switch (id)
             {
-                case 0x10:
-                    tape_read_block_10(f);
-                    break;
-                case 0x15:
-                    tape_read_block_15(f);
-                    break;
+            case 0x10:
+                tape_read_block_10(f);
+                break;
+            case 0x15:
+                tape_read_block_15(f);
+                break;
             }
             fread(&id, 1, 1, f);
         }
