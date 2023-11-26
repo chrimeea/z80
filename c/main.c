@@ -2148,7 +2148,6 @@ void tape_read_block_10(FILE *f)
 {
     fread(&tape_pause, 1, 2, f);
     fread(&tape_block_size, 1, 2, f);
-    printf("10 %d\n", tape_block_size);
     fread(tape_block, 1, tape_block_size, f);
     tape_play_block();
 }
@@ -2160,7 +2159,6 @@ void tape_read_block_15(FILE *f)
     fread(&tape_pause, 1, 2, f);
     fread(&used, 1, 1, f);
     fread(&tape_block_size, 1, 3, f);
-    printf("15 %d\n", tape_block_size);
     fread(tape_block, 1, ceil(tape_block_size / 8.0), f);
     // tape_play_block();
 }
