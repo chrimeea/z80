@@ -2123,7 +2123,7 @@ void tape_play_pulse(int t_states)
 void tape_play_block()
 {
     int i, j, b, v;
-    v = tape_block[0].value == 0x00 ? 8063 : 3223;
+    v = (tape_block[0].value < 0x80 ? 8063 : 3223);
     for (i = 0; i < v; i++)
     {
         tape_play_pulse(2168);
