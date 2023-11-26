@@ -2190,13 +2190,15 @@ void tape_load_tzx(FILE *f)
 
 void *tape_run(void *args)
 {
-    FILE *f = fopen("tape", "rb");
-    if (f != NULL)
+    while (true)
     {
-        tape_load_tzx(f);
-        fclose(f);
+        FILE *f = fopen("tape", "rb");
+        if (f != NULL)
+        {
+            tape_load_tzx(f);
+            fclose(f);
+        }
     }
-    return NULL;
 }
 
 int main(int argc, char **argv)
