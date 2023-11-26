@@ -2123,7 +2123,7 @@ void tape_play_pulse(int t_states)
 void tape_play_block()
 {
     int i, j, b, v;
-    v = (tape_block[0].value < 0x80 ? 8063 : 3223);
+    v = (tape_block[0].byte_value < 0x80 ? 8063 : 3223);
     for (i = 0; i < v; i++)
     {
         tape_play_pulse(2168);
@@ -2167,9 +2167,9 @@ void tape_load_tzx(FILE *f)
 {
     char id;
     int n = fread(tape_block, 1, 11, f);
-    if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].value <= 20)
+    if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
-        id = tape_block[10].value;
+        id = tape_block[10].byte_value;
         while (n != 0)
         {
             switch (id)
