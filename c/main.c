@@ -2135,7 +2135,7 @@ void tape_play_block()
         b = MAX7;
         for (j = 0; j < 8; j++)
         {
-            v = register_is_bit(tape_block[i], b) ? 1710 : 855;
+            v = (register_is_bit(tape_block[i], b) ? 1710 : 855);
             tape_play_pulse(v);
             tape_play_pulse(v);
             b >>= 1;
