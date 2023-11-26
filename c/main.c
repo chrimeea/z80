@@ -2168,25 +2168,22 @@ void tape_read_block_15(FILE *f)
 void tape_load_tzx(FILE *f)
 {
     char id;
-    while (true)
+    int n = fread(tape_block, 1, 11, f);
+    if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].value <= 20)
     {
-        fread(tape_block, 1, 11, f);
-        if (strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].value <= 20)
+        id = tape_block[10].value;
+        while (n != 0)
         {
-            id = tape_block[10].value;
-            while (id != 0)
+            switch (id)
             {
-                switch (id)
-                {
-                case 0x10:
-                    tape_read_block_10(f);
-                    break;
-                case 0x15:
-                    tape_read_block_15(f);
-                    break;
-                }
-                fread(&id, 1, 1, f);
+            case 0x10:
+                tape_read_block_10(f);
+                break;
+            case 0x15:
+                tape_read_block_15(f);
+                break;
             }
+            n = fread(&id, 1, 1, f);
         }
     }
 }
