@@ -90,6 +90,13 @@ typedef struct
     GLfloat blue;
 } RGB;
 
+typedef struct T
+{
+    unsigned long t_states;
+    void (*task)();
+    struct T *next;
+} TASK;
+
 REG8 memory[MAX16];
 RGB ula_screen[SCREEN_HEIGHT][SCREEN_WIDTH];
 RGB ula_border[SCREEN_HEIGHT];
@@ -129,6 +136,7 @@ bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
 int tape_pause, tape_block_size;
 REG8 tape_block[2097152];
+TASK *rt_timeline_head, *rt_pending;
 // int debug = 10;
 
 void to_binary(unsigned char c, char *o)
@@ -2196,6 +2204,68 @@ void *tape_run(void *args)
             tape_load_tzx(f);
             fclose(f);
         }
+    }
+}
+
+void rt_advance_head()
+{
+    if (rt_timeline_head != NULL)
+    {
+        TASK *p = rt_timeline_head;
+        rt_timeline_head = p->next;
+        free(p);
+    }
+}
+
+bool rt_add_pending_task(TASK *task)
+{
+    if (rt_pending != NULL)
+    {
+        rt_pending = task;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void rt_add_task(TASK *task)
+{
+    TASK *c = rt_timeline_head;
+    TASK *p = NULL;
+    while (c != NULL && c->t_states < task->t_states)
+    {
+        p = c;
+        c = c->next;
+    }
+    if (p == NULL)
+    {
+        rt_timeline_head = task;
+    }
+    else
+    {
+        p->next = task;
+    }
+    task->next = c;
+}
+
+void rt_run()
+{
+    while (running)
+    {
+        unsigned long t_states = (rt_timeline_head == NULL ? 1 : rt_timeline_head->t_states);
+        time_sync(&z80_t_states_all, t_states - z80_t_states_all);
+        if (rt_pending != NULL)
+        {
+            rt_add_task(rt_pending);
+            rt_pending = NULL;
+        }
+        if (rt_timeline_head != NULL)
+        {
+            rt_timeline_head->task();
+        }
+        rt_advance_head();
     }
 }
 
