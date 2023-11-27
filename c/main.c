@@ -2122,35 +2122,34 @@ void draw_screen()
     glutPostRedisplay();
 }
 
-void tape_play_pulse(int t_states)
-{
-    sound_ear = true;
-    time_sleep_in_seconds(t_states * state_duration);
-    sound_ear = false;
-    time_sleep_in_seconds(t_states * state_duration);
-}
-
 void tape_play_block()
 {
     int i, j, b, v;
     v = (tape_block[0].byte_value < 0x80 ? 8063 : 3223);
+    sound_ear = false;
     for (i = 0; i < v; i++)
     {
-        tape_play_pulse(2168);
+        sound_ear = !sound_ear;
+        time_sleep_in_seconds(2168 * state_duration);
     }
-    tape_play_pulse(667);
-    tape_play_pulse(735);
+    sound_ear = !sound_ear;
+    time_sleep_in_seconds(667 * state_duration);
+    sound_ear = !sound_ear;
+    time_sleep_in_seconds(735 * state_duration);
     for (i = 0; i < tape_block_size; i++)
     {
         b = MAX7;
         for (j = 0; j < 8; j++)
         {
             v = (register_is_bit(tape_block[i], b) ? 1710 : 855);
-            tape_play_pulse(v);
-            tape_play_pulse(v);
+            sound_ear = !sound_ear;
+            time_sleep_in_seconds(v * state_duration);
+            sound_ear = !sound_ear;
+            time_sleep_in_seconds(v * state_duration);
             b >>= 1;
         }
     }
+    sound_ear = false;
     time_sleep_in_seconds(tape_pause / 1000.0);
 }
 
