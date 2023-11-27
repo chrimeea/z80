@@ -11,6 +11,8 @@
 #include <ctype.h>
 #include <time.h>
 #include <math.h>
+#include <poll.h>
+#include <unistd.h>
 #include <GL/freeglut.h>
 // #include <sys/ioctl.h>
 // #include <linux/kd.h>
@@ -2152,29 +2154,29 @@ void tape_play_block()
     time_sleep_in_seconds(tape_pause / 1000.0);
 }
 
-void tape_read_block_10(FILE *f)
+void tape_read_block_10(int fd)
 {
-    fread(&tape_pause, 1, 2, f);
-    fread(&tape_block_size, 1, 2, f);
-    fread(tape_block, 1, tape_block_size, f);
+    read(fd, &tape_pause, 2);
+    read(fd, &tape_block_size, 2);
+    read(fd, tape_block, tape_block_size);
     tape_play_block();
 }
 
-void tape_read_block_15(FILE *f)
+void tape_read_block_15(int fd)
 {
     int states_per_sample, used;
-    fread(&states_per_sample, 1, 2, f);
-    fread(&tape_pause, 1, 2, f);
-    fread(&used, 1, 1, f);
-    fread(&tape_block_size, 1, 3, f);
-    fread(tape_block, 1, ceil(tape_block_size / 8.0), f);
+    read(fd, &states_per_sample, 2);
+    read(fd, &tape_pause, 2);
+    read(fd, &used, 1);
+    read(fd, &tape_block_size, 3);
+    read(fd, tape_block, ceil(tape_block_size / 8.0));
     // tape_play_block();
 }
 
-void tape_load_tzx(FILE *f)
+void tape_load_tzx(int fd)
 {
     char id;
-    int n = fread(tape_block, 1, 11, f);
+    int n = read(fd, tape_block, 11);
     if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
         id = tape_block[10].byte_value;
@@ -2183,28 +2185,44 @@ void tape_load_tzx(FILE *f)
             switch (id)
             {
             case 0x10:
-                tape_read_block_10(f);
+                tape_read_block_10(fd);
                 break;
             case 0x15:
-                tape_read_block_15(f);
+                tape_read_block_15(fd);
                 break;
             }
-            n = fread(&id, 1, 1, f);
+            n = read(fd, &id, 1);
         }
     }
 }
 
 void *tape_run(void *args)
 {
-    while (true)
+    while (running)
     {
-        FILE *f = fopen("tape", "rb");
-        if (f != NULL)
+        int fd = open("tape", O_RDWR);
+        if (fd != -1)
         {
-            tape_load_tzx(f);
-            fclose(f);
+            int r = 0;
+            struct pollfd p = {.fd = fd, .events = POLLIN};
+            while (r == 0 && running)
+            {
+                r = poll(&p, 1, 100);
+            }
+            if (r > 0)
+            {
+                tape_load_tzx(fd);
+            }
+            close(fd);
         }
     }
+    while (rt_timeline_head != NULL)
+    {
+        TASK *p = rt_timeline_head;
+        rt_timeline_head = rt_timeline_head->next;
+        free(p);
+    }
+    return NULL;
 }
 
 void rt_advance_head()
@@ -2302,9 +2320,13 @@ int main(int argc, char **argv)
         pthread_create(&ula_id, NULL, ula_run, NULL);
         pthread_create(&tape_id, NULL, tape_run, NULL);
         glutDisplayFunc(draw_screen);
+        glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
+        running = false;
+        pthread_join(z80_id, NULL);
+        pthread_join(ula_id, NULL);
+        pthread_join(tape_id, NULL);
     }
-    running = false;
     return 0;
 }
 
