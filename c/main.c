@@ -2349,6 +2349,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// TODO: use preallocated memory instead of malloc
 // TODO: ula in the same thread advance beam after execute
 // https://worldofspectrum.org/faq/reference/48kreference.htm
 // TODO: tape
