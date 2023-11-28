@@ -2009,15 +2009,6 @@ int z80_run_one()
     }
 }
 
-void *z80_run(void *args)
-{
-    while (running)
-    {
-        time_sync(&z80_t_states_all, z80_run_one());
-    }
-    return NULL;
-}
-
 void ula_point(const int x, const int y, const int c, const bool b)
 {
     RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
@@ -2280,7 +2271,7 @@ void rt_add_task(TASK *task)
     task->next = c;
 }
 
-void rt_run()
+void *rt_run(void *args)
 {
     while (running)
     {
@@ -2297,11 +2288,26 @@ void rt_run()
             rt_advance_head();
         }
     }
+    rt_close();
+    return NULL;
+}
+
+TASK *rt_task(unsigned long t_states, void (*task)())
+{
+    TASK *t = (TASK *)malloc(sizeof(TASK));
+    t->t_states = z80_t_states_all + t_states;
+    t->task = task;
+    return t;
+}
+
+void z80_run()
+{
+    rt_add_task(rt_task(z80_run_one(), z80_run));
 }
 
 int main(int argc, char **argv)
 {
-    pthread_t z80_id, ula_id, tape_id;
+    pthread_t rt_id, ula_id, tape_id;
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
@@ -2328,14 +2334,15 @@ int main(int argc, char **argv)
             memory_load_rom(argv[1]);
         }
         z80_reset();
-        pthread_create(&z80_id, NULL, z80_run, NULL);
+        rt_add_task(rt_task(0, z80_run));
+        pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&ula_id, NULL, ula_run, NULL);
         pthread_create(&tape_id, NULL, tape_run, NULL);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
-        pthread_join(z80_id, NULL);
+        pthread_join(rt_id, NULL);
         pthread_join(ula_id, NULL);
         pthread_join(tape_id, NULL);
     }
