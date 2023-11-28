@@ -2157,7 +2157,8 @@ void tape_read_block_10(int fd)
 {
     read(fd, &tape_pause, 2);
     read(fd, &tape_block_size, 2);
-    read(fd, tape_block, tape_block_size);
+    tape_block[tape_block_size].value = 0;
+    read(fd, tape_block, tape_block_size + 1);
     tape_play_block();
 }
 
@@ -2168,18 +2169,32 @@ void tape_read_block_15(int fd)
     read(fd, &tape_pause, 2);
     read(fd, &used, 1);
     read(fd, &tape_block_size, 3);
-    read(fd, tape_block, ceil(tape_block_size / 8.0));
+    tape_block_size = ceil(tape_block_size / 8.0);
+    tape_block[tape_block_size].value = 0;
+    read(fd, tape_block, tape_block_size + 1);
     // tape_play_block();
+}
+
+bool tape_wait(int fd)
+{
+    int r = 0;
+    struct pollfd p = {.fd = fd, .events = POLLIN};
+    while (r == 0 && running)
+    {
+        r = poll(&p, 1, 100);
+    }
+    return (r > 0);
 }
 
 void tape_load_tzx(int fd)
 {
     char id;
+    tape_block[10].value = 0;
     int n = read(fd, tape_block, 11);
     if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
         id = tape_block[10].byte_value;
-        while (n != 0)
+        while (id != 0)
         {
             switch (id)
             {
@@ -2190,7 +2205,7 @@ void tape_load_tzx(int fd)
                 tape_read_block_15(fd);
                 break;
             }
-            n = read(fd, &id, 1);
+            id = tape_block[tape_block_size].value;
         }
     }
 }
@@ -2202,13 +2217,7 @@ void *tape_run(void *args)
         int fd = open("tape", O_RDWR);
         if (fd != -1)
         {
-            int r = 0;
-            struct pollfd p = {.fd = fd, .events = POLLIN};
-            while (r == 0 && running)
-            {
-                r = poll(&p, 1, 100);
-            }
-            if (r > 0)
+            if (tape_wait(fd))
             {
                 tape_load_tzx(fd);
             }
