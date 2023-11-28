@@ -2212,17 +2212,17 @@ void tape_load_tzx(int fd)
 
 void *tape_run(void *args)
 {
-    while (running)
+    int fd = open("tape", O_RDWR);
+    if (fd != -1)
     {
-        int fd = open("tape", O_RDWR);
-        if (fd != -1)
+        while (running)
         {
             if (tape_wait(fd))
             {
                 tape_load_tzx(fd);
             }
-            close(fd);
         }
+        close(fd);
     }
     while (rt_timeline_head != NULL)
     {
