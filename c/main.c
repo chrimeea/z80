@@ -2224,13 +2224,17 @@ void *tape_run(void *args)
         }
         close(fd);
     }
+    return NULL;
+}
+
+void rt_close()
+{
     while (rt_timeline_head != NULL)
     {
         TASK *p = rt_timeline_head;
         rt_timeline_head = rt_timeline_head->next;
         free(p);
     }
-    return NULL;
 }
 
 void rt_advance_head()
