@@ -2249,7 +2249,7 @@ void rt_advance_head()
 
 bool rt_add_pending_task(TASK *task)
 {
-    if (rt_pending != NULL)
+    if (rt_pending == NULL)
     {
         rt_pending = task;
         return true;
@@ -2291,11 +2291,11 @@ void rt_run()
             rt_add_task(rt_pending);
             rt_pending = NULL;
         }
-        if (rt_timeline_head != NULL)
+        if (rt_timeline_head != NULL && z80_t_states_all >= rt_timeline_head->t_states)
         {
             rt_timeline_head->task();
+            rt_advance_head();
         }
-        rt_advance_head();
     }
 }
 
