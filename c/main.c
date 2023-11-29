@@ -137,7 +137,7 @@ bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
 int tape_pause, tape_block_size;
-REG8 tape_block[2097152];
+REG8 *tape_block;
 TASK *rt_timeline_head, *rt_pending;
 // int debug = 10;
 
@@ -2148,6 +2148,7 @@ void tape_read_block_10(int fd)
 {
     read(fd, &tape_pause, 2);
     read(fd, &tape_block_size, 2);
+    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
     tape_block[tape_block_size].value = 0;
     read(fd, tape_block, tape_block_size + 1);
     tape_play_block();
@@ -2161,6 +2162,7 @@ void tape_read_block_15(int fd)
     read(fd, &used, 1);
     read(fd, &tape_block_size, 3);
     tape_block_size = ceil(tape_block_size / 8.0);
+    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
     tape_block[tape_block_size].value = 0;
     read(fd, tape_block, tape_block_size + 1);
     // tape_play_block();
@@ -2180,11 +2182,13 @@ bool tape_wait(int fd)
 void tape_load_tzx(int fd)
 {
     char id;
-    tape_block[10].value = 0;
-    int n = read(fd, tape_block, 11);
+    tape_block_size = 10;
+    tape_block = (REG8 *) malloc(tape_block_size + 1);
+    tape_block[tape_block_size].value = 0;
+    int n = read(fd, tape_block, tape_block_size + 1);
     if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
-        id = tape_block[10].byte_value;
+        id = tape_block[tape_block_size].byte_value;
         while (id != 0)
         {
             switch (id)
@@ -2196,9 +2200,10 @@ void tape_load_tzx(int fd)
                 tape_read_block_15(fd);
                 break;
             }
-            id = tape_block[tape_block_size].value;
+            id = tape_block[tape_block_size].byte_value;
         }
     }
+    free(tape_block);
 }
 
 void *tape_run(void *args)
