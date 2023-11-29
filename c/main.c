@@ -2144,12 +2144,18 @@ void tape_play_block()
     time_sleep_in_seconds(tape_pause / 1000.0);
 }
 
+void tape_allocate()
+{
+    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
+    tape_block[tape_block_size - 1].value = 0;
+    tape_block[tape_block_size].value = 0;
+}
+
 void tape_read_block_10(int fd)
 {
     read(fd, &tape_pause, 2);
     read(fd, &tape_block_size, 2);
-    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
-    tape_block[tape_block_size].value = 0;
+    tape_allocate();
     read(fd, tape_block, tape_block_size + 1);
     tape_play_block();
 }
@@ -2162,8 +2168,7 @@ void tape_read_block_15(int fd)
     read(fd, &used, 1);
     read(fd, &tape_block_size, 3);
     tape_block_size = ceil(tape_block_size / 8.0);
-    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
-    tape_block[tape_block_size].value = 0;
+    tape_allocate();
     read(fd, tape_block, tape_block_size + 1);
     // tape_play_block();
 }
@@ -2183,8 +2188,7 @@ void tape_load_tzx(int fd)
 {
     char id;
     tape_block_size = 10;
-    tape_block = (REG8 *) malloc(tape_block_size + 1);
-    tape_block[tape_block_size].value = 0;
+    tape_allocate();
     int n = read(fd, tape_block, tape_block_size + 1);
     if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
