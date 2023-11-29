@@ -2188,7 +2188,8 @@ void tape_load_tzx(int fd)
 {
     char id;
     tape_block_size = 10;
-    tape_allocate();
+    tape_block = (REG8 *) malloc(tape_block_size + 1);
+    tape_block[tape_block_size].value = 0;
     int n = read(fd, tape_block, tape_block_size + 1);
     if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
     {
