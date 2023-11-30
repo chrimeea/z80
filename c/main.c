@@ -92,12 +92,19 @@ typedef struct
     GLfloat blue;
 } RGB;
 
-typedef struct T
+typedef struct TTASK
 {
     unsigned long t_states;
     void (*task)();
-    struct T *next;
+    struct TTASK *next;
 } TASK;
+
+typedef struct TREG8BLOCK
+{
+    int size, pause;
+    REG8 *data;
+    struct TREG8BLOCK *next;
+} REG8BLOCK;
 
 REG8 memory[MAX16];
 RGB ula_screen[SCREEN_HEIGHT][SCREEN_WIDTH];
@@ -136,8 +143,8 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-int tape_pause, tape_block_size;
-REG8 *tape_block;
+int tape_state;
+REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
 // int debug = 10;
 
@@ -2113,121 +2120,6 @@ void draw_screen()
     glutPostRedisplay();
 }
 
-void tape_play_block()
-{
-    int i, j, b, v;
-    v = (tape_block[0].byte_value < 0x80 ? 8063 : 3223);
-    sound_ear = false;
-    for (i = 0; i < v; i++)
-    {
-        sound_ear = !sound_ear;
-        time_sleep_in_seconds(2168 * state_duration);
-    }
-    sound_ear = !sound_ear;
-    time_sleep_in_seconds(667 * state_duration);
-    sound_ear = !sound_ear;
-    time_sleep_in_seconds(735 * state_duration);
-    for (i = 0; i < tape_block_size; i++)
-    {
-        b = MAX7;
-        for (j = 0; j < 8; j++)
-        {
-            v = (register_is_bit(tape_block[i], b) ? 1710 : 855);
-            sound_ear = !sound_ear;
-            time_sleep_in_seconds(v * state_duration);
-            sound_ear = !sound_ear;
-            time_sleep_in_seconds(v * state_duration);
-            b >>= 1;
-        }
-    }
-    sound_ear = false;
-    time_sleep_in_seconds(tape_pause / 1000.0);
-}
-
-void tape_allocate()
-{
-    tape_block = (REG8 *) realloc(tape_block, tape_block_size + 1);
-    tape_block[tape_block_size - 1].value = 0;
-    tape_block[tape_block_size].value = 0;
-}
-
-void tape_read_block_10(int fd)
-{
-    read(fd, &tape_pause, 2);
-    read(fd, &tape_block_size, 2);
-    tape_allocate();
-    read(fd, tape_block, tape_block_size + 1);
-    tape_play_block();
-}
-
-void tape_read_block_15(int fd)
-{
-    int states_per_sample, used;
-    read(fd, &states_per_sample, 2);
-    read(fd, &tape_pause, 2);
-    read(fd, &used, 1);
-    read(fd, &tape_block_size, 3);
-    tape_block_size = ceil(tape_block_size / 8.0);
-    tape_allocate();
-    read(fd, tape_block, tape_block_size + 1);
-    // tape_play_block();
-}
-
-bool tape_wait(int fd)
-{
-    int r = 0;
-    struct pollfd p = {.fd = fd, .events = POLLIN};
-    while (r == 0 && running)
-    {
-        r = poll(&p, 1, 100);
-    }
-    return (r > 0);
-}
-
-void tape_load_tzx(int fd)
-{
-    char id;
-    tape_block_size = 10;
-    tape_block = (REG8 *) malloc(tape_block_size + 1);
-    tape_block[tape_block_size].value = 0;
-    int n = read(fd, tape_block, tape_block_size + 1);
-    if (n == 11 && strncmp("ZXTape!\x1A", (const char *)tape_block, 8) == 0 && tape_block[9].byte_value <= 20)
-    {
-        id = tape_block[tape_block_size].byte_value;
-        while (id != 0)
-        {
-            switch (id)
-            {
-            case 0x10:
-                tape_read_block_10(fd);
-                break;
-            case 0x15:
-                tape_read_block_15(fd);
-                break;
-            }
-            id = tape_block[tape_block_size].byte_value;
-        }
-    }
-    free(tape_block);
-}
-
-void *tape_run(void *args)
-{
-    int fd = open("tape", O_RDWR);
-    if (fd != -1)
-    {
-        while (running)
-        {
-            if (tape_wait(fd))
-            {
-                tape_load_tzx(fd);
-            }
-        }
-        close(fd);
-    }
-    return NULL;
-}
-
 void rt_close()
 {
     while (rt_timeline_head != NULL)
@@ -2310,6 +2202,193 @@ TASK *rt_task(unsigned long t_states, void (*task)())
     return t;
 }
 
+void tape_play_block()
+{
+    int i, j, b, v, s = 0;
+    REG8BLOCK *block = tape_block_last;
+    if (block != NULL)
+    {
+        v = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
+        for (i = 0; i < v; i++)
+        {
+            s++;
+            if (tape_state + 1 == s)
+            {
+                tape_state = s;
+                sound_ear = !sound_ear;
+                rt_add_task(rt_task(2168, tape_play_block));
+                return;
+            }
+        }
+        s++;
+        if (tape_state + 1 == s)
+        {
+            tape_state = s;
+            sound_ear = !sound_ear;
+            rt_add_task(rt_task(667, tape_play_block));
+            return;
+        }
+        s++;
+        if (tape_state + 1 == s)
+        {
+            tape_state = s;
+            sound_ear = !sound_ear;
+            rt_add_task(rt_task(735, tape_play_block));
+            return;
+        }
+        for (i = 0; i < block->size; i++)
+        {
+            b = MAX7;
+            for (j = 0; j < 8; j++)
+            {
+                v = (register_is_bit(block->data[i], b) ? 1710 : 855);
+                s++;
+                if (tape_state + 1 == s)
+                {
+                    tape_state = s;
+                    sound_ear = !sound_ear;
+                    rt_add_task(rt_task(v, tape_play_block));
+                    return;
+                }
+                s++;
+                if (tape_state + 1 == s)
+                {
+                    tape_state = s;
+                    sound_ear = !sound_ear;
+                    rt_add_task(rt_task(v, tape_play_block));
+                    return;
+                }
+                b >>= 1;
+            }
+        }
+        s++;
+        if (tape_state + 1 == s && block->pause > 0)
+        {
+            tape_state = s;
+            sound_ear = false;
+            rt_add_task(rt_task(block->pause / (1000 * state_duration), tape_play_block));
+            tape_block_last = tape_block_last->next;
+            return;
+        }
+    }
+}
+
+REG8BLOCK *tape_allocate(int size)
+{
+    REG8BLOCK *b = (REG8BLOCK *) malloc(sizeof(REG8BLOCK));
+    b->size = size;
+    b->data = (REG8 *) calloc(1, size + 1);
+    b->next = NULL;
+    if (tape_block_head == NULL)
+    {
+        tape_block_head = b;
+        tape_block_last = b;
+    }
+    else
+    {
+        tape_block_last->next = b;
+        tape_block_last = b;        
+    }
+    return b;
+}
+
+char tape_read_block_10(int fd)
+{
+    int pause = 0, size = 0;
+    read(fd, &pause, 2);
+    read(fd, &size, 2);
+    REG8BLOCK *b = tape_allocate(size);
+    b->pause = pause;
+    read(fd, b->data, b->size + 1);
+    return b->data[b->size].byte_value;
+}
+
+char tape_read_block_15(int fd)
+{
+    int states_per_sample = 0, used = 0, pause = 0, size = 0;
+    read(fd, &states_per_sample, 2);
+    read(fd, &pause, 2);
+    read(fd, &used, 1);
+    read(fd, &size, 3);
+    REG8BLOCK *b = tape_allocate(size / 8.0);
+    read(fd, b->data, b->size + 1);
+    return b->data[b->size].byte_value;
+}
+
+bool tape_wait(int fd)
+{
+    int r = 0;
+    struct pollfd p = {.fd = fd, .events = POLLIN};
+    while (r == 0 && running)
+    {
+        r = poll(&p, 1, 100);
+    }
+    return (r > 0);
+}
+
+void tape_close()
+{
+    tape_block_last = NULL;
+    while (tape_block_head != NULL)
+    {
+        REG8BLOCK *p = tape_block_head;
+        tape_block_head = tape_block_head->next;
+        free(p);
+    }
+}
+
+char tape_header(int fd)
+{
+    REG8 block[11] = {0};
+    if (read(fd, block, 11) == 11 && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0 && block[9].byte_value <= 20)
+    {
+        return block[10].byte_value;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void tape_load_tzx(int fd)
+{
+    char id = tape_header(fd);
+    while (id != 0)
+    {
+        switch (id)
+        {
+        case 0x10:
+            id = tape_read_block_10(fd);
+            break;
+        case 0x15:
+            id = tape_read_block_15(fd);
+            break;
+        }
+    }
+}
+
+void *tape_run(void *args)
+{
+    int fd = open("tape", O_RDWR);
+    if (fd != -1)
+    {
+        while (running)
+        {
+            if (tape_wait(fd))
+            {
+                tape_close();
+                tape_load_tzx(fd);
+                tape_block_last = tape_block_head;
+                tape_state = 0;
+                rt_add_pending_task(rt_task(0, tape_play_block));
+            }
+        }
+        tape_close();
+        close(fd);
+    }
+    return NULL;
+}
+
 void z80_run()
 {
     rt_add_task(rt_task(z80_run_one(), z80_run));
@@ -2344,7 +2423,7 @@ int main(int argc, char **argv)
             memory_load_rom(argv[1]);
         }
         z80_reset();
-        rt_add_task(rt_task(0, z80_run));
+        rt_add_pending_task(rt_task(0, z80_run));
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&ula_id, NULL, ula_run, NULL);
         pthread_create(&tape_id, NULL, tape_run, NULL);
