@@ -2437,7 +2437,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: ula correct order of border/screen + task per point
+// TODO: ula task each 4 states
 // TODO: use preallocated memory instead of malloc
 // https://worldofspectrum.org/faq/reference/48kreference.htm
 // TODO: uart
