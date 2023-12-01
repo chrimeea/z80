@@ -2195,7 +2195,7 @@ void ula_run()
     return;
 }
 
-void tape_play_block()
+int tape_play_block()
 {
     int i, j, b, v, s = 0;
     REG8BLOCK *block = tape_block_last;
@@ -2209,8 +2209,7 @@ void tape_play_block()
             {
                 tape_state = s;
                 sound_ear = !sound_ear;
-                rt_add_task(rt_task(2168, tape_play_block));
-                return;
+                return 2168;
             }
         }
         s++;
@@ -2218,16 +2217,14 @@ void tape_play_block()
         {
             tape_state = s;
             sound_ear = !sound_ear;
-            rt_add_task(rt_task(667, tape_play_block));
-            return;
+            return 667;
         }
         s++;
         if (tape_state + 1 == s)
         {
             tape_state = s;
             sound_ear = !sound_ear;
-            rt_add_task(rt_task(735, tape_play_block));
-            return;
+            return 735;
         }
         for (i = 0; i < block->size; i++)
         {
@@ -2240,16 +2237,14 @@ void tape_play_block()
                 {
                     tape_state = s;
                     sound_ear = !sound_ear;
-                    rt_add_task(rt_task(v, tape_play_block));
-                    return;
+                    return v;
                 }
                 s++;
                 if (tape_state + 1 == s)
                 {
                     tape_state = s;
                     sound_ear = !sound_ear;
-                    rt_add_task(rt_task(v, tape_play_block));
-                    return;
+                    return v;
                 }
                 b >>= 1;
             }
@@ -2259,11 +2254,11 @@ void tape_play_block()
         {
             tape_state = s;
             sound_ear = false;
-            rt_add_task(rt_task(block->pause / (1000 * state_duration), tape_play_block));
             tape_block_last = tape_block_last->next;
-            return;
+            return block->pause / (1000 * state_duration);
         }
     }
+    return -1;
 }
 
 REG8BLOCK *tape_allocate(int size)
@@ -2360,6 +2355,15 @@ void tape_load_tzx(int fd)
     }
 }
 
+void tape_play_run()
+{
+    int s = tape_play_block();
+    if (s >= 0)
+    {
+        rt_add_task(rt_task(s, tape_play_run));
+    }
+}
+
 void *tape_run(void *args)
 {
     int fd = open("tape", O_RDWR);
@@ -2373,7 +2377,7 @@ void *tape_run(void *args)
                 tape_load_tzx(fd);
                 tape_block_last = tape_block_head;
                 tape_state = 0;
-                rt_add_pending_task(rt_task(0, tape_play_block));
+                rt_add_pending_task(rt_task(0, tape_play_run));
             }
         }
         tape_close();
