@@ -123,7 +123,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
 const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000025L;
 unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
-unsigned int ula_draw_counter = 0;
+unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
 // int sound_console_fd;
 bool sound_ear = false, sound_mic = false;
@@ -2016,93 +2016,6 @@ int z80_run_one()
     }
 }
 
-void ula_point(const int x, const int y, const int c, const bool b)
-{
-    RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
-    ula_screen[y][x] = color;
-}
-
-int ula_draw_line(int y)
-{
-    int i, j, x = 0;
-    if (y > 55 && y < 248)
-    {
-        y -= 56;
-        for (j = 0; j < 48; j++)
-        {
-            ula_point(x + j, y + 56, ula_border_color, false);
-        }
-        x = 48;
-        ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
-        for (i = 0; i < 32; i++)
-        {
-            REG8 reg_bitmap = memory_read8(ula_addr_bitmap);
-            REG8 reg_attrib = memory_read8(ula_addr_attrib);
-            int ink = reg_attrib.byte_value & 7;
-            int paper = reg_attrib.byte_value >> 3 & 7;
-            bool flash = register_is_bit(reg_attrib, MAX7);
-            if (flash && ula_draw_counter == 0)
-            {
-                int temp = ink;
-                ink = paper;
-                paper = temp;
-            }
-            bool brightness = register_is_bit(reg_attrib, MAX6);
-            int b = MAX7;
-            for (int j = 0; j < 8; j++)
-            {
-                ula_point(x + j, y + 56, register_is_bit(reg_bitmap, b) ? ink : paper, brightness);
-                b >>= 1;
-            }
-            ula_addr_bitmap.byte_value++;
-            ula_addr_attrib.byte_value++;
-            x += 8;
-        }
-        for (j = 0; j < 48; j++)
-        {
-            ula_point(x + j, y + 56, ula_border_color, false);
-        }
-        y++;
-        register_set_or_unset_bit(ula_addr_bitmap, MAX5, is_bit(y, MAX3));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX6, is_bit(y, MAX4));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX7, is_bit(y, MAX5));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX8, is_bit(y, MAX0));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX9, is_bit(y, MAX1));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX10, is_bit(y, MAX2));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX11, is_bit(y, MAX6));
-        register_set_or_unset_bit(ula_addr_bitmap, MAX12, is_bit(y, MAX7));
-    }
-    else
-    {
-        for (j = 0; j < SCREEN_WIDTH; j++)
-        {
-            ula_point(j, y, ula_border_color, false);
-        }
-    }
-    return 224;
-}
-
-void ula_draw_screen_once()
-{
-    z80_maskable_interrupt_flag = true;
-    ula_addr_bitmap.byte_value = 0x4000;
-    for (int i = 0; i < SCREEN_HEIGHT; i++)
-    {
-        time_sync(&ula_t_states_all, ula_draw_line(i));
-    }
-    ula_draw_counter = (ula_draw_counter + 1) % 16;
-    time_sync(&ula_t_states_all, 8 * 224); // vertical retrace
-}
-
-void *ula_run(void *args)
-{
-    while (running)
-    {
-        ula_draw_screen_once();
-    }
-    return NULL;
-}
-
 void draw_screen()
 {
     glBegin(GL_POINTS);
@@ -2200,6 +2113,86 @@ TASK *rt_task(unsigned long t_states, void (*task)())
     t->t_states = z80_t_states_all + t_states;
     t->task = task;
     return t;
+}
+
+void ula_point(const int x, const int y, const int c, const bool b)
+{
+    RGB color = (b ? ula_bright_colors[c] : ula_colors[c]);
+    ula_screen[y][x] = color;
+}
+
+void ula_run()
+{
+    int i, j, x = 0, y = ula_line;
+    if (y > 55 && y < 248)
+    {
+        y -= 56;
+        for (j = 0; j < 48; j++)
+        {
+            ula_point(x + j, y + 56, ula_border_color, false);
+        }
+        x = 48;
+        ula_addr_attrib.byte_value = 0x5800 + y / 8 * 32;
+        for (i = 0; i < 32; i++)
+        {
+            REG8 reg_bitmap = memory_read8(ula_addr_bitmap);
+            REG8 reg_attrib = memory_read8(ula_addr_attrib);
+            int ink = reg_attrib.byte_value & 7;
+            int paper = reg_attrib.byte_value >> 3 & 7;
+            bool flash = register_is_bit(reg_attrib, MAX7);
+            if (flash && ula_draw_counter == 0)
+            {
+                int temp = ink;
+                ink = paper;
+                paper = temp;
+            }
+            bool brightness = register_is_bit(reg_attrib, MAX6);
+            int b = MAX7;
+            for (int j = 0; j < 8; j++)
+            {
+                ula_point(x + j, y + 56, register_is_bit(reg_bitmap, b) ? ink : paper, brightness);
+                b >>= 1;
+            }
+            ula_addr_bitmap.byte_value++;
+            ula_addr_attrib.byte_value++;
+            x += 8;
+        }
+        for (j = 0; j < 48; j++)
+        {
+            ula_point(x + j, y + 56, ula_border_color, false);
+        }
+        y++;
+        register_set_or_unset_bit(ula_addr_bitmap, MAX5, is_bit(y, MAX3));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX6, is_bit(y, MAX4));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX7, is_bit(y, MAX5));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX8, is_bit(y, MAX0));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX9, is_bit(y, MAX1));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX10, is_bit(y, MAX2));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX11, is_bit(y, MAX6));
+        register_set_or_unset_bit(ula_addr_bitmap, MAX12, is_bit(y, MAX7));
+    }
+    else if (y < SCREEN_HEIGHT)
+    {
+        if (y == 0)
+        {
+            z80_maskable_interrupt_flag = true;
+            ula_addr_bitmap.byte_value = 0x4000;
+        }
+        for (j = 0; j < SCREEN_WIDTH; j++)
+        {
+            ula_point(j, y, ula_border_color, false);
+        }
+    }
+    else
+    {
+        ula_line = 0;
+        ula_draw_counter = (ula_draw_counter + 1) % 16;
+        rt_add_task(rt_task(8 * 224, ula_run)); // vertical retrace
+        return;
+    }
+    ula_line++;
+    rt_add_task(rt_task(224, ula_run));
+    return;
 }
 
 void tape_play_block()
@@ -2396,7 +2389,7 @@ void z80_run()
 
 int main(int argc, char **argv)
 {
-    pthread_t rt_id, ula_id, tape_id;
+    pthread_t rt_id, tape_id;
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
@@ -2423,31 +2416,28 @@ int main(int argc, char **argv)
             memory_load_rom(argv[1]);
         }
         z80_reset();
-        rt_add_pending_task(rt_task(0, z80_run));
+        rt_add_task(rt_task(0, z80_run));
+        rt_add_task(rt_task(0, ula_run));
         pthread_create(&rt_id, NULL, rt_run, NULL);
-        pthread_create(&ula_id, NULL, ula_run, NULL);
         pthread_create(&tape_id, NULL, tape_run, NULL);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
         pthread_join(rt_id, NULL);
-        pthread_join(ula_id, NULL);
         pthread_join(tape_id, NULL);
     }
     return 0;
 }
 
+// TODO: ula correct order of border/screen + task per point
 // TODO: use preallocated memory instead of malloc
-// TODO: ula in the same thread advance beam after execute
 // https://worldofspectrum.org/faq/reference/48kreference.htm
-// TODO: tape
 // TODO: uart
 // TODO: debugger
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
-// https://linux.die.net/man/3/xbell
 // TODO: sound
 // /etc/modprobe.d/pc-speaker.conf
 // https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
