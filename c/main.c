@@ -2121,7 +2121,7 @@ void ula_point(const int x, const int y, const int c, const bool b)
     ula_screen[y][x] = color;
 }
 
-void ula_run()
+int ula_draw_line()
 {
     int i, j, x = 0, y = ula_line;
     if (y > 55 && y < 248)
@@ -2187,12 +2187,15 @@ void ula_run()
     {
         ula_line = 0;
         ula_draw_counter = (ula_draw_counter + 1) % 16;
-        rt_add_task(rt_task(8 * 224, ula_run)); // vertical retrace
-        return;
+        return 8 *224; // vertical retrace
     }
     ula_line++;
-    rt_add_task(rt_task(224, ula_run));
-    return;
+    return 224;
+}
+
+void ula_run()
+{
+    rt_add_task(rt_task(ula_draw_line(), ula_run));
 }
 
 int tape_play_block()
