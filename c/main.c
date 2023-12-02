@@ -109,9 +109,9 @@ typedef struct TREG8BLOCK
 REG8 memory[MAX16];
 RGB ula_screen[SCREEN_HEIGHT][SCREEN_WIDTH];
 RGB ula_border[SCREEN_HEIGHT];
-REG8 keyboard[] = {(REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
-                   (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F}, (REG8){.value = 0x1F},
-                   (REG8){.value = 0x1F}};
+REG8 keyboard[] = {(REG8){.value = 0xFF}, (REG8){.value = 0xFF}, (REG8){.value = 0xFF},
+                   (REG8){.value = 0xFF}, (REG8){.value = 0xFF}, (REG8){.value = 0xFF},
+                   (REG8){.value = 0xFF}, (REG8){.value = 0xFF}};
 RGB ula_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 0.9f},
                     (RGB){0.5f, 0.0f, 0.0f}, (RGB){0.4f, 0.0f, 0.4f},
                     (RGB){0.0f, 0.9f, 0.0f}, (RGB){0.0f, 0.4f, 0.4f},
@@ -348,7 +348,7 @@ REG16 *memory_ref16(REG16 reg)
 REG8 keyboard_read8(const REG16 reg)
 {
     REG8 alt;
-    alt.byte_value = 0x1F;
+    alt.byte_value = 0xFF;
     int b = MAX0;
     for (int i = 0; i < 8; i++)
     {
@@ -2001,7 +2001,7 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0xea60) {
+        // if (z80_reg_pc.byte_value == 0x05f1) {
         //     debug = 0;
         // }
         // if (debug < 10) {
@@ -2448,6 +2448,4 @@ int main(int argc, char **argv)
 // TODO: sound
 // /etc/modprobe.d/pc-speaker.conf
 // https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
-// br $029d
-// first interrupt 0e5b / 0e5c
 // https://jnz.dk/z80/um0080.pdf
