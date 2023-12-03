@@ -2249,9 +2249,9 @@ int tape_play_block()
             }
         }
         s++;
-        if (tape_state + 1 == s && block->pause > 0)
+        if (tape_state + 1 == s)
         {
-            tape_state = s;
+            tape_state = 0;
             sound_ear = false;
             tape_block_last = tape_block_last->next;
             return block->pause / (1000 * state_duration);
