@@ -358,10 +358,6 @@ REG8 keyboard_read8(const REG16 reg)
         }
         b <<= 1;
     }
-    // if (alt.byte_value == 0x1e && reg.byte_value == 0xbffe) {
-    //     debug = 0;
-    //     z80_iff1 = z80_iff2 = false;
-    // }
     return alt;
 }
 
