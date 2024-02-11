@@ -146,7 +146,7 @@ int z80_imode;
 int tape_state;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 10;
+// int debug = 50;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -572,6 +572,7 @@ void z80_print()
            z80_imode,
            z80_iff1 ? " true" : "false",
            o);
+    // printf("%ld\n", z80_t_states_all);
 }
 
 void z80_reset()
@@ -2000,7 +2001,7 @@ int z80_run_one()
         // if (z80_reg_pc.byte_value == 0x05f1) {
         //     debug = 0;
         // }
-        // if (debug < 10) {
+        // if (debug < 50) {
         //     z80_print();
         //     debug++;
         // }
@@ -2433,6 +2434,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// TODO: use glutIdleFunc instead of glutDisplayFunc ?
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // https://worldofspectrum.org/faq/reference/48kreference.htm
