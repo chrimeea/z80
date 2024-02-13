@@ -122,11 +122,11 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
 long double time_start, state_duration = 0.00000025L;
-unsigned long z80_t_states_all = 0, ula_t_states_all = 0;
+unsigned long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
 // int sound_console_fd;
-bool sound_ear = false, sound_mic = false;
+bool sound_ear = false, sound_mic = false, sound_input = false;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
 REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
@@ -549,7 +549,10 @@ void port_write8(const REG16 reg, const REG8 alt)
     {
         ula_border_color = alt.byte_value & 0x07;
         sound_mic = ((alt.byte_value & MAX3) == 0);
-        sound_ear_on_off(alt.byte_value & MAX4);
+        if (!sound_input)
+        {
+            sound_ear_on_off(alt.byte_value & MAX4);
+        }
     }
 }
 
@@ -589,7 +592,7 @@ void z80_reset()
     z80_reg_r.byte_value = 0;
     running = true;
     time_start = time_in_seconds();
-    z80_t_states_all = ula_t_states_all = 0;
+    z80_t_states_all = 0;
     sound_mic = false;
     sound_ear_on_off(false);
 }
@@ -2208,7 +2211,7 @@ int tape_play_block()
             if (tape_state + 1 == s)
             {
                 tape_state = s;
-                sound_ear = !sound_ear;
+                sound_ear_on_off(!sound_ear);
                 return 2168;
             }
         }
@@ -2216,14 +2219,14 @@ int tape_play_block()
         if (tape_state + 1 == s)
         {
             tape_state = s;
-            sound_ear = !sound_ear;
+            sound_ear_on_off(!sound_ear);
             return 667;
         }
         s++;
         if (tape_state + 1 == s)
         {
             tape_state = s;
-            sound_ear = !sound_ear;
+            sound_ear_on_off(!sound_ear);
             return 735;
         }
         for (i = 0; i < block->size; i++)
@@ -2236,14 +2239,14 @@ int tape_play_block()
                 if (tape_state + 1 == s)
                 {
                     tape_state = s;
-                    sound_ear = !sound_ear;
+                    sound_ear_on_off(!sound_ear);
                     return v;
                 }
                 s++;
                 if (tape_state + 1 == s)
                 {
                     tape_state = s;
-                    sound_ear = !sound_ear;
+                    sound_ear_on_off(!sound_ear);
                     return v;
                 }
                 b >>= 1;
@@ -2253,7 +2256,7 @@ int tape_play_block()
         if (tape_state + 1 == s)
         {
             tape_state = 0;
-            sound_ear = false;
+            sound_ear_on_off(false);
             tape_block_last = tape_block_last->next;
             return block->pause / (1000 * state_duration);
         }
@@ -2357,10 +2360,13 @@ void tape_load_tzx(int fd)
 
 void tape_play_run()
 {
+    sound_input = true;
     int s = tape_play_block();
     if (s >= 0)
     {
         rt_add_task(rt_task(s, tape_play_run));
+    } else {
+        sound_input = false;
     }
 }
 
