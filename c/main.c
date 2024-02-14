@@ -121,7 +121,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
-long double time_start, state_duration = 0.00000025L;
+long double time_start, state_duration = 0.0000002857L;
 unsigned long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
@@ -2252,13 +2252,26 @@ int tape_play_block()
                 b >>= 1;
             }
         }
-        s++;
-        if (tape_state + 1 == s)
+        if (block->pause >= 0)
         {
-            tape_state = 0;
-            sound_ear_on_off(false);
-            tape_block_last = tape_block_last->next;
-            return block->pause / (1000 * state_duration);
+            s++;
+            if (tape_state + 1 == s)
+            {
+                tape_state = s;
+                if (!sound_ear)
+                {
+                    sound_ear_on_off(true);
+                    return 1 / (1000 * state_duration);
+                }
+            }
+            s++;
+            if (tape_state + 1 == s)
+            {
+                tape_state = 0;
+                sound_ear_on_off(false);
+                tape_block_last = tape_block_last->next;
+                return block->pause / (1000 * state_duration);
+            }
         }
     }
     return -1;
