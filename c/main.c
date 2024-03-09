@@ -146,7 +146,7 @@ int z80_imode;
 int tape_state;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 50;
+// int debug = 2000;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -297,6 +297,13 @@ void memory_load_rom(const char *filename)
 {
     FILE *f = fopen(filename, "rb");
     fread(memory, 1, memory_size, f);
+    fclose(f);
+}
+
+void memory_export(const char *filename)
+{
+    FILE *f = fopen(filename, "w");
+    fwrite(memory, 1, memory_size, f);
     fclose(f);
 }
 
@@ -1963,17 +1970,19 @@ int z80_maskable_interrupt()
 {
     z80_iff1 = false;
     z80_iff2 = false;
+    z80_memory_refresh();
     switch (z80_imode)
     {
     case 0:
         // TODO: wait 2 cycles for interrupting device to write to data_bus
-        z80_memory_refresh();
-        return z80_execute(z80_data_bus) + 2;
+        return z80_execute(z80_data_bus);
     case 1:
         z80_push16(z80_reg_pc);
         z80_reg_pc.byte_value = 0x38;
         return 13;
     case 2:
+        z80_memory_refresh();
+        z80_memory_refresh();
         z80_push16(z80_reg_pc);
         z80_reg_pc = memory_read16((REG16){.bytes.high = z80_reg_i, .bytes.low = z80_data_bus});
         return 19;
@@ -2001,10 +2010,12 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0x05f1) {
+        // if (z80_reg_pc.byte_value == 0x0e5e) {
+        //     memory_export("snapshot");
+        //     exit(0);
         //     debug = 0;
         // }
-        // if (debug < 50) {
+        // if (debug < 2000) {
         //     z80_print();
         //     debug++;
         // }
@@ -2173,11 +2184,6 @@ int ula_draw_line()
     }
     else if (y < SCREEN_HEIGHT)
     {
-        if (y == 0)
-        {
-            z80_maskable_interrupt_flag = true;
-            ula_addr_bitmap.byte_value = 0x4000;
-        }
         for (j = 0; j < SCREEN_WIDTH; j++)
         {
             ula_point(j, y, ula_border_color, false);
@@ -2185,9 +2191,11 @@ int ula_draw_line()
     }
     else
     {
+        z80_maskable_interrupt_flag = true;
+        ula_addr_bitmap.byte_value = 0x4000;
         ula_line = 0;
         ula_draw_counter = (ula_draw_counter + 1) % 16;
-        return 8 *224; // vertical retrace
+        return 8 * 224; // vertical retrace
     }
     ula_line++;
     return 224;
@@ -2286,13 +2294,12 @@ REG8BLOCK *tape_allocate(int size)
     if (tape_block_head == NULL)
     {
         tape_block_head = b;
-        tape_block_last = b;
     }
     else
     {
         tape_block_last->next = b;
-        tape_block_last = b;        
     }
+    tape_block_last = b;
     return b;
 }
 
