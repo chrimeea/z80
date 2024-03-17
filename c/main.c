@@ -54,6 +54,7 @@
 
 #define SCREEN_WIDTH 352
 #define SCREEN_HEIGHT 304
+#define SCREEN_ZOOM 2
 
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
@@ -2424,11 +2425,11 @@ int main(int argc, char **argv)
         // atexit(z80_reset);
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_SINGLE);
-        glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        glutInitWindowSize(SCREEN_WIDTH * SCREEN_ZOOM, SCREEN_HEIGHT * SCREEN_ZOOM);
 
         // glutInitWindowPosition(200, 100);
         glutCreateWindow("Cristian Mocanu Z80");
-        // glPointSize(1.0f);
+        glPointSize(SCREEN_ZOOM);
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         // glMatrixMode(GL_PROJECTION);
@@ -2470,4 +2471,3 @@ int main(int argc, char **argv)
 // TODO: sound
 // /etc/modprobe.d/pc-speaker.conf
 // https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
-// https://jnz.dk/z80/um0080.pdf
