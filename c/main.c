@@ -147,7 +147,7 @@ int z80_imode;
 int tape_state;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 1000;
+// int debug = 100;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -1591,7 +1591,7 @@ int z80_execute(REG8 reg)
             register_add8_with_flags(&z80_reg_af.bytes.high, other->bytes.high, MASK_ALL);
             return 19; // TODO ?
         case 0x85: // ADD A,IXL
-            register_add8_with_flags(&z80_reg_af.bytes.low, other->bytes.low, MASK_ALL);
+            register_add8_with_flags(&z80_reg_af.bytes.high, other->bytes.low, MASK_ALL);
             return 19; // TODO ?
         case 0x86: // ADD A,(IX+d)
             register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
@@ -2154,7 +2154,7 @@ int z80_run_one()
         // {
         //    debug = 0;
         // }
-        // if (debug < 1000)
+        // if (debug < 100)
         // {
         //     z80_print();
         //     debug++;
