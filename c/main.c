@@ -1528,7 +1528,7 @@ int z80_execute_ed(REG8 reg)
     bool c, hl;
     div_t qr, qr_alt;
     int mask = MASK_ALL;
-    REG8 *alt;
+    REG8 *alt = NULL;
     REG8 duplicate_a = z80_reg_af.bytes.high;
     switch (reg.byte_value)
     {
@@ -1653,6 +1653,14 @@ int z80_execute_ed(REG8 reg)
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
         return 18;
+    case 0x70: // IN F,(C)
+        z80_reg_af.bytes.low = port_read8(z80_reg_bc);
+        register_set_flag_s_z_p(*alt, MASK_ALL);
+        register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
+        return 12; // TODO ?
+    case 0x71: // OUT F,(C)
+        port_write8(z80_reg_bc, z80_reg_af.bytes.low);
+        return 12; // TODO ?
     case 0xA0: // LDI & LDIR
     case 0xB0:
         memory_write8(z80_reg_de, memory_read8(z80_reg_hl));
@@ -2041,27 +2049,107 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         reg = z80_next8();
         switch (reg.byte_value)
         {
+        case 0x00: // LD r,RLC (IX+d)
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0x04:
+        case 0x05:
+        case 0x07:
+            register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x06: // RLC (IX+d)
             register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             return 23;
+        case 0x08: // LD r,RRC (IX+d)
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+        case 0x0C:
+        case 0x0D:
+        case 0x0F:
+            register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x0E: // RRC (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
             return 23;
+        case 0x10: // LD r,RL (IX+d)
+        case 0x11:
+        case 0x12:
+        case 0x13:
+        case 0x14:
+        case 0x15:
+        case 0x17:
+            register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x16: // RL (IX+d)
             register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             return 23;
+        case 0x18: // LD r,RR (IX+d)
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+        case 0x1C:
+        case 0x1D:
+        case 0x1F:
+            register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x1E: // RR (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             return 23;
+        case 0x20: // LD r,SLA (IX+d)
+        case 0x21:
+        case 0x22:
+        case 0x23:
+        case 0x24:
+        case 0x25:
+        case 0x27:
+            register_left8_with_flags(alt, MASK_ALL, false);
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x26: // SLA (IX+d)
             register_left8_with_flags(alt, MASK_ALL, false);
             return 23;
+        case 0x28: // LD r,SRA (IX+d)
+        case 0x29:
+        case 0x2A:
+        case 0x2B:
+        case 0x2C:
+        case 0x2D:
+        case 0x2F:
+            register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x2E: // SRA (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             return 23;
+        case 0x30: // LD r,SLL (IX+d)
+        case 0x31:
+        case 0x32:
+        case 0x33:
+        case 0x34:
+        case 0x35:
+        case 0x37:
+            register_left8_with_flags(alt, MASK_ALL, true);
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x36: // SLL (IX+d)
             register_left8_with_flags(alt, MASK_ALL, true);
             return 23;
+        case 0x38: // LD r,SRL (IX+d)
+        case 0x39:
+        case 0x3A:
+        case 0x3B:
+        case 0x3C:
+        case 0x3D:
+        case 0x3F:
+            register_right8_with_flags(alt, MASK_ALL, false);
+            *z80_decode_reg8(reg, 0, &hl) = *alt;
+            return 23; // TODO ?
         case 0x3E: // SRL (IX+d)
             register_right8_with_flags(alt, MASK_ALL, false);
             return 23;
