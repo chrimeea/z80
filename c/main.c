@@ -2231,7 +2231,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         z80_reg_pc = *other;
         return 8;
     case 0xED:
-        return z80_execute_ed(z80_fetch_opcode());
+        return 0; // fail
     case 0xF9: // LD SP,IX
         z80_reg_sp = *other;
         return 10;
