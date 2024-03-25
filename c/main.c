@@ -605,7 +605,7 @@ void z80_reset()
 
 void z80_memory_refresh()
 {
-    z80_reg_r.byte_value = (z80_reg_r.byte_value + 1) % MAX7;
+    z80_reg_r.byte_value = ((z80_reg_r.byte_value + 1) & 0x7F) | (z80_reg_r.byte_value & MAX7);
 }
 
 REG8 z80_next8()
