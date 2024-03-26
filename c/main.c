@@ -1,7 +1,9 @@
 // gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -Wall
 // SHIFT = SS; ALT = CS; ESC = SS + CS
-// mkfifo tape
-// cat file.tzx > tape
+// mkfifo load
+// mkfifo save
+// cat file.tzx > load
+// cat save > file.tzx
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -2741,7 +2743,7 @@ bool tape_wait(int fd)
     {
         r = poll(&p, 1, 100);
     }
-    return (r > 0);
+    return (r > 0 && (p.revents & POLLIN));
 }
 
 void tape_close()
@@ -2797,12 +2799,29 @@ void tape_play_run()
     }
 }
 
-void *tape_run(void *args)
+void *tape_run_save(void *args)
 {
-    int fd = open("tape", O_RDWR);
-    if (fd != -1)
+    int fd;
+    while (running)
     {
-        while (running)
+        fd = open("save", O_WRONLY | O_NONBLOCK);
+        if (fd == -1)
+        {
+            sleep(1);
+        } else {
+            break;
+        }
+    };
+    close(fd);
+}
+
+void *tape_run_load(void *args)
+{
+    int fd;
+    while (running)
+    {
+        fd = open("load", O_RDONLY | O_NONBLOCK);
+        if (fd != -1)
         {
             if (tape_wait(fd))
             {
@@ -2812,10 +2831,12 @@ void *tape_run(void *args)
                 tape_state = 0;
                 rt_add_pending_task(rt_task(0, tape_play_run));
             }
+            close(fd);
+        } else {
+            break;
         }
-        tape_close();
-        close(fd);
     }
+    tape_close();
     return NULL;
 }
 
@@ -2856,7 +2877,8 @@ int main(int argc, char **argv)
         rt_add_task(rt_task(0, z80_run));
         rt_add_task(rt_task(0, ula_run));
         pthread_create(&rt_id, NULL, rt_run, NULL);
-        pthread_create(&tape_id, NULL, tape_run, NULL);
+        pthread_create(&tape_id, NULL, tape_run_load, NULL);
+        pthread_create(&tape_id, NULL, tape_run_save, NULL);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
