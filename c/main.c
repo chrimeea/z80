@@ -1653,14 +1653,12 @@ int z80_execute_ed(REG8 reg)
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
         return 18;
-    case 0x70: // IN F,(C)
-        z80_reg_af.bytes.low = port_read8(z80_reg_bc);
+    case 0x70: // IN 0,(C)
         register_set_flag_s_z_p(*alt, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
-        return 12; // TODO ?
-    case 0x71: // OUT F,(C)
-        port_write8(z80_reg_bc, z80_reg_af.bytes.low);
-        return 12; // TODO ?
+        return 12;
+    case 0x71: // OUT (C),0
+        return 12;
     case 0xA0: // LDI & LDIR
     case 0xB0:
         memory_write8(z80_reg_de, memory_read8(z80_reg_hl));
@@ -1828,13 +1826,13 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         return 10;
     case 0x24: // INC IXH
         register_add8_with_flags(&other->bytes.high, REG8_ONE, MASK_NONE);
-        return 10; //TODO ?
+        return 8;
     case 0x25: // DEC IXH
         register_sub8_with_flags(&other->bytes.high, REG8_ONE, MASK_NONE);
-        return 10; //TODO ?
+        return 8;
     case 0x26: // LD IXH,nn
         other->bytes.high = z80_next8();
-        return 14; //TODO ?
+        return 11;
     case 0x2A: // LD IX,(nn)
         *other = memory_read16(z80_next16());
         return 20;
@@ -1843,13 +1841,13 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         return 10;
     case 0x2C: // INC IXL
         register_add8_with_flags(&other->bytes.low, REG8_ONE, MASK_NONE);
-        return 10; //TODO ?
+        return 8;
     case 0x2D: // DEC IXL
         register_sub8_with_flags(&other->bytes.low, REG8_ONE, MASK_NONE);
-        return 10; //TODO ?
+        return 8;
     case 0x2E: // LD IXL,nn
         other->bytes.low = z80_next8();
-        return 14; //TODO ?
+        return 11;
     case 0x34: // INC (IX+d)
         register_add8_with_flags(memory_ref8_indexed(*other, z80_next8()), REG8_ONE, MASK_SZHVN);
         return 23;
@@ -1863,15 +1861,17 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
     case 0x44: // LD r,IXH
     case 0x4C:
     case 0x54:
+    case 0x5C:
     case 0x7C:
         *z80_decode_reg8(reg, 3, &hl) = other->bytes.high;
-        return 10; //TODO ?
+        return 8;
     case 0x45: //LD r,IXL
     case 0x4D:
     case 0x55:
+    case 0x5D:
     case 0x7D:
         *z80_decode_reg8(reg, 3, &hl) = other->bytes.low;
-        return 10; //TODO ?
+        return 8;
     case 0x46: // LD r,(IX+d)
     case 0x4E:
     case 0x56:
@@ -1887,24 +1887,24 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
     case 0x63:
     case 0x67:
         other->bytes.high = *z80_decode_reg8(reg, 0, &hl);
-        return 10; // TODO ?
+        return 8;
     case 0x64: // LD IXH,IXH
-        return 0; //TODO ?
+        return 8;
     case 0x65: // LD IXH,IXL
         other->bytes.high = other->bytes.low;
-        return 10; //TODO ?
+        return 8;
     case 0x68: //LD IXL,r
     case 0x69:
     case 0x6A:
     case 0x6B:
     case 0x6F:
         other->bytes.low = *z80_decode_reg8(reg, 0, &hl);
-        return 10; //TODO ?
+        return 8;
     case 0x6C: //LD IXL,IXH
         other->bytes.low = other->bytes.high;
-        return 10; //TODO ?
+        return 8;
     case 0x6D: //LD IXL,IXL
-        return 0; //TODO ?
+        return 8;
     case 0x70: // LD (IX+d),r
     case 0x71:
     case 0x72:
@@ -1917,10 +1917,10 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         return 19;
     case 0x84: // ADD A,IXH
         register_add8_with_flags(&z80_reg_af.bytes.high, other->bytes.high, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0x85: // ADD A,IXL
         register_add8_with_flags(&z80_reg_af.bytes.high, other->bytes.low, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0x86: // ADD A,(IX+d)
         register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
         return 19;
@@ -1932,7 +1932,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
             mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
             register_add8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        return 19; // TODO ?
+        return 8;
     case 0x8D: // ADC A,IXL
         c = register_is_flag(FLAG_C);
         register_add8_with_flags(&z80_reg_af.bytes.high, other->bytes.low, mask);
@@ -1941,7 +1941,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
             mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
             register_add8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        return 19; // TODO ?
+        return 8;
     case 0x8E: // ADC A,(IX+d)
         c = register_is_flag(FLAG_C);
         register_add8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), mask);
@@ -1953,10 +1953,10 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         return 19;
     case 0x94: // SUB A,IXH
         register_sub8_with_flags(&z80_reg_af.bytes.high, other->bytes.high, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0x95: // SUB A,IXL
         register_sub8_with_flags(&z80_reg_af.bytes.high, other->bytes.low, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0x96: // SUB (IX+d)
         register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
         return 19;
@@ -1968,7 +1968,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
             mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
             register_sub8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        return 19; // TODO ?
+        return 8;
     case 0x9D: // SBC A,IXL
         c = register_is_flag(FLAG_C);
         register_sub8_with_flags(&z80_reg_af.bytes.high, other->bytes.low, mask);
@@ -1977,7 +1977,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
             mask = MASK_ALL & ~(z80_reg_af.bytes.low.byte_value & MASK_HVNC);
             register_sub8_with_flags(&z80_reg_af.bytes.high, REG8_ONE, mask);
         }
-        return 19; // TODO ?
+        return 8;
     case 0x9E: // SBC (IX+d)
         c = register_is_flag(FLAG_C);
         register_sub8_with_flags(&z80_reg_af.bytes.high, memory_read8_indexed(*other, z80_next8()), mask);
@@ -1992,13 +1992,13 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
-        return 19; // TODO ?
+        return 8;
     case 0xA5: // AND IXL
         z80_reg_af.bytes.high.byte_value &= other->bytes.low.byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_N | FLAG_C, false);
         register_set_or_unset_flag(FLAG_HC, true);
-        return 19; // TODO ?
+        return 8;
     case 0xA6: // AND (IX+d)
         z80_reg_af.bytes.high.byte_value &= memory_read8_indexed(*other, z80_next8()).byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
@@ -2009,12 +2009,12 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         z80_reg_af.bytes.high.byte_value ^= other->bytes.high.byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
-        return 19; // TODO ?
+        return 8;
     case 0xAD: // XOR IXL
         z80_reg_af.bytes.high.byte_value ^= other->bytes.low.byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
-        return 19; // TODO ?
+        return 8;
     case 0xAE: // XOR (IX+d)
         z80_reg_af.bytes.high.byte_value ^= memory_read8_indexed(*other, z80_next8()).byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
@@ -2024,12 +2024,12 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         z80_reg_af.bytes.high.byte_value |= other->bytes.high.byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
-        return 19; // TODO ?
+        return 8;
     case 0xB5: // OR IXL
         z80_reg_af.bytes.high.byte_value |= other->bytes.low.byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
         register_set_or_unset_flag(FLAG_HC | FLAG_N | FLAG_C, false);
-        return 19; // TODO ?
+        return 8;
     case 0xB6: // OR (IX+d)
         z80_reg_af.bytes.high.byte_value |= memory_read8_indexed(*other, z80_next8()).byte_value;
         register_set_flag_s_z_p(z80_reg_af.bytes.high, MASK_ALL);
@@ -2037,10 +2037,10 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         return 19;
     case 0xBC: // CP IXH
         register_sub8_with_flags(&duplicate_a, other->bytes.high, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0xBD: // CP IXL
         register_sub8_with_flags(&duplicate_a, other->bytes.low, MASK_ALL);
-        return 19; // TODO ?
+        return 8;
     case 0xBE: // CP (IX+d)
         register_sub8_with_flags(&duplicate_a, memory_read8_indexed(*other, z80_next8()), MASK_ALL);
         return 19;
@@ -2058,7 +2058,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x07:
             register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x06: // RLC (IX+d)
             register_left8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             return 23;
@@ -2071,7 +2071,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x0F:
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x0E: // RRC (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX0));
             return 23;
@@ -2084,7 +2084,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x17:
             register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x16: // RL (IX+d)
             register_left8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             return 23;
@@ -2097,7 +2097,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x1F:
             register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x1E: // RR (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_flag(FLAG_C));
             return 23;
@@ -2110,7 +2110,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x27:
             register_left8_with_flags(alt, MASK_ALL, false);
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x26: // SLA (IX+d)
             register_left8_with_flags(alt, MASK_ALL, false);
             return 23;
@@ -2123,7 +2123,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x2F:
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x2E: // SRA (IX+d)
             register_right8_with_flags(alt, MASK_ALL, register_is_bit(*alt, MAX7));
             return 23;
@@ -2136,7 +2136,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x37:
             register_left8_with_flags(alt, MASK_ALL, true);
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x36: // SLL (IX+d)
             register_left8_with_flags(alt, MASK_ALL, true);
             return 23;
@@ -2149,7 +2149,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0x3F:
             register_right8_with_flags(alt, MASK_ALL, false);
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x3E: // SRL (IX+d)
             register_right8_with_flags(alt, MASK_ALL, false);
             return 23;
@@ -2223,7 +2223,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0xBF:
             register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), false);
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0x86: // RES b,(IX+d)
         case 0x8E:
         case 0x96:
@@ -2292,7 +2292,7 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         case 0xFF:
             register_set_or_unset_bit(*alt, 0x01 << (reg.byte_value >> 3 & 0x07), true);
             *z80_decode_reg8(reg, 0, &hl) = *alt;
-            return 23; // TODO ?
+            return 23;
         case 0xC6: // SET b,(IX+d)
         case 0xCE:
         case 0xD6:
