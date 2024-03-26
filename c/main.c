@@ -1583,10 +1583,19 @@ int z80_execute_ed(REG8 reg)
         register_sub8_with_flags(&z80_reg_af.bytes.high, duplicate_a, MASK_ALL);
         return 8;
     case 0x45: // RETN
+    case 0x55:
+    case 0x5D:
+    case 0x65:
+    case 0x6D:
+    case 0x75:
+    case 0x7D:
         z80_reg_pc = z80_pop16();
         z80_iff1 = z80_iff2;
         return 14;
     case 0x46: // IM 0
+    case 0x4E:
+    case 0x66:
+    case 0x6E:
         z80_imode = 0;
         return 8;
     case 0x47: // LD I,A
@@ -1627,6 +1636,7 @@ int z80_execute_ed(REG8 reg)
         register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
         return 9;
     case 0x5E: // IM 2
+    case 0x7E:
         z80_imode = 2;
         return 8;
     case 0x5F: // LD A,R
@@ -1658,7 +1668,11 @@ int z80_execute_ed(REG8 reg)
         register_set_or_unset_flag(FLAG_HC | FLAG_N, false);
         return 12;
     case 0x71: // OUT (C),0
+        port_write8(z80_reg_bc, (REG8){.value=0});
         return 12;
+    case 0x77: // NOPD
+    case 0x7F:
+        return 8;
     case 0xA0: // LDI & LDIR
     case 0xB0:
         memory_write8(z80_reg_de, memory_read8(z80_reg_hl));
