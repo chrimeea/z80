@@ -2807,12 +2807,13 @@ void *tape_run_save(void *args)
         fd = open("save", O_WRONLY | O_NONBLOCK);
         if (fd == -1)
         {
-            sleep(1);
+            time_sleep_in_seconds(0.1);
         } else {
             break;
         }
     };
     close(fd);
+    return NULL;
 }
 
 void *tape_run_load(void *args)
