@@ -2894,10 +2894,10 @@ int main(int argc, char **argv)
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
-// TODO: debugger
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
 // TODO: sound
 // /etc/modprobe.d/pc-speaker.conf
 // https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
+// support fully tzx spec
