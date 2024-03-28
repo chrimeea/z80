@@ -58,6 +58,9 @@
 #define SCREEN_HEIGHT 304
 #define SCREEN_ZOOM 2
 
+#define TAPE_LOAD 1
+#define TAPE_EOF 2
+
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_zero(X) ((X).value == 0)
@@ -145,7 +148,9 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-int tape_state;
+unsigned long tape_save_t_states;
+int tape_load_state, tape_save_state;
+bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
 // int debug = 100;
@@ -2625,24 +2630,24 @@ int tape_play_block()
         for (i = 0; i < v; i++)
         {
             s++;
-            if (tape_state + 1 == s)
+            if (tape_load_state + 1 == s)
             {
-                tape_state = s;
+                tape_load_state = s;
                 sound_ear_on_off(!sound_ear);
                 return 2168;
             }
         }
         s++;
-        if (tape_state + 1 == s)
+        if (tape_load_state + 1 == s)
         {
-            tape_state = s;
+            tape_load_state = s;
             sound_ear_on_off(!sound_ear);
             return 667;
         }
         s++;
-        if (tape_state + 1 == s)
+        if (tape_load_state + 1 == s)
         {
-            tape_state = s;
+            tape_load_state = s;
             sound_ear_on_off(!sound_ear);
             return 735;
         }
@@ -2653,16 +2658,16 @@ int tape_play_block()
             {
                 v = (register_is_bit(block->data[i], b) ? 1710 : 855);
                 s++;
-                if (tape_state + 1 == s)
+                if (tape_load_state + 1 == s)
                 {
-                    tape_state = s;
+                    tape_load_state = s;
                     sound_ear_on_off(!sound_ear);
                     return v;
                 }
                 s++;
-                if (tape_state + 1 == s)
+                if (tape_load_state + 1 == s)
                 {
-                    tape_state = s;
+                    tape_load_state = s;
                     sound_ear_on_off(!sound_ear);
                     return v;
                 }
@@ -2672,9 +2677,9 @@ int tape_play_block()
         if (block->pause >= 0)
         {
             s++;
-            if (tape_state + 1 == s)
+            if (tape_load_state + 1 == s)
             {
-                tape_state = s;
+                tape_load_state = s;
                 if (!sound_ear)
                 {
                     sound_ear_on_off(true);
@@ -2682,9 +2687,9 @@ int tape_play_block()
                 }
             }
             s++;
-            if (tape_state + 1 == s)
+            if (tape_load_state + 1 == s)
             {
-                tape_state = 0;
+                tape_load_state = 0;
                 sound_ear_on_off(false);
                 tape_block_last = tape_block_last->next;
                 return block->pause / (1000 * state_duration);
@@ -2735,15 +2740,33 @@ char tape_read_block_15(int fd)
     return b->data[b->size].byte_value;
 }
 
-bool tape_wait(int fd)
+bool tape_wait(int fd, int event)
 {
     int r = 0;
-    struct pollfd p = {.fd = fd, .events = POLLIN};
+    struct pollfd p = {.fd = fd};
+    if (event == TAPE_LOAD)
+    {
+        p.events = POLLIN;
+    }
     while (r == 0 && running)
     {
         r = poll(&p, 1, 100);
     }
-    return (r > 0 && (p.revents & POLLIN));
+    if (r > 0)
+    {
+        if (event == TAPE_LOAD)
+        {
+            return (p.revents & POLLIN);
+        }
+        else
+        {
+            return (p.revents & POLLHUP);
+        }
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void tape_close()
@@ -2794,8 +2817,26 @@ void tape_play_run()
     if (s >= 0)
     {
         rt_add_task(rt_task(s, tape_play_run));
-    } else {
+    }
+    else
+    {
         sound_input = false;
+    }
+}
+
+void tape_listen()
+{
+    if (tape_save_state != -1)
+    {
+        if (tape_save_mic != sound_mic)
+        {
+            // printf("%ld\n", z80_t_states_all - tape_save_t_states);
+            tape_save_t_states = z80_t_states_all;
+            tape_save_mic = sound_mic;
+        }
+        //TODO: wait until next task from z80
+        //TODO: otherwise the t_states are not increased
+        rt_add_task(rt_task(1, tape_listen));
     }
 }
 
@@ -2808,11 +2849,18 @@ void *tape_run_save(void *args)
         if (fd == -1)
         {
             time_sleep_in_seconds(0.1);
-        } else {
-            break;
+        }
+        else
+        {
+            tape_save_state = 0;
+            tape_save_t_states = 0;
+            tape_save_mic = false;
+            rt_add_pending_task(rt_task(0, tape_listen));
+            tape_wait(fd, TAPE_EOF);
+            tape_save_state = -1;
+            close(fd);
         }
     };
-    close(fd);
     return NULL;
 }
 
@@ -2824,16 +2872,18 @@ void *tape_run_load(void *args)
         fd = open("load", O_RDONLY | O_NONBLOCK);
         if (fd != -1)
         {
-            if (tape_wait(fd))
+            if (tape_wait(fd, TAPE_LOAD))
             {
                 tape_close();
                 tape_load_tzx(fd);
                 tape_block_last = tape_block_head;
-                tape_state = 0;
+                tape_load_state = 0;
                 rt_add_pending_task(rt_task(0, tape_play_run));
             }
             close(fd);
-        } else {
+        }
+        else
+        {
             break;
         }
     }
