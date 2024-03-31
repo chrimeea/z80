@@ -58,8 +58,8 @@
 #define SCREEN_HEIGHT 304
 #define SCREEN_ZOOM 2
 
-#define TAPE_LOAD 1
-#define TAPE_EOF 2
+#define TAPE_LOAD_EVENT 1
+#define TAPE_SAVE_EVENT 2
 
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
@@ -2746,9 +2746,13 @@ bool tape_wait(int fd, int event)
 {
     int r = 0;
     struct pollfd p = {.fd = fd};
-    if (event == TAPE_LOAD)
+    if (event == TAPE_LOAD_EVENT)
     {
         p.events = POLLIN;
+    }
+    else if (event == TAPE_SAVE_EVENT)
+    {
+        p.events = POLLOUT;
     }
     while (r == 0 && running)
     {
@@ -2756,19 +2760,16 @@ bool tape_wait(int fd, int event)
     }
     if (r > 0)
     {
-        if (event == TAPE_LOAD)
+        if (event == TAPE_LOAD_EVENT)
         {
             return (p.revents & POLLIN);
         }
-        else
+        else if (event == TAPE_SAVE_EVENT)
         {
-            return (p.revents & POLLHUP);
+            return (p.revents & POLLOUT);
         }
     }
-    else
-    {
-        return false;
-    }
+    return false;
 }
 
 void tape_close()
@@ -2847,23 +2848,22 @@ void write_tzx_block_10(int fd, char *data, short size)
 
 void tape_record(int counter, unsigned long duration)
 {
-    // printf("%d %ld %d\n", counter, duration, tape_save_state);
     int i;
-    if (duration == 2168)
+    if (duration == 2168 && tape_save_state == 0)
     {
-        if (tape_save_state == 0 && counter == 8063)
+        if (counter == 8063)
         {
-            tape_save_state++;
+            tape_save_state = 1;
             return;
         }
-        else if (tape_save_state == 4 && counter == 3222)
+        else if (counter == 3222)
         {
-            i = *(unsigned short *) &tape_save_buffer[12];
+            i = *(unsigned short *) &tape_save_buffer[12] + 2;
             if (i > tape_save_buffer_size)
             {
-                tape_save_buffer_size = i;
-                tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
+                tape_save_buffer = realloc(tape_save_buffer, i);
             }
+            tape_save_buffer_size = i;
             tape_save_state = 1;
             return;
         }
@@ -2890,6 +2890,10 @@ void tape_record(int counter, unsigned long duration)
                 tape_save_buffer[tape_save_index / 8] <<= 1;
                 tape_save_index++;
             }
+            if (tape_save_index / 8 == tape_save_buffer_size)
+            {
+                tape_save_state++;
+            }
             return;
         }
         else if (duration == 1710 || duration == 1711
@@ -2901,13 +2905,21 @@ void tape_record(int counter, unsigned long duration)
                 tape_save_buffer[tape_save_index / 8] |= MAX0;
                 tape_save_index++;
             }
+            if (tape_save_index / 8 == tape_save_buffer_size)
+            {
+                tape_save_state++;
+            }
             return;
         }
         else
         {
-            tape_save_state = 4;
+            tape_save_state++;
             return;
         }
+    }
+    else if (tape_save_state == 4)
+    {
+        return;
     }
     tape_save_state = 0;
     tape_save_index = 0;
@@ -2963,12 +2975,19 @@ void *tape_run_save(void *args)
             tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
             rt_add_pending_task(rt_task(0, tape_listen));
             write_tzx_header(fd);
-            while (tape_save_state != 4)
+            while (tape_wait(fd, TAPE_SAVE_EVENT))
             {
-                time_sleep_in_seconds(0.1);
+                while (tape_save_state != 4 && running)
+                {
+                    time_sleep_in_seconds(0.1);
+                }
+                if (running)
+                {
+                    write_tzx_block_10(fd, tape_save_buffer, tape_save_buffer_size);
+                    tape_save_state = 0;
+                    tape_save_index = 0;
+                }
             }
-            write_tzx_block_10(fd, tape_save_buffer, tape_save_buffer_size);
-            tape_wait(fd, TAPE_EOF);
             tape_save_state = -1;
             close(fd);
         }
@@ -2984,7 +3003,7 @@ void *tape_run_load(void *args)
         fd = open("load", O_RDONLY | O_NONBLOCK);
         if (fd != -1)
         {
-            if (tape_wait(fd, TAPE_LOAD))
+            if (tape_wait(fd, TAPE_LOAD_EVENT))
             {
                 tape_close();
                 tape_load_tzx(fd);
