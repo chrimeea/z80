@@ -3071,7 +3071,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: save to tape
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
