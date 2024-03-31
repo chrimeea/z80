@@ -2826,15 +2826,37 @@ void tape_play_run()
     }
 }
 
+void write_tzx_header(int fd)
+{
+    char buffer[10] = "ZXTape!";
+    buffer[7] = 0x1A;
+    buffer[8] = 1;
+    buffer[9] = 20;
+    write(fd, buffer, 10);
+}
+
+void write_tzx_block_10(int fd, char *data, short size)
+{
+    char buffer[5];
+    buffer[0] = 0x10;
+    *(unsigned short *) &buffer[1] = 0x3E8;
+    *(unsigned short *) &buffer[3] = size;
+    write(fd, buffer, 5);
+    write(fd, data, size);
+}
+
 void tape_record(int counter, unsigned long duration)
 {
     // printf("%d %ld %d\n", counter, duration, tape_save_state);
     int i;
-    if (tape_save_state == 0 && duration == 2168
-        && (counter == 8063 || counter == 3222))
+    if (duration == 2168)
     {
-        tape_save_state++;
-        if (counter == 3222)
+        if (tape_save_state == 0 && counter == 8063)
+        {
+            tape_save_state++;
+            return;
+        }
+        else if (tape_save_state == 4 && counter == 3222)
         {
             i = *(unsigned short *) &tape_save_buffer[12];
             if (i > tape_save_buffer_size)
@@ -2842,8 +2864,9 @@ void tape_record(int counter, unsigned long duration)
                 tape_save_buffer_size = i;
                 tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
             }
+            tape_save_state = 1;
+            return;
         }
-        return;
     }
     if (tape_save_state == 1 && counter == 1
         && duration == 667)
@@ -2880,7 +2903,11 @@ void tape_record(int counter, unsigned long duration)
             }
             return;
         }
-        //TODO: write buffer as tzx
+        else
+        {
+            tape_save_state = 4;
+            return;
+        }
     }
     tape_save_state = 0;
     tape_save_index = 0;
@@ -2934,8 +2961,13 @@ void *tape_run_save(void *args)
             tape_save_mic = false;
             tape_save_buffer_size = 19;
             tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
-            //TODO: write tzx header
             rt_add_pending_task(rt_task(0, tape_listen));
+            write_tzx_header(fd);
+            while (tape_save_state != 4)
+            {
+                time_sleep_in_seconds(0.1);
+            }
+            write_tzx_block_10(fd, tape_save_buffer, tape_save_buffer_size);
             tape_wait(fd, TAPE_EOF);
             tape_save_state = -1;
             close(fd);
