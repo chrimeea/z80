@@ -2989,6 +2989,8 @@ void *tape_run_save(void *args)
                 }
             }
             tape_save_state = -1;
+            free(tape_save_buffer);
+            tape_save_buffer = NULL;
             close(fd);
         }
     };
