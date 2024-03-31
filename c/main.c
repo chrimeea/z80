@@ -2800,7 +2800,7 @@ void tape_close()
 char tape_header(int fd)
 {
     REG8 block[11] = {0};
-    if (read(fd, block, 11) == 11 && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0 && block[9].byte_value <= 20)
+    if (read(fd, block, 11) == 11 && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0 && block[8].byte_value == 1)
     {
         return block[10].byte_value;
     }
