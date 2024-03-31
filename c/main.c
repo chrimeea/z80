@@ -148,8 +148,10 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-unsigned long tape_save_t_states;
-int tape_load_state, tape_save_state;
+unsigned long tape_save_t_states, tape_save_duration;
+int tape_load_state, tape_save_state, tape_save_counter;
+int tape_save_index, tape_save_buffer_size;
+char *tape_save_buffer = NULL;
 bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
@@ -2824,13 +2826,85 @@ void tape_play_run()
     }
 }
 
+void tape_record(int counter, unsigned long duration)
+{
+    // printf("%d %ld %d\n", counter, duration, tape_save_state);
+    int i;
+    if (tape_save_state == 0 && duration == 2168
+        && (counter == 8063 || counter == 3222))
+    {
+        tape_save_state++;
+        if (counter == 3222)
+        {
+            i = *(unsigned short *) &tape_save_buffer[12];
+            if (i > tape_save_buffer_size)
+            {
+                tape_save_buffer_size = i;
+                tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
+            }
+        }
+        return;
+    }
+    if (tape_save_state == 1 && counter == 1
+        && duration == 667)
+    {
+        tape_save_state++;
+        return;
+    }
+    if (tape_save_state == 2 && counter == 1
+        && duration == 735)
+    {
+        tape_save_state++;
+        return;
+    }
+    if (tape_save_state == 3)
+    {
+        if (duration == 855 || duration == 852
+            || duration == 856 || duration == 854)
+        {
+            for (i = 0; i < counter / 2; i++)
+            {
+                tape_save_buffer[tape_save_index / 8] <<= 1;
+                tape_save_index++;
+            }
+            return;
+        }
+        else if (duration == 1710 || duration == 1711
+            || duration == 1707 || duration == 1709)
+        {
+            for (i = 0; i < counter / 2; i++)
+            {
+                tape_save_buffer[tape_save_index / 8] <<= 1;
+                tape_save_buffer[tape_save_index / 8] |= MAX0;
+                tape_save_index++;
+            }
+            return;
+        }
+        //TODO: write buffer as tzx
+    }
+    tape_save_state = 0;
+    tape_save_index = 0;
+}
+
 void tape_listen()
 {
+    unsigned long duration;
     if (tape_save_state != -1)
     {
         if (tape_save_mic != sound_mic)
         {
-            // printf("%ld\n", z80_t_states_all - tape_save_t_states);
+            duration = z80_t_states_all - tape_save_t_states;
+            if (duration > tape_save_duration - 5
+                && duration < tape_save_duration + 5)
+            {
+                tape_save_counter++;
+            }
+            else
+            {
+                tape_record(tape_save_counter, tape_save_duration);
+                tape_save_duration = duration;
+                tape_save_counter = 1;
+            }
             tape_save_t_states = z80_t_states_all;
             tape_save_mic = sound_mic;
         }
@@ -2854,7 +2928,13 @@ void *tape_run_save(void *args)
         {
             tape_save_state = 0;
             tape_save_t_states = 0;
+            tape_save_counter = 0;
+            tape_save_duration = 0;
+            tape_save_index = 0;
             tape_save_mic = false;
+            tape_save_buffer_size = 19;
+            tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
+            //TODO: write tzx header
             rt_add_pending_task(rt_task(0, tape_listen));
             tape_wait(fd, TAPE_EOF);
             tape_save_state = -1;
