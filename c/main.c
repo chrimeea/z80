@@ -2809,6 +2809,10 @@ void tape_load_tzx(int fd)
         case 0x15:
             id = tape_read_block_15(fd);
             break;
+        default:
+            printf("unknown block type %04x\n", id);
+            id = 0;
+            break;
         }
     }
 }
