@@ -2742,6 +2742,20 @@ char tape_read_block_15(int fd)
     return b->data[b->size].byte_value;
 }
 
+char tape_read_block_30(int fd)
+{
+    char size;
+    char next;
+    char *buffer;
+    read(fd, &size, 1);
+    buffer = malloc(size);
+    read(fd, buffer, size);
+    printf("%s\n", buffer);
+    free(buffer);
+    read(fd, &next, 1);
+    return next;
+}
+
 bool tape_wait(int fd, int event)
 {
     int r = 0;
@@ -2809,8 +2823,11 @@ void tape_load_tzx(int fd)
         case 0x15:
             id = tape_read_block_15(fd);
             break;
+        case 0x30:
+            id = tape_read_block_30(fd);
+            break;
         default:
-            printf("unknown block type %04x\n", id);
+            printf("unknown block type %02x\n", id);
             id = 0;
             break;
         }
