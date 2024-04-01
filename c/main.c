@@ -2496,11 +2496,27 @@ bool rt_add_pending_task(TASK *task)
     }
 }
 
+unsigned long rt_next_t_states()
+{
+    if (rt_timeline_head == NULL)
+    {
+        return 1;
+    }
+    else if (rt_timeline_head->next == NULL)
+    {
+        return rt_timeline_head->t_states + 1 - z80_t_states_all;
+    }
+    else
+    {
+        return rt_timeline_head->next->t_states - z80_t_states_all;
+    }
+}
+
 void rt_add_task(TASK *task)
 {
     TASK *c = rt_timeline_head;
     TASK *p = NULL;
-    while (c != NULL && c->t_states < task->t_states)
+    while (c != NULL && c->t_states <= task->t_states)
     {
         p = c;
         c = c->next;
@@ -2821,7 +2837,7 @@ bool tape_wait(int fd, int event)
     {
         r = poll(&p, 1, 100);
     }
-    if (r > 0)
+    if (r > 0 && !(p.revents & POLLERR))
     {
         if (event == TAPE_LOAD_EVENT)
         {
@@ -3020,9 +3036,7 @@ void tape_listen()
             tape_save_t_states = z80_t_states_all;
             tape_save_mic = sound_mic;
         }
-        //TODO: wait until next task from z80
-        //TODO: otherwise the t_states are not increased
-        rt_add_task(rt_task(1, tape_listen));
+        rt_add_task(rt_task(rt_next_t_states(), tape_listen));
     }
 }
 
@@ -3050,11 +3064,11 @@ void *tape_run_save(void *args)
             write_tzx_header(fd);
             while (tape_wait(fd, TAPE_SAVE_EVENT))
             {
-                while (tape_save_state != 4 && running)
+                if (tape_save_state != 4)
                 {
                     time_sleep_in_seconds(0.1);
                 }
-                if (running)
+                else
                 {
                     write_tzx_block_10(fd, tape_save_buffer, tape_save_buffer_size);
                     tape_save_state = 0;
@@ -3146,7 +3160,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: on save don't add task after 1 state, wait for z80 to increment
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
