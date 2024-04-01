@@ -107,7 +107,10 @@ typedef struct TTASK
 
 typedef struct TREG8BLOCK
 {
-    int size, pause;
+    char last_used, pulses_per_sample;
+    int size;
+    short pilot_pulse, pilot_tone, sync_1_pulse, sync_2_pulse;
+    short pause, zero_pulse, one_pulse;
     REG8 *data;
     struct TREG8BLOCK *next;
 } REG8BLOCK;
@@ -2624,54 +2627,56 @@ void ula_run()
 
 int tape_play_block()
 {
-    int i, j, b, v, s = 0;
+    int i, j, k, n, b, v, s = 0;
     REG8BLOCK *block = tape_block_last;
     if (block != NULL)
     {
-        v = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
-        for (i = 0; i < v; i++)
+        for (i = 0; i < block->pilot_tone; i++)
         {
             s++;
             if (tape_load_state + 1 == s)
             {
                 tape_load_state = s;
                 sound_ear_on_off(!sound_ear);
-                return 2168;
+                return block->pilot_pulse;
             }
         }
-        s++;
-        if (tape_load_state + 1 == s)
+        if (block->sync_1_pulse > 0)
         {
-            tape_load_state = s;
-            sound_ear_on_off(!sound_ear);
-            return 667;
+            s++;
+            if (tape_load_state + 1 == s)
+            {
+                tape_load_state = s;
+                sound_ear_on_off(!sound_ear);
+                return block->sync_1_pulse;
+            }
         }
-        s++;
-        if (tape_load_state + 1 == s)
+        if (block->sync_2_pulse > 0)
         {
-            tape_load_state = s;
-            sound_ear_on_off(!sound_ear);
-            return 735;
+            s++;
+            if (tape_load_state + 1 == s)
+            {
+                tape_load_state = s;
+                sound_ear_on_off(!sound_ear);
+                return block->sync_2_pulse;
+            }
         }
         for (i = 0; i < block->size; i++)
         {
             b = MAX7;
-            for (j = 0; j < 8; j++)
+            n = (i == block->size - 1 ? block->last_used : 8);
+            for (j = 0; j < n; j++)
             {
-                v = (register_is_bit(block->data[i], b) ? 1710 : 855);
-                s++;
-                if (tape_load_state + 1 == s)
+                v = (register_is_bit(block->data[i], b) ? block->one_pulse : block->zero_pulse);
+                for (k = 0; k < block->pulses_per_sample; k++)
                 {
-                    tape_load_state = s;
-                    sound_ear_on_off(!sound_ear);
-                    return v;
-                }
-                s++;
-                if (tape_load_state + 1 == s)
-                {
-                    tape_load_state = s;
-                    sound_ear_on_off(!sound_ear);
-                    return v;
+                    s++;
+                    if (tape_load_state + 1 == s)
+                    {
+                        tape_load_state = s;
+                        sound_ear_on_off(!sound_ear);
+                        return v;
+                    }
                 }
                 b >>= 1;
             }
@@ -2719,6 +2724,18 @@ REG8BLOCK *tape_allocate(int size)
     return b;
 }
 
+void tape_default_timings(REG8BLOCK *block)
+{
+    block->pilot_pulse = 2168;
+    block->sync_1_pulse = 667;
+    block->sync_2_pulse = 735;
+    block->zero_pulse = 855;
+    block->one_pulse = 1710;
+    block->pulses_per_sample = 2;
+    block->last_used = 8;
+    block->pilot_tone = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
+}
+
 char tape_read_block_10(int fd)
 {
     int pause = 0, size = 0;
@@ -2727,18 +2744,49 @@ char tape_read_block_10(int fd)
     REG8BLOCK *b = tape_allocate(size);
     b->pause = pause;
     read(fd, b->data, b->size + 1);
+    tape_default_timings(b);
+    return b->data[b->size].byte_value;
+}
+
+char tape_read_block_11(int fd)
+{
+    REG8BLOCK block;
+    read(fd, &block.pilot_pulse, 2);
+    read(fd, &block.sync_1_pulse, 2);
+    read(fd, &block.sync_2_pulse, 2);
+    read(fd, &block.zero_pulse, 2);
+    read(fd, &block.one_pulse, 2);
+    read(fd, &block.pilot_tone, 2);
+    read(fd, &block.last_used, 1);
+    read(fd, &block.pause, 2);
+    read(fd, &block.size, 3);
+    REG8BLOCK *b = tape_allocate(block.size);
+    b->pilot_pulse = block.pilot_pulse;
+    b->sync_1_pulse = block.sync_1_pulse;
+    b->sync_2_pulse = block.sync_2_pulse;
+    b->zero_pulse = block.zero_pulse;
+    b->one_pulse = block.one_pulse;
+    b->last_used = block.last_used;
+    b->pulses_per_sample = 2;
+    b->pause = block.pause;
+    read(fd, b->data, b->size + 1);
     return b->data[b->size].byte_value;
 }
 
 char tape_read_block_15(int fd)
 {
-    int states_per_sample = 0, used = 0, pause = 0, size = 0;
+    char used;
+    short states_per_sample, pause;
+    int size;
     read(fd, &states_per_sample, 2);
     read(fd, &pause, 2);
     read(fd, &used, 1);
     read(fd, &size, 3);
-    REG8BLOCK *b = tape_allocate(size / 8.0);
+    REG8BLOCK *b = tape_allocate(ceil(size / 8.0));
     read(fd, b->data, b->size + 1);
+    b->zero_pulse = b->one_pulse = states_per_sample;
+    b->last_used = used;
+    b->pulses_per_sample = 1;
     return b->data[b->size].byte_value;
 }
 
