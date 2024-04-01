@@ -2766,6 +2766,7 @@ char tape_read_block_11(int fd)
     b->sync_2_pulse = block.sync_2_pulse;
     b->zero_pulse = block.zero_pulse;
     b->one_pulse = block.one_pulse;
+    b->pilot_tone = block.pilot_tone;
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
@@ -2867,6 +2868,9 @@ void tape_load_tzx(int fd)
         {
         case 0x10:
             id = tape_read_block_10(fd);
+            break;
+        case 0x11:
+            id = tape_read_block_11(fd);
             break;
         case 0x15:
             id = tape_read_block_15(fd);
