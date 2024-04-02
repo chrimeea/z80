@@ -2822,9 +2822,8 @@ void tape_read_block_21(int fd)
     unsigned char size;
     char *text;
     read(fd, &size, 1);
-    text = malloc(size + 1);
-    read(fd, text, size + 1);
-    text[size] = 0;
+    text = calloc(size + 1, 1);
+    read(fd, text, size);
     printf("%s\n", text);
     free(text);
 }
@@ -2912,6 +2911,9 @@ void tape_load_tzx(int fd)
                 break;
             case 0x11:
                 tape_read_block_11(fd);
+                break;
+            case 0x12:
+                tape_read_block_12(fd);
                 break;
             case 0x15:
                 tape_read_block_15(fd);
