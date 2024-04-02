@@ -2726,7 +2726,7 @@ REG8BLOCK *tape_allocate(int size)
 {
     REG8BLOCK *b = (REG8BLOCK *) malloc(sizeof(REG8BLOCK));
     b->size = size;
-    b->data = (REG8 *) calloc(1, size + 1);
+    b->data = (REG8 *) calloc(1, size);
     b->next = NULL;
     if (tape_block_head == NULL)
     {
@@ -2752,19 +2752,18 @@ void tape_default_timings(REG8BLOCK *block)
     block->pilot_tone = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
 }
 
-char tape_read_block_10(int fd)
+void tape_read_block_10(int fd)
 {
     int pause = 0, size = 0;
     read(fd, &pause, 2);
     read(fd, &size, 2);
     REG8BLOCK *b = tape_allocate(size);
     b->pause = pause;
-    read(fd, b->data, b->size + 1);
+    read(fd, b->data, b->size);
     tape_default_timings(b);
-    return b->data[b->size].byte_value;
 }
 
-char tape_read_block_11(int fd)
+void tape_read_block_11(int fd)
 {
     REG8BLOCK block;
     read(fd, &block.pilot_pulse, 2);
@@ -2786,11 +2785,23 @@ char tape_read_block_11(int fd)
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
-    read(fd, b->data, b->size + 1);
-    return b->data[b->size].byte_value;
+    read(fd, b->data, b->size);
 }
 
-char tape_read_block_15(int fd)
+void tape_read_block_12(int fd)
+{
+    REG8BLOCK *b = tape_allocate(0);
+    read(fd, &b->pilot_pulse, 2);
+    read(fd, &b->pilot_tone, 2);
+    b->sync_1_pulse = 0;
+    b->sync_2_pulse = 0;
+    b->zero_pulse = 0;
+    b->one_pulse = 0;
+    b->last_used = 0;
+    b->pause = 0;
+}
+
+void tape_read_block_15(int fd)
 {
     char used;
     short states_per_sample, pause;
@@ -2800,33 +2811,26 @@ char tape_read_block_15(int fd)
     read(fd, &used, 1);
     read(fd, &size, 3);
     REG8BLOCK *b = tape_allocate(ceil(size / 8.0));
-    read(fd, b->data, b->size + 1);
+    read(fd, b->data, b->size);
     b->zero_pulse = b->one_pulse = states_per_sample;
     b->last_used = used;
     b->pulses_per_sample = 1;
-    return b->data[b->size].byte_value;
 }
 
-char tape_read_block_21(int fd)
+void tape_read_block_21(int fd)
 {
     unsigned char size;
-    char next;
     char *text;
     read(fd, &size, 1);
     text = malloc(size + 1);
     read(fd, text, size + 1);
-    next = text[size];
     text[size] = 0;
     printf("%s\n", text);
     free(text);
-    return next;
 }
 
-char tape_read_block_22(int fd)
+void tape_read_block_22(int fd)
 {
-    char next;
-    read(fd, &next, 1);
-    return next;
 }
 
 char tape_read_block_30(int fd)
@@ -2881,52 +2885,50 @@ void tape_close()
     {
         REG8BLOCK *p = tape_block_head;
         tape_block_head = tape_block_head->next;
+        free(p->data);
         free(p);
     }
 }
 
-char tape_header(int fd)
+bool tape_header(int fd)
 {
-    REG8 block[11] = {0};
-    if (read(fd, block, 11) == 11 && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0 && block[8].byte_value == 1)
-    {
-        return block[10].byte_value;
-    }
-    else
-    {
-        return 0;
-    }
+    REG8 block[10] = {0};
+    return (read(fd, block, 10) == 10
+        && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0
+        && block[8].byte_value == 1);
 }
 
 void tape_load_tzx(int fd)
 {
-    char id = tape_header(fd);
-    while (id != 0)
+    char id;
+    if (tape_header(fd))
     {
-        switch (id)
+        while (read(fd, &id, 1) == 1)
         {
-        case 0x10:
-            id = tape_read_block_10(fd);
-            break;
-        case 0x11:
-            id = tape_read_block_11(fd);
-            break;
-        case 0x15:
-            id = tape_read_block_15(fd);
-            break;
-        case 0x21:
-            id = tape_read_block_21(fd);
-            break;
-        case 0x22:
-            id = tape_read_block_22(fd);
-            break;
-        case 0x30:
-            id = tape_read_block_30(fd);
-            break;
-        default:
-            printf("unknown block type %02x\n", id);
-            id = 0;
-            break;
+            switch (id)
+            {
+            case 0x10:
+                tape_read_block_10(fd);
+                break;
+            case 0x11:
+                tape_read_block_11(fd);
+                break;
+            case 0x15:
+                tape_read_block_15(fd);
+                break;
+            case 0x21:
+                tape_read_block_21(fd);
+                break;
+            case 0x22:
+                tape_read_block_22(fd);
+                break;
+            case 0x30:
+                tape_read_block_30(fd);
+                break;
+            default:
+                printf("unknown block type %02x\n", id);
+                return;
+            }
         }
     }
 }
