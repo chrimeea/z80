@@ -2807,14 +2807,37 @@ char tape_read_block_15(int fd)
     return b->data[b->size].byte_value;
 }
 
+char tape_read_block_21(int fd)
+{
+    unsigned char size;
+    char next;
+    char *text;
+    read(fd, &size, 1);
+    text = malloc(size + 1);
+    read(fd, text, size + 1);
+    next = text[size];
+    text[size] = 0;
+    printf("%s\n", text);
+    free(text);
+    return next;
+}
+
+char tape_read_block_22(int fd)
+{
+    char next;
+    read(fd, &next, 1);
+    return next;
+}
+
 char tape_read_block_30(int fd)
 {
-    char size;
+    unsigned char size;
     char next;
     char *buffer;
     read(fd, &size, 1);
-    buffer = malloc(size);
+    buffer = malloc(size + 1);
     read(fd, buffer, size);
+    buffer[size] = 0;
     printf("%s\n", buffer);
     free(buffer);
     read(fd, &next, 1);
@@ -2890,6 +2913,12 @@ void tape_load_tzx(int fd)
             break;
         case 0x15:
             id = tape_read_block_15(fd);
+            break;
+        case 0x21:
+            id = tape_read_block_21(fd);
+            break;
+        case 0x22:
+            id = tape_read_block_22(fd);
             break;
         case 0x30:
             id = tape_read_block_30(fd);
@@ -3167,6 +3196,4 @@ int main(int argc, char **argv)
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
 // TODO: sound
-// /etc/modprobe.d/pc-speaker.conf
-// https://www.alsa-project.org/alsa-doc/alsa-lib/examples.html
 // support fully tzx spec
