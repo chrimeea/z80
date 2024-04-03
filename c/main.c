@@ -2715,11 +2715,11 @@ int tape_play_block()
 
 REG8BLOCK *tape_allocate(int size, int sync_size)
 {
-    REG8BLOCK *b = (REG8BLOCK *) malloc(sizeof(REG8BLOCK));
+    REG8BLOCK *b = malloc(sizeof(REG8BLOCK));
     b->size = size;
-    b->data = (REG8 *) calloc(1, size);
+    b->data = calloc(1, size);
     b->sync_size = sync_size;
-    b->sync_pulse = malloc(sync_size);
+    b->sync_pulse = malloc(sync_size * sizeof(short));
     b->next = NULL;
     if (tape_block_head == NULL)
     {
@@ -2788,6 +2788,19 @@ void tape_read_block_12(int fd)
     read(fd, &b->pilot_pulse, 2);
     read(fd, &b->pilot_tone, 2);
     b->zero_pulse = 0;
+    b->one_pulse = 0;
+    b->last_used = 0;
+    b->pause = 0;
+}
+
+void tape_read_block_13(int fd)
+{
+    unsigned char sync_size;
+    read(fd, &sync_size, 1);
+    REG8BLOCK *b = tape_allocate(0, sync_size);
+    read(fd, b->sync_pulse, sync_size * 2);
+    b->pilot_pulse = 0;
+    b->pilot_tone = 0;
     b->one_pulse = 0;
     b->last_used = 0;
     b->pause = 0;
@@ -2909,6 +2922,9 @@ void tape_load_tzx(int fd)
                 break;
             case 0x12:
                 tape_read_block_12(fd);
+                break;
+            case 0x13:
+                tape_read_block_13(fd);
                 break;
             case 0x15:
                 tape_read_block_15(fd);
