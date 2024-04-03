@@ -2715,7 +2715,7 @@ int tape_play_block()
 
 REG8BLOCK *tape_allocate(int size, int sync_size)
 {
-    REG8BLOCK *b = malloc(sizeof(REG8BLOCK));
+    REG8BLOCK *b = calloc(1, sizeof(REG8BLOCK));
     b->size = size;
     b->data = calloc(1, size);
     b->sync_size = sync_size;
@@ -2787,10 +2787,6 @@ void tape_read_block_12(int fd)
     REG8BLOCK *b = tape_allocate(0, 0);
     read(fd, &b->pilot_pulse, 2);
     read(fd, &b->pilot_tone, 2);
-    b->zero_pulse = 0;
-    b->one_pulse = 0;
-    b->last_used = 0;
-    b->pause = 0;
 }
 
 void tape_read_block_13(int fd)
@@ -2799,11 +2795,6 @@ void tape_read_block_13(int fd)
     read(fd, &sync_size, 1);
     REG8BLOCK *b = tape_allocate(0, sync_size);
     read(fd, b->sync_pulse, sync_size * 2);
-    b->pilot_pulse = 0;
-    b->pilot_tone = 0;
-    b->one_pulse = 0;
-    b->last_used = 0;
-    b->pause = 0;
 }
 
 void tape_read_block_14(int fd)
@@ -2817,8 +2808,6 @@ void tape_read_block_14(int fd)
     REG8BLOCK *b = tape_allocate(block.size, 0);
     b->zero_pulse = block.zero_pulse;
     b->one_pulse = block.one_pulse;
-    b->pilot_pulse = 0;
-    b->pilot_tone = 0;
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
@@ -2841,6 +2830,18 @@ void tape_read_block_15(int fd)
     b->pulses_per_sample = 1;
 }
 
+int tape_read_block_20(int fd)
+{
+    int pause;
+    read(fd, &pause, 2);
+    if (pause > 0)
+    {
+        REG8BLOCK *b = tape_allocate(0, 0);
+        b->pause = pause;
+    }
+    return pause;
+}
+
 void tape_read_block_21(int fd)
 {
     unsigned char size;
@@ -2852,10 +2853,9 @@ void tape_read_block_21(int fd)
     free(text);
 }
 
-char tape_read_block_30(int fd)
+void tape_read_block_30(int fd)
 {
     unsigned char size;
-    char next;
     char *buffer;
     read(fd, &size, 1);
     buffer = malloc(size + 1);
@@ -2863,8 +2863,6 @@ char tape_read_block_30(int fd)
     buffer[size] = 0;
     printf("%s\n", buffer);
     free(buffer);
-    read(fd, &next, 1);
-    return next;
 }
 
 bool tape_wait(int fd, int event)
@@ -2951,6 +2949,15 @@ void tape_load_tzx(int fd)
             case 0x15:
                 tape_read_block_15(fd);
                 break;
+            case 0x20:
+                if (tape_read_block_20(fd) == 0)
+                {
+                    return;
+                }
+                else
+                {
+                    break;
+                }
             case 0x21:
                 tape_read_block_21(fd);
                 break;
