@@ -2806,6 +2806,25 @@ void tape_read_block_13(int fd)
     b->pause = 0;
 }
 
+void tape_read_block_14(int fd)
+{
+    REG8BLOCK block;
+    read(fd, &block.zero_pulse, 2);
+    read(fd, &block.one_pulse, 2);
+    read(fd, &block.last_used, 1);
+    read(fd, &block.pause, 2);
+    read(fd, &block.size, 3);
+    REG8BLOCK *b = tape_allocate(block.size, 0);
+    b->zero_pulse = block.zero_pulse;
+    b->one_pulse = block.one_pulse;
+    b->pilot_pulse = 0;
+    b->pilot_tone = 0;
+    b->last_used = block.last_used;
+    b->pulses_per_sample = 2;
+    b->pause = block.pause;
+    read(fd, b->data, b->size);
+}
+
 void tape_read_block_15(int fd)
 {
     char used;
@@ -2925,6 +2944,9 @@ void tape_load_tzx(int fd)
                 break;
             case 0x13:
                 tape_read_block_13(fd);
+                break;
+            case 0x14:
+                tape_read_block_14(fd);
                 break;
             case 0x15:
                 tape_read_block_15(fd);
