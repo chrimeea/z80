@@ -16,8 +16,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <GL/freeglut.h>
-// #include <sys/ioctl.h>
-// #include <linux/kd.h>
+#include <errno.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -107,11 +106,11 @@ typedef struct TTASK
 
 typedef struct TREG8BLOCK
 {
-    char last_used, pulses_per_sample;
+    unsigned char last_used, pulses_per_sample;
     int size, sync_size;
-    short pilot_pulse, pilot_tone;
-    short pause, zero_pulse, one_pulse;
-    short *sync_pulse;
+    unsigned short pilot_pulse, pilot_tone;
+    unsigned short pause, zero_pulse, one_pulse;
+    unsigned short *sync_pulse;
     REG8 *data;
     struct TREG8BLOCK *next;
 } REG8BLOCK;
@@ -2745,30 +2744,60 @@ void tape_default_timings(REG8BLOCK *block)
     block->pilot_tone = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
 }
 
+bool tape_read(int fd, void *buffer, int size)
+{
+    int i = 0, j;
+    char *b = buffer;
+    while (i < size)
+    {
+        j = read(fd, &b[i], size - i);
+        if (j == -1)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                time_sleep_in_seconds(0.1);
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else if (j == 0)
+        {
+            return false;
+        }
+        else
+        {
+            i += j;
+        }
+    }
+    return true;
+}
+
 void tape_read_block_10(int fd)
 {
     int pause = 0, size = 0;
-    read(fd, &pause, 2);
-    read(fd, &size, 2);
+    tape_read(fd, &pause, 2);
+    tape_read(fd, &size, 2);
     REG8BLOCK *b = tape_allocate(size, 2);
     b->pause = pause;
-    read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size);
     tape_default_timings(b);
 }
 
 void tape_read_block_11(int fd)
 {
     REG8BLOCK block;
-    short sync_pulse[2];
-    read(fd, &block.pilot_pulse, 2);
-    read(fd, &sync_pulse[0], 2);
-    read(fd, &sync_pulse[1], 2);
-    read(fd, &block.zero_pulse, 2);
-    read(fd, &block.one_pulse, 2);
-    read(fd, &block.pilot_tone, 2);
-    read(fd, &block.last_used, 1);
-    read(fd, &block.pause, 2);
-    read(fd, &block.size, 3);
+    unsigned short sync_pulse[2];
+    tape_read(fd, &block.pilot_pulse, 2);
+    tape_read(fd, &sync_pulse[0], 2);
+    tape_read(fd, &sync_pulse[1], 2);
+    tape_read(fd, &block.zero_pulse, 2);
+    tape_read(fd, &block.one_pulse, 2);
+    tape_read(fd, &block.pilot_tone, 2);
+    tape_read(fd, &block.last_used, 1);
+    tape_read(fd, &block.pause, 2);
+    tape_read(fd, &block.size, 3);
     REG8BLOCK *b = tape_allocate(block.size, 2);
     b->pilot_pulse = block.pilot_pulse;
     b->sync_pulse[0] = sync_pulse[0];
@@ -2779,76 +2808,79 @@ void tape_read_block_11(int fd)
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
-    read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size);
 }
 
 void tape_read_block_12(int fd)
 {
     REG8BLOCK *b = tape_allocate(0, 0);
-    read(fd, &b->pilot_pulse, 2);
-    read(fd, &b->pilot_tone, 2);
+    tape_read(fd, &b->pilot_pulse, 2);
+    tape_read(fd, &b->pilot_tone, 2);
 }
 
 void tape_read_block_13(int fd)
 {
     unsigned char sync_size;
-    read(fd, &sync_size, 1);
+    tape_read(fd, &sync_size, 1);
     REG8BLOCK *b = tape_allocate(0, sync_size);
-    read(fd, b->sync_pulse, sync_size * 2);
+    tape_read(fd, b->sync_pulse, sync_size * 2);
 }
 
 void tape_read_block_14(int fd)
 {
     REG8BLOCK block;
-    read(fd, &block.zero_pulse, 2);
-    read(fd, &block.one_pulse, 2);
-    read(fd, &block.last_used, 1);
-    read(fd, &block.pause, 2);
-    read(fd, &block.size, 3);
+    tape_read(fd, &block.zero_pulse, 2);
+    tape_read(fd, &block.one_pulse, 2);
+    tape_read(fd, &block.last_used, 1);
+    tape_read(fd, &block.pause, 2);
+    tape_read(fd, &block.size, 3);
     REG8BLOCK *b = tape_allocate(block.size, 0);
     b->zero_pulse = block.zero_pulse;
     b->one_pulse = block.one_pulse;
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
-    read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size);
 }
 
 void tape_read_block_15(int fd)
 {
-    char used;
-    short states_per_sample, pause;
-    int size;
-    read(fd, &states_per_sample, 2);
-    read(fd, &pause, 2);
-    read(fd, &used, 1);
-    read(fd, &size, 3);
+    unsigned char used;
+    unsigned short states_per_sample, pause;
+    int size = 0;
+    tape_read(fd, &states_per_sample, 2);
+    tape_read(fd, &pause, 2);
+    tape_read(fd, &used, 1);
+    tape_read(fd, &size, 3);
     REG8BLOCK *b = tape_allocate(ceil(size / 8.0), 0);
-    read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size);
     b->zero_pulse = b->one_pulse = states_per_sample;
     b->last_used = used;
     b->pulses_per_sample = 1;
 }
 
-int tape_read_block_20(int fd)
+void tape_read_block_20(int fd)
 {
-    int pause;
-    read(fd, &pause, 2);
+    unsigned short pause;
+    tape_read(fd, &pause, 2);
     if (pause > 0)
     {
         REG8BLOCK *b = tape_allocate(0, 0);
         b->pause = pause;
     }
-    return pause;
+    else
+    {
+        pause = 0xFFFF;
+    }
 }
 
 void tape_read_block_21(int fd)
 {
     unsigned char size;
     char *text;
-    read(fd, &size, 1);
+    tape_read(fd, &size, 1);
     text = calloc(size + 1, 1);
-    read(fd, text, size);
+    tape_read(fd, text, size);
     printf("%s\n", text);
     free(text);
 }
@@ -2857,9 +2889,9 @@ void tape_read_block_30(int fd)
 {
     unsigned char size;
     char *buffer;
-    read(fd, &size, 1);
+    tape_read(fd, &size, 1);
     buffer = malloc(size + 1);
-    read(fd, buffer, size);
+    tape_read(fd, buffer, size);
     buffer[size] = 0;
     printf("%s\n", buffer);
     free(buffer);
@@ -2917,7 +2949,7 @@ void tape_close()
 bool tape_header(int fd)
 {
     REG8 block[10];
-    return (read(fd, block, 10) == 10
+    return (tape_read(fd, block, 10)
         && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0
         && block[8].byte_value == 1);
 }
@@ -2927,7 +2959,7 @@ void tape_load_tzx(int fd)
     char id;
     if (tape_header(fd))
     {
-        while (read(fd, &id, 1) == 1)
+        while (tape_read(fd, &id, 1))
         {
             switch (id)
             {
@@ -2950,14 +2982,8 @@ void tape_load_tzx(int fd)
                 tape_read_block_15(fd);
                 break;
             case 0x20:
-                if (tape_read_block_20(fd) == 0)
-                {
-                    return;
-                }
-                else
-                {
-                    break;
-                }
+                tape_read_block_20(fd);
+                break;
             case 0x21:
                 tape_read_block_21(fd);
                 break;
@@ -3232,6 +3258,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
+// TODO: tape_read_block_20 if zero stop the tape
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
