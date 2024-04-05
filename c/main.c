@@ -158,7 +158,7 @@ char *tape_save_buffer = NULL;
 bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 100;
+// int debug = 2;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -2429,11 +2429,11 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0x5cf2)
+        // if (z80_reg_pc.byte_value == 0xfce3 && debug == 2)
         // {
         //    debug = 0;
         // }
-        // if (debug < 100)
+        // if (debug < 2)
         // {
         //     z80_print();
         //     debug++;
@@ -2687,7 +2687,7 @@ int tape_play_block()
                 b >>= 1;
             }
         }
-        if (block->pause >= 0)
+        if (block->pause > 0)
         {
             s++;
             if (tape_load_state + 1 == s)
@@ -2707,6 +2707,12 @@ int tape_play_block()
                 tape_block_last = tape_block_last->next;
                 return block->pause / (1000 * state_duration);
             }
+        }
+        else if (block->pause == 0)
+        {
+            tape_load_state = 0;
+            tape_block_last = tape_block_last->next;
+            return 0;
         }
     }
     return -1;
@@ -3003,8 +3009,12 @@ void tape_load_tzx(int fd)
 void tape_play_run()
 {
     sound_input = true;
-    int s = tape_play_block();
-    if (s >= 0)
+    int s;
+    do
+    {
+        s = tape_play_block();
+    } while (s == 0 && running);
+    if (s > 0)
     {
         rt_add_task(rt_task(s, tape_play_run));
     }
