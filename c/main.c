@@ -3268,7 +3268,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: tape_read_block_20 if zero stop the tape
+// TODO: tape_read_block_20 if zero stop the tape then resume ?
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
