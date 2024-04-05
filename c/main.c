@@ -3013,7 +3013,8 @@ void tape_play_run()
     do
     {
         s = tape_play_block();
-    } while (s == 0 && running);
+    }
+    while (s == 0 && running);
     if (s > 0)
     {
         rt_add_task(rt_task(s, tape_play_run));
