@@ -3003,7 +3003,7 @@ void tape_load_tzx(int fd)
                 tape_read_block_30(fd);
                 break;
             default:
-                printf("unknown block type %02x\n", id);
+                printf("Unknown block type %02x\n", id);
                 return;
             }
         }
