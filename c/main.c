@@ -139,7 +139,7 @@ int ula_border_color;
 bool sound_ear = false, sound_mic = false, sound_input = false;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
-REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2, z80_reg_pc_2, z80_reg_sp_2, z80_reg_ix_2, z80_reg_iy_2;
+REG16 z80_reg_bc_2, z80_reg_de_2, z80_reg_hl_2, z80_reg_af_2;
 REG8 z80_reg_i, z80_reg_r, z80_data_bus;
 REG8 *z80_all8[] = {&z80_reg_bc.bytes.high, &z80_reg_bc.bytes.low,
                     &z80_reg_de.bytes.high, &z80_reg_de.bytes.low,
@@ -306,14 +306,44 @@ void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
     *reg = other;
 }
 
-void memory_load_rom(const char *filename)
+bool file_has_extension(const char *filename, const char *ext)
 {
-    FILE *f = fopen(filename, "rb");
+    int i = strlen(filename);
+    int j = strlen(ext);
+    return (i > j && strcmp(filename + i - j, ext) == 0);
+}
+
+void file_load_rom(const char *filename)
+{
+    FILE *f = fopen(filename, "r");
     fread(memory, 1, memory_size, f);
     fclose(f);
 }
 
-void memory_export(const char *filename)
+void file_load_sna(const char *filename)
+{
+    FILE *f = fopen(filename, "r");
+    fread(&z80_reg_i, 1, 1, f);
+    fread(&z80_reg_hl_2, 2, 1, f);
+    fread(&z80_reg_de_2, 2, 1, f);
+    fread(&z80_reg_bc_2, 2, 1, f);
+    fread(&z80_reg_af_2, 2, 1, f);
+    fread(&z80_reg_hl, 2, 1, f);
+    fread(&z80_reg_de, 2, 1, f);
+    fread(&z80_reg_bc, 2, 1, f);
+    fread(&z80_reg_iy, 2, 1, f);
+    fread(&z80_reg_ix, 2, 1, f);
+    fread(&z80_iff2, 1, 1, f);
+    fread(&z80_reg_r, 1, 1, f);
+    fread(&z80_reg_af, 2, 1, f);
+    fread(&z80_reg_sp, 2, 1, f);
+    fread(&z80_imode, 1, 1, f);
+    fread(&ula_border_color, 1, 1, f);
+    fread(memory + 0x4000, 1, 49152, f);
+    fclose(f);
+}
+
+void file_save_binary(const char *filename)
 {
     FILE *f = fopen(filename, "w");
     fwrite(memory, 1, memory_size, f);
@@ -3253,11 +3283,25 @@ int main(int argc, char **argv)
         glScalef(2.0f / SCREEN_WIDTH, -2.0f / SCREEN_HEIGHT, 0.0f);
         glutKeyboardFunc(keyboard_press_down);
         glutKeyboardUpFunc(keyboard_press_up);
+        z80_reset();
         if (argc == 2)
         {
-            memory_load_rom(argv[1]);
+            if (file_has_extension(argv[1], ".rom"))
+            {
+                file_load_rom(argv[1]);
+            }
+            else if (file_has_extension(argv[1], ".sna"))
+            {
+                file_load_sna(argv[1]);
+                z80_reg_pc = z80_pop16();
+                z80_iff1 = z80_iff2;
+            }
+            else
+            {
+                printf("Unkown file format %s\n", argv[1]);
+                return 1;
+            }
         }
-        z80_reset();
         rt_add_task(rt_task(0, z80_run));
         rt_add_task(rt_task(0, ula_run));
         pthread_create(&rt_id, NULL, rt_run, NULL);
