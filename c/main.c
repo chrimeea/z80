@@ -4,6 +4,7 @@
 // mkfifo save
 // cat file.tzx > load
 // cat save > file.tzx
+// { head -c 10 file.tzx > load; tail -c +INDEX file.tzx; } > load
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -151,7 +152,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-unsigned long tape_save_t_states, tape_save_duration;
+unsigned long tape_save_t_states, tape_save_duration, tape_index;
 int tape_load_state, tape_save_state, tape_save_counter;
 int tape_save_index, tape_save_buffer_size;
 char *tape_save_buffer = NULL;
@@ -2754,7 +2755,7 @@ bool tape_read(int fd, void *buffer, int size)
 {
     int i = 0, j;
     char *b = buffer;
-    while (i < size)
+    while (i < size && running)
     {
         j = read(fd, &b[i], size - i);
         if (j == -1)
@@ -2775,6 +2776,7 @@ bool tape_read(int fd, void *buffer, int size)
         else
         {
             i += j;
+            tape_index += j;
         }
     }
     return true;
@@ -2876,7 +2878,8 @@ void tape_read_block_20(int fd)
     }
     else
     {
-        pause = 0xFFFF;
+        printf("Tape stopped at index %ld\n", tape_index + 1);
+        while (tape_read(fd, &pause, 1));
     }
 }
 
@@ -2963,9 +2966,10 @@ bool tape_header(int fd)
 void tape_load_tzx(int fd)
 {
     char id;
+    tape_index = 0;
     if (tape_header(fd))
     {
-        while (tape_read(fd, &id, 1))
+        while (tape_read(fd, &id, 1) && running)
         {
             switch (id)
             {
@@ -3269,8 +3273,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: tape_read_block_20 if zero stop the tape then resume ?
-// TODO: simulation speed is not constant
+// TODO: simulation speed is not constant ?
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: use preallocated memory instead of malloc
 // TODO: uart
