@@ -159,7 +159,7 @@ char *tape_save_buffer = NULL;
 bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 2;
+// int debug = 1000;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -639,6 +639,7 @@ void z80_reset()
     z80_reg_sp.byte_value = 0xFFFF;
     z80_reg_pc.byte_value = 0;
     z80_reg_r.byte_value = 0;
+    z80_data_bus.byte_value = 0xFF;
     running = true;
     time_start = time_in_seconds();
     z80_t_states_all = 0;
@@ -2460,11 +2461,11 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0xfce3 && debug == 2)
+        // if (z80_reg_pc.byte_value == 0xbe4e && debug == 10)
         // {
         //    debug = 0;
         // }
-        // if (debug < 2)
+        // if (debug < 1000)
         // {
         //     z80_print();
         //     debug++;
