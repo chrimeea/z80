@@ -159,7 +159,7 @@ char *tape_save_buffer = NULL;
 bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK *rt_timeline_head, *rt_pending;
-// int debug = 1000;
+// int debug = 100;
 
 void to_binary(unsigned char c, char *o)
 {
@@ -1883,10 +1883,10 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         register_add16_with_flags(other, REG16_ONE, MASK_NONE);
         return 10;
     case 0x24: // INC IXH
-        register_add8_with_flags(&other->bytes.high, REG8_ONE, MASK_NONE);
+        register_add8_with_flags(&other->bytes.high, REG8_ONE, MASK_SZHVN);
         return 8;
     case 0x25: // DEC IXH
-        register_sub8_with_flags(&other->bytes.high, REG8_ONE, MASK_NONE);
+        register_sub8_with_flags(&other->bytes.high, REG8_ONE, MASK_SZHVN);
         return 8;
     case 0x26: // LD IXH,nn
         other->bytes.high = z80_next8();
@@ -1898,10 +1898,10 @@ int z80_execute_dd_fd(REG8 reg, REG16 *other)
         register_sub16_with_flags(other, REG16_ONE, MASK_NONE);
         return 10;
     case 0x2C: // INC IXL
-        register_add8_with_flags(&other->bytes.low, REG8_ONE, MASK_NONE);
+        register_add8_with_flags(&other->bytes.low, REG8_ONE, MASK_SZHVN);
         return 8;
     case 0x2D: // DEC IXL
-        register_sub8_with_flags(&other->bytes.low, REG8_ONE, MASK_NONE);
+        register_sub8_with_flags(&other->bytes.low, REG8_ONE, MASK_SZHVN);
         return 8;
     case 0x2E: // LD IXL,nn
         other->bytes.low = z80_next8();
@@ -2461,11 +2461,11 @@ int z80_run_one()
     }
     if (z80_can_execute)
     {
-        // if (z80_reg_pc.byte_value == 0xbe4e && debug == 10)
+        // if (z80_reg_pc.byte_value == 0x87a3 && debug == 100)
         // {
         //    debug = 0;
         // }
-        // if (debug < 1000)
+        // if (debug < 100)
         // {
         //     z80_print();
         //     debug++;
