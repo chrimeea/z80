@@ -2898,7 +2898,7 @@ void tape_read_block_15(int fd)
     b->pulses_per_sample = 1;
 }
 
-void tape_read_block_20(int fd)
+void tape_read_block_20(int fd, bool full)
 {
     unsigned short pause;
     tape_read(fd, &pause, 2);
@@ -2907,7 +2907,7 @@ void tape_read_block_20(int fd)
         REG8BLOCK *b = tape_allocate(0, 0);
         b->pause = pause;
     }
-    else
+    else if (!full)
     {
         printf("Tape stopped at index %ld\n", tape_index + 1);
         while (tape_read(fd, &pause, 1));
@@ -2994,7 +2994,7 @@ bool tape_header(int fd)
         && block[8].byte_value == 1);
 }
 
-void tape_load_tzx(int fd)
+void tape_load_tzx(int fd, bool full)
 {
     char id;
     tape_index = 0;
@@ -3023,7 +3023,7 @@ void tape_load_tzx(int fd)
                 tape_read_block_15(fd);
                 break;
             case 0x20:
-                tape_read_block_20(fd);
+                tape_read_block_20(fd, full);
                 break;
             case 0x21:
                 tape_read_block_21(fd);
@@ -3239,7 +3239,7 @@ void *tape_run_load(void *args)
             if (tape_wait(fd, TAPE_LOAD_EVENT))
             {
                 tape_close();
-                tape_load_tzx(fd);
+                tape_load_tzx(fd, false);
                 tape_block_last = tape_block_head;
                 tape_load_state = 0;
                 rt_add_pending_task(rt_task(0, tape_play_run));
@@ -3260,6 +3260,27 @@ void z80_run()
     rt_add_task(rt_task(z80_run_one(), z80_run));
 }
 
+void window_show(int argc, char **argv)
+{
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE);
+    glutInitWindowSize(SCREEN_WIDTH * SCREEN_ZOOM, SCREEN_HEIGHT * SCREEN_ZOOM);
+
+    // glutInitWindowPosition(200, 100);
+    glutCreateWindow("Cristian Mocanu Z80");
+    glPointSize(SCREEN_ZOOM);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    // glMatrixMode(GL_PROJECTION);
+    // glLoadIdentity();
+    // glMatrixMode(GL_MODELVIEW);
+    // glLoadIdentity();
+    glTranslatef(-1.0, 1.0, 0.0);
+    glScalef(2.0f / SCREEN_WIDTH, -2.0f / SCREEN_HEIGHT, 0.0f);
+    glutKeyboardFunc(keyboard_press_down);
+    glutKeyboardUpFunc(keyboard_press_up);
+}
+
 int main(int argc, char **argv)
 {
     pthread_t rt_id, tape_id;
@@ -3267,23 +3288,6 @@ int main(int argc, char **argv)
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
         // atexit(z80_reset);
-        glutInit(&argc, argv);
-        glutInitDisplayMode(GLUT_SINGLE);
-        glutInitWindowSize(SCREEN_WIDTH * SCREEN_ZOOM, SCREEN_HEIGHT * SCREEN_ZOOM);
-
-        // glutInitWindowPosition(200, 100);
-        glutCreateWindow("Cristian Mocanu Z80");
-        glPointSize(SCREEN_ZOOM);
-        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // glMatrixMode(GL_PROJECTION);
-        // glLoadIdentity();
-        // glMatrixMode(GL_MODELVIEW);
-        // glLoadIdentity();
-        glTranslatef(-1.0, 1.0, 0.0);
-        glScalef(2.0f / SCREEN_WIDTH, -2.0f / SCREEN_HEIGHT, 0.0f);
-        glutKeyboardFunc(keyboard_press_down);
-        glutKeyboardUpFunc(keyboard_press_up);
         z80_reset();
         if (argc == 2)
         {
@@ -3297,12 +3301,24 @@ int main(int argc, char **argv)
                 z80_reg_pc = z80_pop16();
                 z80_iff1 = z80_iff2;
             }
+            else if (file_has_extension(argv[1], ".tzx"))
+            {
+                int fd = open(argv[1], O_RDONLY);
+                if (fd != -1)
+                {
+                    tape_load_tzx(fd, true);
+                    tape_close();
+                    close(fd);
+                }
+                return 0;
+            }
             else
             {
                 printf("Unkown file format %s\n", argv[1]);
                 return 1;
             }
         }
+        window_show(argc, argv);
         rt_add_task(rt_task(0, z80_run));
         rt_add_task(rt_task(0, ula_run));
         pthread_create(&rt_id, NULL, rt_run, NULL);
