@@ -152,7 +152,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-unsigned long tape_save_t_states, tape_save_duration, tape_index;
+unsigned long tape_save_t_states, tape_save_duration, tape_index, tape_break_index;
 int tape_load_state, tape_save_state, tape_save_counter;
 int tape_save_index, tape_save_buffer_size;
 char *tape_save_buffer = NULL;
@@ -2898,7 +2898,7 @@ void tape_read_block_15(int fd)
     b->pulses_per_sample = 1;
 }
 
-void tape_read_block_20(int fd, bool full)
+void tape_read_block_20(int fd, int index)
 {
     unsigned short pause;
     tape_read(fd, &pause, 2);
@@ -2907,10 +2907,14 @@ void tape_read_block_20(int fd, bool full)
         REG8BLOCK *b = tape_allocate(0, 0);
         b->pause = pause;
     }
-    else if (!full)
+    else
     {
-        printf("Tape stopped at index %ld\n", tape_index + 1);
-        while (tape_read(fd, &pause, 1));
+        tape_break_index++;
+        if (tape_break_index == index)
+        {
+            printf("Tape stopped at index %ld\n", tape_index + 1);
+            while (tape_read(fd, &pause, 1));
+        }
     }
 }
 
@@ -2994,10 +2998,11 @@ bool tape_header(int fd)
         && block[8].byte_value == 1);
 }
 
-void tape_load_tzx(int fd, bool full)
+void tape_load_tzx(int fd, int index)
 {
     char id;
     tape_index = 0;
+    tape_break_index = 0;
     if (tape_header(fd))
     {
         while (tape_read(fd, &id, 1) && running)
@@ -3023,7 +3028,7 @@ void tape_load_tzx(int fd, bool full)
                 tape_read_block_15(fd);
                 break;
             case 0x20:
-                tape_read_block_20(fd, full);
+                tape_read_block_20(fd, index);
                 break;
             case 0x21:
                 tape_read_block_21(fd);
@@ -3239,7 +3244,7 @@ void *tape_run_load(void *args)
             if (tape_wait(fd, TAPE_LOAD_EVENT))
             {
                 tape_close();
-                tape_load_tzx(fd, false);
+                tape_load_tzx(fd, 1);
                 tape_block_last = tape_block_head;
                 tape_load_state = 0;
                 rt_add_pending_task(rt_task(0, tape_play_run));
@@ -3285,6 +3290,7 @@ int main(int argc, char **argv)
 {
     pthread_t rt_id, tape_id;
     int fd, index;
+    char *buffer;
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
@@ -3310,12 +3316,21 @@ int main(int argc, char **argv)
                     if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'p')
                     {
                         index = atoi(&argv[2][2]);
-                        tape_load_tzx(fd, false);
-                        // system("cat FILE > load");
+                        if (index == 0)
+                        {
+                            buffer = malloc(strlen(argv[1]) + 13);
+                            sprintf(buffer, "cat \"%s\" > load", argv[1]);
+                            system(buffer);
+                            free(buffer);
+                        }
+                        else
+                        {
+                            tape_load_tzx(fd, index);
+                        }
                     }
                     else
                     {
-                        tape_load_tzx(fd, true);
+                        tape_load_tzx(fd, 0);
                     }
                     tape_close();
                     close(fd);
