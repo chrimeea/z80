@@ -3284,12 +3284,13 @@ void window_show(int argc, char **argv)
 int main(int argc, char **argv)
 {
     pthread_t rt_id, tape_id;
+    int fd, index;
     if (system_little_endian())
     {
         // sound_console_fd = open("/dev/console", O_WRONLY);
         // atexit(z80_reset);
         z80_reset();
-        if (argc == 2)
+        if (argc >= 2)
         {
             if (file_has_extension(argv[1], ".rom"))
             {
@@ -3303,10 +3304,19 @@ int main(int argc, char **argv)
             }
             else if (file_has_extension(argv[1], ".tzx"))
             {
-                int fd = open(argv[1], O_RDONLY);
+                fd = open(argv[1], O_RDONLY);
                 if (fd != -1)
                 {
-                    tape_load_tzx(fd, true);
+                    if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'p')
+                    {
+                        index = atoi(&argv[2][2]);
+                        tape_load_tzx(fd, false);
+                        // system("cat FILE > load");
+                    }
+                    else
+                    {
+                        tape_load_tzx(fd, true);
+                    }
                     tape_close();
                     close(fd);
                 }
