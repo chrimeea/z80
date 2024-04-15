@@ -2782,7 +2782,7 @@ void tape_default_timings(REG8BLOCK *block)
     block->pilot_tone = (block->data[0].byte_value < 0x80 ? 8063 : 3223);
 }
 
-bool tape_read(int fd, void *buffer, int size)
+bool tape_read(int fd, void *buffer, int size, bool rec)
 {
     int i = 0, j;
     char *b = buffer;
@@ -2807,7 +2807,10 @@ bool tape_read(int fd, void *buffer, int size)
         else
         {
             i += j;
-            tape_index += j;
+            if (rec)
+            {
+                tape_index += j;
+            }
         }
     }
     return true;
@@ -2816,11 +2819,11 @@ bool tape_read(int fd, void *buffer, int size)
 void tape_read_block_10(int fd)
 {
     int pause = 0, size = 0;
-    tape_read(fd, &pause, 2);
-    tape_read(fd, &size, 2);
+    tape_read(fd, &pause, 2, true);
+    tape_read(fd, &size, 2, true);
     REG8BLOCK *b = tape_allocate(size, 2);
     b->pause = pause;
-    tape_read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size, true);
     tape_default_timings(b);
 }
 
@@ -2828,15 +2831,15 @@ void tape_read_block_11(int fd)
 {
     REG8BLOCK block;
     unsigned short sync_pulse[2];
-    tape_read(fd, &block.pilot_pulse, 2);
-    tape_read(fd, &sync_pulse[0], 2);
-    tape_read(fd, &sync_pulse[1], 2);
-    tape_read(fd, &block.zero_pulse, 2);
-    tape_read(fd, &block.one_pulse, 2);
-    tape_read(fd, &block.pilot_tone, 2);
-    tape_read(fd, &block.last_used, 1);
-    tape_read(fd, &block.pause, 2);
-    tape_read(fd, &block.size, 3);
+    tape_read(fd, &block.pilot_pulse, 2, true);
+    tape_read(fd, &sync_pulse[0], 2, true);
+    tape_read(fd, &sync_pulse[1], 2, true);
+    tape_read(fd, &block.zero_pulse, 2, true);
+    tape_read(fd, &block.one_pulse, 2, true);
+    tape_read(fd, &block.pilot_tone, 2, true);
+    tape_read(fd, &block.last_used, 1, true);
+    tape_read(fd, &block.pause, 2, true);
+    tape_read(fd, &block.size, 3, true);
     REG8BLOCK *b = tape_allocate(block.size, 2);
     b->pilot_pulse = block.pilot_pulse;
     b->sync_pulse[0] = sync_pulse[0];
@@ -2847,39 +2850,39 @@ void tape_read_block_11(int fd)
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
-    tape_read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size, true);
 }
 
 void tape_read_block_12(int fd)
 {
     REG8BLOCK *b = tape_allocate(0, 0);
-    tape_read(fd, &b->pilot_pulse, 2);
-    tape_read(fd, &b->pilot_tone, 2);
+    tape_read(fd, &b->pilot_pulse, 2, true);
+    tape_read(fd, &b->pilot_tone, 2, true);
 }
 
 void tape_read_block_13(int fd)
 {
     unsigned char sync_size;
-    tape_read(fd, &sync_size, 1);
+    tape_read(fd, &sync_size, 1, true);
     REG8BLOCK *b = tape_allocate(0, sync_size);
-    tape_read(fd, b->sync_pulse, sync_size * 2);
+    tape_read(fd, b->sync_pulse, sync_size * 2, true);
 }
 
 void tape_read_block_14(int fd)
 {
     REG8BLOCK block;
-    tape_read(fd, &block.zero_pulse, 2);
-    tape_read(fd, &block.one_pulse, 2);
-    tape_read(fd, &block.last_used, 1);
-    tape_read(fd, &block.pause, 2);
-    tape_read(fd, &block.size, 3);
+    tape_read(fd, &block.zero_pulse, 2, true);
+    tape_read(fd, &block.one_pulse, 2, true);
+    tape_read(fd, &block.last_used, 1, true);
+    tape_read(fd, &block.pause, 2, true);
+    tape_read(fd, &block.size, 3, true);
     REG8BLOCK *b = tape_allocate(block.size, 0);
     b->zero_pulse = block.zero_pulse;
     b->one_pulse = block.one_pulse;
     b->last_used = block.last_used;
     b->pulses_per_sample = 2;
     b->pause = block.pause;
-    tape_read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size, true);
 }
 
 void tape_read_block_15(int fd)
@@ -2887,12 +2890,12 @@ void tape_read_block_15(int fd)
     unsigned char used;
     unsigned short states_per_sample, pause;
     int size = 0;
-    tape_read(fd, &states_per_sample, 2);
-    tape_read(fd, &pause, 2);
-    tape_read(fd, &used, 1);
-    tape_read(fd, &size, 3);
+    tape_read(fd, &states_per_sample, 2, true);
+    tape_read(fd, &pause, 2, true);
+    tape_read(fd, &used, 1, true);
+    tape_read(fd, &size, 3, true);
     REG8BLOCK *b = tape_allocate(ceil(size / 8.0), 0);
-    tape_read(fd, b->data, b->size);
+    tape_read(fd, b->data, b->size, true);
     b->zero_pulse = b->one_pulse = states_per_sample;
     b->last_used = used;
     b->pulses_per_sample = 1;
@@ -2901,7 +2904,7 @@ void tape_read_block_15(int fd)
 void tape_read_block_20(int fd, int index)
 {
     unsigned short pause;
-    tape_read(fd, &pause, 2);
+    tape_read(fd, &pause, 2, true);
     if (pause > 0)
     {
         REG8BLOCK *b = tape_allocate(0, 0);
@@ -2912,8 +2915,7 @@ void tape_read_block_20(int fd, int index)
         tape_break_index++;
         if (tape_break_index == index)
         {
-            printf("Tape stopped at index %ld\n", tape_index + 1);
-            while (tape_read(fd, &pause, 1));
+            while (tape_read(fd, &pause, 1, false));
         }
     }
 }
@@ -2922,9 +2924,9 @@ void tape_read_block_21(int fd)
 {
     unsigned char size;
     char *text;
-    tape_read(fd, &size, 1);
+    tape_read(fd, &size, 1, true);
     text = calloc(size + 1, 1);
-    tape_read(fd, text, size);
+    tape_read(fd, text, size, true);
     printf("%s\n", text);
     free(text);
 }
@@ -2933,9 +2935,9 @@ void tape_read_block_30(int fd)
 {
     unsigned char size;
     char *buffer;
-    tape_read(fd, &size, 1);
+    tape_read(fd, &size, 1, true);
     buffer = malloc(size + 1);
-    tape_read(fd, buffer, size);
+    tape_read(fd, buffer, size, true);
     buffer[size] = 0;
     printf("%s\n", buffer);
     free(buffer);
@@ -2993,7 +2995,7 @@ void tape_close()
 bool tape_header(int fd)
 {
     REG8 block[10];
-    return (tape_read(fd, block, 10)
+    return (tape_read(fd, block, 10, true)
         && strncmp("ZXTape!\x1A", (const char *)block, 8) == 0
         && block[8].byte_value == 1);
 }
@@ -3005,7 +3007,7 @@ void tape_load_tzx(int fd, int index)
     tape_break_index = 0;
     if (tape_header(fd))
     {
-        while (tape_read(fd, &id, 1) && running)
+        while (tape_read(fd, &id, 1, true) && running)
         {
             switch (id)
             {
@@ -3326,6 +3328,11 @@ int main(int argc, char **argv)
                         else
                         {
                             tape_load_tzx(fd, index);
+                            tape_index++;
+                            buffer = malloc(strlen(argv[1]) + (floor(log10(tape_index)) + 1) + 40);
+                            sprintf(buffer, "{ head -c 10 \"%1$s\"; tail -c +%2$ld \"%1$s\"; } > load", argv[1], tape_index);
+                            system(buffer);
+                            free(buffer);
                         }
                     }
                     else
