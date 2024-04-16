@@ -4,7 +4,7 @@
 // mkfifo save
 // cat file.tzx > load
 // cat save > file.tzx
-// { head -c 10 file.tzx > load; tail -c +INDEX file.tzx; } > load
+// ./a.out file.tzx -p0
 
 #include <fcntl.h>
 #include <stdio.h>
