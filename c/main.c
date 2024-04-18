@@ -180,6 +180,8 @@ int system_little_endian()
     return *(char *)&x;
 }
 
+// ===TIME===============================================
+
 long double time_in_seconds()
 {
     struct timespec ts;
@@ -209,6 +211,8 @@ void time_sync(unsigned long *t_states_all, int t_states)
     *t_states_all += t_states;
     time_sleep_in_seconds(time_start + *t_states_all * state_duration - time_in_seconds());
 }
+
+// ===REGISTER===========================================
 
 void register_set_8_from_4(REG8 *reg, div_t d)
 {
@@ -306,6 +310,8 @@ void register_sub16_with_flags(REG16 *reg, REG16 alt, int mask)
     *reg = other;
 }
 
+// ===FILE===============================================
+
 bool file_has_extension(const char *filename, const char *ext)
 {
     int i = strlen(filename);
@@ -349,6 +355,8 @@ void file_save_binary(const char *filename)
     fwrite(memory, 1, memory_size, f);
     fclose(f);
 }
+
+// ===MEMORY=============================================
 
 REG8 memory_read8(const REG16 reg)
 {
@@ -394,6 +402,8 @@ REG16 *memory_ref16(REG16 reg)
 {
     return (REG16 *)memory_ref8(reg);
 }
+
+// ======================================================
 
 REG8 keyboard_read8(const REG16 reg)
 {
@@ -605,6 +615,8 @@ void port_write8(const REG16 reg, const REG8 alt)
         }
     }
 }
+
+// ===Z80================================================
 
 void z80_print()
 {
@@ -2478,22 +2490,7 @@ int z80_run_one()
     }
 }
 
-void draw_screen()
-{
-    glBegin(GL_POINTS);
-    for (int y = 0; y < SCREEN_HEIGHT; y++)
-    {
-        for (int x = 0; x < SCREEN_WIDTH; x++)
-        {
-            RGB color = ula_screen[y][x];
-            glColor3f(color.red, color.green, color.blue);
-            glVertex2i(x, y);
-        }
-    }
-    glEnd();
-    glFlush();
-    glutPostRedisplay();
-}
+// ===RT=================================================
 
 void rt_close()
 {
@@ -2592,6 +2589,7 @@ TASK *rt_task(unsigned long t_states, void (*task)())
     t->task = task;
     return t;
 }
+// ===ULA================================================
 
 void ula_point(const int x, const int y, const int c, const bool b)
 {
@@ -2672,6 +2670,8 @@ void ula_run()
 {
     rt_add_task(rt_task(ula_draw_line(), ula_run));
 }
+
+// ===TAPE===============================================
 
 int tape_play_block()
 {
@@ -3260,6 +3260,25 @@ void *tape_run_load(void *args)
     }
     tape_close();
     return NULL;
+}
+
+// ======================================================
+
+void draw_screen()
+{
+    glBegin(GL_POINTS);
+    for (int y = 0; y < SCREEN_HEIGHT; y++)
+    {
+        for (int x = 0; x < SCREEN_WIDTH; x++)
+        {
+            RGB color = ula_screen[y][x];
+            glColor3f(color.red, color.green, color.blue);
+            glVertex2i(x, y);
+        }
+    }
+    glEnd();
+    glFlush();
+    glutPostRedisplay();
 }
 
 void z80_run()
