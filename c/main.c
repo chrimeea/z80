@@ -2719,7 +2719,8 @@ int tape_play_block()
                 b >>= 1;
             }
         }
-        if (block->pause > 0)
+        if ((block->pause > 0)
+            || (block->pause == 0 && tape_block_last->next == NULL))
         {
             s++;
             if (tape_load_state + 1 == s)
