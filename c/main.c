@@ -2944,6 +2944,31 @@ void tape_read_block_30(int fd)
     free(buffer);
 }
 
+void tape_read_block_32(int fd)
+{
+    unsigned short size;
+    unsigned char n, l, t;
+    int i;
+    char buffer[256];
+    char *types[] = {"Title", "Publisher", "Author", "Year",
+        "Language", "Type", "Price", "Protection", "Origin",
+        "Comment"};
+    tape_read(fd, &size, 2, true);
+    tape_read(fd, &n, 1, true);
+    for (i = 0; i < n; i++)
+    {
+        tape_read(fd, &t, 1, true);
+        tape_read(fd, &l, 1, true);
+        tape_read(fd, buffer, l, true);
+        buffer[l] = 0;
+        if (t == 0xFF)
+        {
+            t = 9;
+        }
+        printf("%s: %s\n", types[t], buffer);
+    }
+}
+
 bool tape_wait(int fd, int event)
 {
     int r = 0;
@@ -3040,6 +3065,9 @@ void tape_load_tzx(int fd, int index)
                 break;
             case 0x30:
                 tape_read_block_30(fd);
+                break;
+            case 0x32:
+                tape_read_block_32(fd);
                 break;
             default:
                 printf("Unknown block type %02x\n", id);
