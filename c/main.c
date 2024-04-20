@@ -2924,24 +2924,21 @@ void tape_read_block_20(int fd, int index)
 void tape_read_block_21(int fd)
 {
     unsigned char size;
-    char *text;
+    char text[256];
     tape_read(fd, &size, 1, true);
-    text = calloc(size + 1, 1);
     tape_read(fd, text, size, true);
+    text[size] = 0;
     printf("%s\n", text);
-    free(text);
 }
 
 void tape_read_block_30(int fd)
 {
     unsigned char size;
-    char *buffer;
+    char buffer[256];
     tape_read(fd, &size, 1, true);
-    buffer = malloc(size + 1);
     tape_read(fd, buffer, size, true);
     buffer[size] = 0;
     printf("%s\n", buffer);
-    free(buffer);
 }
 
 void tape_read_block_32(int fd)
@@ -2952,7 +2949,7 @@ void tape_read_block_32(int fd)
     char buffer[256];
     char *types[] = {"Title", "Publisher", "Author", "Year",
         "Language", "Type", "Price", "Protection", "Origin",
-        "Comment"};
+        "Comment", ""};
     tape_read(fd, &size, 2, true);
     tape_read(fd, &n, 1, true);
     for (i = 0; i < n; i++)
@@ -2964,6 +2961,10 @@ void tape_read_block_32(int fd)
         if (t == 0xFF)
         {
             t = 9;
+        }
+        else if (t > 8)
+        {
+            t = 10;
         }
         printf("%s: %s\n", types[t], buffer);
     }
