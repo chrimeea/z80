@@ -2970,6 +2970,40 @@ void tape_read_block_32(int fd)
     }
 }
 
+void tape_read_block_33(int fd)
+{
+    unsigned char n, t, id, info;
+    int i;
+    tape_read(fd, &n, 1, true);
+    for (i = 0; i < n; i++)
+    {
+        tape_read(fd, &t, 1, true);
+        tape_read(fd, &id, 1, true);
+        tape_read(fd, &info, 1, true);
+        printf("Hardware ID: %02x, Info: %02x\n", id, info);
+    }
+}
+
+void tape_read_block_35(int fd)
+{
+    unsigned short l;
+    char buffer[11];
+    char *info;
+    tape_read(fd, buffer, 10, true);
+    printf("%s\n", buffer);
+    buffer[10] = 0;
+    tape_read(fd, &l, 2, true);
+    info = malloc(l);
+    tape_read(fd, info, l, true);
+    free(info);
+}
+
+void tape_read_block_5A(int fd)
+{
+    char buffer[9];
+    tape_read(fd, buffer, 9, true);
+}
+
 bool tape_wait(int fd, int event)
 {
     int r = 0;
@@ -3069,6 +3103,15 @@ void tape_load_tzx(int fd, int index)
                 break;
             case 0x32:
                 tape_read_block_32(fd);
+                break;
+            case 0x33:
+                tape_read_block_33(fd);
+                break;
+            case 0x35:
+                tape_read_block_35(fd);
+                break;
+            case 0x5A:
+                tape_read_block_5A(fd);
                 break;
             default:
                 printf("Unknown block type %02x\n", id);
