@@ -61,6 +61,8 @@
 #define TAPE_LOAD_EVENT 1
 #define TAPE_SAVE_EVENT 2
 
+#define RT_MAX 4
+
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_zero(X) ((X).value == 0)
@@ -158,7 +160,9 @@ int tape_save_index, tape_save_buffer_size;
 char *tape_save_buffer = NULL;
 bool tape_save_mic;
 REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
-TASK *rt_timeline_head, *rt_pending;
+TASK rt_timeline[RT_MAX], rt_pending;
+bool rt_is_pending = false;
+int rt_size = 0;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -2492,31 +2496,66 @@ int z80_run_one()
 
 // ===RT=================================================
 
-void rt_close()
-{
-    while (rt_timeline_head != NULL)
-    {
-        TASK *p = rt_timeline_head;
-        rt_timeline_head = rt_timeline_head->next;
-        free(p);
-    }
-}
-
 void rt_advance_head()
 {
-    if (rt_timeline_head != NULL)
+    int i;
+    if (rt_size > 0)
     {
-        TASK *p = rt_timeline_head;
-        rt_timeline_head = p->next;
-        free(p);
+        for (i = 1; i < rt_size; i++)
+        {
+            rt_timeline[i - 1] = rt_timeline[i];
+        }
+        rt_size--;
     }
 }
 
-bool rt_add_pending_task(TASK *task)
+bool rt_add_pending_task(TASK task)
 {
-    if (rt_pending == NULL)
+    if (rt_is_pending)
+    {
+        return false;
+    }
+    else
     {
         rt_pending = task;
+        rt_is_pending = true;
+        return true;
+    }
+}
+
+unsigned long rt_next_t_states()
+{
+    if (rt_size == 0)
+    {
+        return z80_t_states_all + 1;
+    }
+    else if (rt_size == 1)
+    {
+        return rt_timeline[0].t_states + 1;
+    }
+    else
+    {
+        return rt_timeline[1].t_states;
+    }
+}
+
+bool rt_add_task(TASK task)
+{
+    int i;
+    TASK aux;
+    if (rt_size < RT_MAX)
+    {
+        rt_timeline[rt_size] = task;
+        rt_size++;
+        for (i = rt_size - 2; i >= 0; i--)
+        {
+            if (rt_timeline[i].t_states > rt_timeline[i + 1].t_states)
+            {
+                aux = rt_timeline[i];
+                rt_timeline[i] = rt_timeline[i + 1];
+                rt_timeline[i + 1] = aux;
+            }
+        }
         return true;
     }
     else
@@ -2525,70 +2564,26 @@ bool rt_add_pending_task(TASK *task)
     }
 }
 
-unsigned long rt_next_t_states()
-{
-    if (rt_timeline_head == NULL)
-    {
-        return 1;
-    }
-    else if (rt_timeline_head->next == NULL)
-    {
-        return rt_timeline_head->t_states + 1 - z80_t_states_all;
-    }
-    else
-    {
-        return rt_timeline_head->next->t_states - z80_t_states_all;
-    }
-}
-
-void rt_add_task(TASK *task)
-{
-    TASK *c = rt_timeline_head;
-    TASK *p = NULL;
-    while (c != NULL && c->t_states <= task->t_states)
-    {
-        p = c;
-        c = c->next;
-    }
-    if (p == NULL)
-    {
-        rt_timeline_head = task;
-    }
-    else
-    {
-        p->next = task;
-    }
-    task->next = c;
-}
-
 void *rt_run(void *args)
 {
     while (running)
     {
-        unsigned long t_states = (rt_timeline_head == NULL ? 1 : rt_timeline_head->t_states);
+        unsigned long t_states = (rt_size == 0 ? 1 : rt_timeline[0].t_states);
         time_sync(&z80_t_states_all, t_states - z80_t_states_all);
-        if (rt_pending != NULL)
+        if (rt_is_pending)
         {
             rt_add_task(rt_pending);
-            rt_pending = NULL;
+            rt_is_pending = false;
         }
-        if (rt_timeline_head != NULL && z80_t_states_all >= rt_timeline_head->t_states)
+        if (rt_size > 0 && z80_t_states_all >= rt_timeline[0].t_states)
         {
-            rt_timeline_head->task();
+            rt_timeline[0].task();
             rt_advance_head();
         }
     }
-    rt_close();
     return NULL;
 }
 
-TASK *rt_task(unsigned long t_states, void (*task)())
-{
-    TASK *t = (TASK *)malloc(sizeof(TASK));
-    t->t_states = z80_t_states_all + t_states;
-    t->task = task;
-    return t;
-}
 // ===ULA================================================
 
 void ula_point(const int x, const int y, const int c, const bool b)
@@ -2668,7 +2663,7 @@ int ula_draw_line()
 
 void ula_run()
 {
-    rt_add_task(rt_task(ula_draw_line(), ula_run));
+    rt_add_task((TASK){.t_states = z80_t_states_all + ula_draw_line(), .task = ula_run});
 }
 
 // ===TAPE===============================================
@@ -3132,7 +3127,7 @@ void tape_play_run()
     while (s == 0 && running);
     if (s > 0)
     {
-        rt_add_task(rt_task(s, tape_play_run));
+        rt_add_task((TASK){.t_states = z80_t_states_all + s, .task = tape_play_run});
     }
     else
     {
@@ -3260,7 +3255,7 @@ void tape_listen()
             tape_save_t_states = z80_t_states_all;
             tape_save_mic = sound_mic;
         }
-        rt_add_task(rt_task(rt_next_t_states(), tape_listen));
+        rt_add_task((TASK){.t_states = rt_next_t_states(), .task = tape_listen});
     }
 }
 
@@ -3284,7 +3279,7 @@ void *tape_run_save(void *args)
             tape_save_mic = false;
             tape_save_buffer_size = 19;
             tape_save_buffer = realloc(tape_save_buffer, tape_save_buffer_size);
-            rt_add_pending_task(rt_task(0, tape_listen));
+            rt_add_pending_task((TASK){.t_states = z80_t_states_all, .task = tape_listen});
             write_tzx_header(fd);
             while (tape_wait(fd, TAPE_SAVE_EVENT))
             {
@@ -3322,7 +3317,7 @@ void *tape_run_load(void *args)
                 tape_load_tzx(fd, 1);
                 tape_block_last = tape_block_head;
                 tape_load_state = 0;
-                rt_add_pending_task(rt_task(0, tape_play_run));
+                rt_add_pending_task((TASK){.t_states = z80_t_states_all, .task = tape_play_run});
             }
             close(fd);
         }
@@ -3356,7 +3351,7 @@ void draw_screen()
 
 void z80_run()
 {
-    rt_add_task(rt_task(z80_run_one(), z80_run));
+    rt_add_task((TASK){.t_states = z80_t_states_all + z80_run_one(), z80_run});
 }
 
 void window_show(int argc, char **argv)
@@ -3443,8 +3438,8 @@ int main(int argc, char **argv)
             }
         }
         window_show(argc, argv);
-        rt_add_task(rt_task(0, z80_run));
-        rt_add_task(rt_task(0, ula_run));
+        rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
+        rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_id, NULL, tape_run_save, NULL);
@@ -3460,7 +3455,6 @@ int main(int argc, char **argv)
 
 // TODO: simulation speed is not constant ?
 // TODO: ula task each 4 states and horizontal retrace
-// TODO: use preallocated memory instead of malloc
 // TODO: uart
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
