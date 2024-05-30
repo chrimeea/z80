@@ -3377,7 +3377,7 @@ void window_show(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    pthread_t rt_id, tape_id;
+    pthread_t rt_id, tape_load_id, tape_save_id;
     int fd, index;
     char *buffer;
     if (system_little_endian())
@@ -3441,14 +3441,15 @@ int main(int argc, char **argv)
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
         pthread_create(&rt_id, NULL, rt_run, NULL);
-        pthread_create(&tape_id, NULL, tape_run_load, NULL);
-        pthread_create(&tape_id, NULL, tape_run_save, NULL);
+        pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
+        pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
         pthread_join(rt_id, NULL);
-        pthread_join(tape_id, NULL);
+        pthread_join(tape_load_id, NULL);
+        pthread_join(tape_save_id, NULL);
     }
     return 0;
 }
