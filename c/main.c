@@ -4,6 +4,8 @@
 // mkfifo save
 // cat file.tzx > load
 // cat save > file.tzx
+// ./a.out file.rom
+// ./a.out file.sna
 // ./a.out file.tzx -p0
 
 #include <fcntl.h>
