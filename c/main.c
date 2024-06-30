@@ -3146,7 +3146,7 @@ void write_tzx_header(int fd)
     write(fd, buffer, 10);
 }
 
-void write_tzx_block_10(int fd, char *data, short size)
+void write_tzx_block_10(int fd, char *data, unsigned short size)
 {
     char buffer[5];
     buffer[0] = 0x10;
