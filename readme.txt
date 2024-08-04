@@ -6,3 +6,6 @@ C version, fully working. Needs a rom file.
 cd c
 gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -Wall
 ./a.out file.rom
+
+To compile the C version you need the following packages:
+sudo apt-get install libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev
