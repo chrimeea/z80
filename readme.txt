@@ -8,4 +8,4 @@ gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -Wall
 ./a.out file.rom
 
 To compile the C version you need the following packages:
-sudo apt install freeglut3-dev
+sudo apt install freeglut3-dev glew-utils libglew-dev libgl-dev libglut-dev
