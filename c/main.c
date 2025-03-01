@@ -1,4 +1,4 @@
-// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -Wall
+// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -lasound -Wall
 // SHIFT = SS; ALT = CS; ESC = SS + CS
 // mkfifo load
 // mkfifo save
@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <GL/freeglut.h>
 #include <errno.h>
+#include <alsa/asoundlib.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -63,7 +64,7 @@
 #define TAPE_LOAD_EVENT 1
 #define TAPE_SAVE_EVENT 2
 
-#define RT_MAX 4
+#define RT_MAX 5
 
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
@@ -135,7 +136,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
-long double time_start, state_duration = 0.0000002857L;
+long double time_start, state_duration = 1.0L / 3500000.0L;
 unsigned long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
@@ -165,6 +166,9 @@ REG8BLOCK *tape_block_head = NULL, *tape_block_last = NULL;
 TASK rt_timeline[RT_MAX], rt_pending;
 bool rt_is_pending = false;
 int rt_size = 0;
+snd_pcm_t *pcm_handle;
+int pcm_sample = 48000;
+int pcm_states = 3500000 / 48000 + 1;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -586,12 +590,10 @@ void sound_ear_on_off(bool on)
     if (on && !sound_ear)
     {
         sound_ear = true;
-        // ioctl(sound_console_fd, KIOCSOUND, 2147483647);
     }
     else if (!on && sound_ear)
     {
         sound_ear = false;
-        // ioctl(sound_console_fd, KIOCSOUND, 0);
     }
 }
 
@@ -2668,6 +2670,20 @@ void ula_run()
     rt_add_task((TASK){.t_states = z80_t_states_all + ula_draw_line(), .task = ula_run});
 }
 
+// ===SOUND==============================================
+
+/*void pcm_frame()
+{
+	unsigned char frame = sound_ear * 128;
+	snd_pcm_writei(pcm_handle, &frame, 1);
+}
+
+void pcm_run()
+{
+	pcm_frame();
+    rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
+}*/
+
 // ===TAPE===============================================
 
 int tape_play_block()
@@ -3439,9 +3455,54 @@ int main(int argc, char **argv)
                 return 1;
             }
         }
+        /*int err;
+        char *device = "default";
+    if ((err = snd_pcm_open(&pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+        printf("Playback open error: %s\n", snd_strerror(err));
+        exit(EXIT_FAILURE);
+    }
+    if ((err = snd_pcm_set_params(pcm_handle,
+                      SND_PCM_FORMAT_U8,
+                      SND_PCM_ACCESS_RW_INTERLEAVED,
+                      1,
+                      48000,
+                      1,
+                      500000)) < 0) {
+        printf("Playback open error: %s\n", snd_strerror(err));
+        exit(EXIT_FAILURE);
+    }
+        unsigned char b[16*1024];
+        snd_pcm_sframes_t frames;
+        for (int j = 0; j < sizeof(b); j++)
+			b[j] = random() & 0xff;
+        for (int i = 0; i < 16; i++) {
+        frames = snd_pcm_writei(pcm_handle, b, sizeof(b));
+        if (frames < 0)
+            frames = snd_pcm_recover(pcm_handle, frames, 0);
+        if (frames < 0) {
+            printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
+            break;
+        }
+        if (frames > 0 && frames < (long)sizeof(b))
+            printf("Short write (expected %li, wrote %li)\n", (long)sizeof(b), frames);
+		}
+		err = snd_pcm_drain(pcm_handle);
+		if (err < 0)
+			printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
+		*/
+        /*snd_pcm_uframes_t size;
+        int dir, err;
+        snd_pcm_hw_params_t *params;
+        snd_pcm_hw_params_alloca(&params);
+        err = snd_pcm_hw_params_any(pcm_handle, params);
+        printf("%d\n", err);
+		err = snd_pcm_hw_params_get_period_size(params, &size, &dir);
+		printf("%s\n", snd_strerror(err));
+		printf("%ld\n", size);*/
         window_show(argc, argv);
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
+        //rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
@@ -3449,6 +3510,7 @@ int main(int argc, char **argv)
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
+        //snd_pcm_close(pcm_handle);
         pthread_join(rt_id, NULL);
         pthread_join(tape_load_id, NULL);
         pthread_join(tape_save_id, NULL);
@@ -3463,3 +3525,5 @@ int main(int argc, char **argv)
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
 // TODO: sound
+// https://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
+// async_loop
