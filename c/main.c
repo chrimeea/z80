@@ -168,7 +168,7 @@ bool rt_is_pending = false;
 int rt_size = 0;
 snd_pcm_t *pcm_handle;
 //int pcm_sample = 48000;
-//int pcm_states = 3500000 / 48000 + 1;
+//wint pcm_states = 3500000 / 48000 + 1;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -2693,7 +2693,7 @@ void pcm_frame()
 void pcm_run()
 {
 	pcm_frame();
-    rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
+    rt_add_task((TASK){.t_states = z80_t_states_all + 72, .task = pcm_run});
 }
 
 // ===TAPE===============================================
@@ -3467,18 +3467,18 @@ int main(int argc, char **argv)
                 return 1;
             }
         }
-        /*snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK,  SND_PCM_NONBLOCK);
+        snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK,  SND_PCM_NONBLOCK);
 		snd_pcm_set_params(pcm_handle,
                       SND_PCM_FORMAT_U8,
                       SND_PCM_ACCESS_RW_INTERLEAVED,
                       1,
                       48000,
                       1,
-                      500000);*/
+                      100000);
         window_show(argc, argv);
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
-        //rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
+        rt_add_task((TASK){.t_states = z80_t_states_all + 72, pcm_run});
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
@@ -3486,7 +3486,7 @@ int main(int argc, char **argv)
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
-        //snd_pcm_close(pcm_handle);
+        snd_pcm_close(pcm_handle);
         pthread_join(rt_id, NULL);
         pthread_join(tape_load_id, NULL);
         pthread_join(tape_save_id, NULL);
