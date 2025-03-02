@@ -2678,15 +2678,9 @@ void pcm_frame()
 	snd_pcm_sframes_t avail = snd_pcm_avail_update(pcm_handle);
 	if (avail >= 1)
 	{
-		int err = snd_pcm_writei(pcm_handle, &frame, 1);
-		/*if (err < 0)
-		{
-			printf("%d %s\n", err, snd_strerror(err));
-			exit(1);
-		}*/
+		snd_pcm_writei(pcm_handle, &frame, 1);
 	} else if (avail < 0) {
 		snd_pcm_prepare(pcm_handle);
-		//printf("%s\n", snd_strerror(avail));
 	}
 }
 
@@ -2696,6 +2690,17 @@ void pcm_run()
     rt_add_task((TASK){.t_states = z80_t_states_all + 72, .task = pcm_run});
 }
 
+void pcm_config()
+{
+	snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	snd_pcm_set_params(pcm_handle,
+				  SND_PCM_FORMAT_U8,
+				  SND_PCM_ACCESS_RW_INTERLEAVED,
+				  1,
+				  48000,
+				  1,
+				  100000);
+}
 // ===TAPE===============================================
 
 int tape_play_block()
@@ -3412,8 +3417,6 @@ int main(int argc, char **argv)
     char *buffer;
     if (system_little_endian())
     {
-        // sound_console_fd = open("/dev/console", O_WRONLY);
-        // atexit(z80_reset);
         z80_reset();
         if (argc >= 2)
         {
@@ -3467,14 +3470,7 @@ int main(int argc, char **argv)
                 return 1;
             }
         }
-        snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK,  SND_PCM_NONBLOCK);
-		snd_pcm_set_params(pcm_handle,
-                      SND_PCM_FORMAT_U8,
-                      SND_PCM_ACCESS_RW_INTERLEAVED,
-                      1,
-                      48000,
-                      1,
-                      100000);
+        pcm_config();
         window_show(argc, argv);
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
