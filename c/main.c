@@ -66,6 +66,9 @@
 
 #define RT_MAX 5
 
+#define PCM_SAMPLE 48000
+#define Z80_FREQ 3500000.0L
+
 #define sign(X) (X < 0)
 #define is_bit(I, B) (I & (B))
 #define register_is_zero(X) ((X).value == 0)
@@ -136,7 +139,7 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
-long double time_start, state_duration = 1.0L / 3500000.0L;
+long double time_start, state_duration = 1.0L / Z80_FREQ;
 unsigned long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
@@ -167,8 +170,7 @@ TASK rt_timeline[RT_MAX], rt_pending;
 bool rt_is_pending = false;
 int rt_size = 0;
 snd_pcm_t *pcm_handle;
-//int pcm_sample = 48000;
-//wint pcm_states = 3500000 / 48000 + 1;
+int pcm_states = Z80_FREQ / PCM_SAMPLE;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -2687,7 +2689,7 @@ void pcm_frame()
 void pcm_run()
 {
 	pcm_frame();
-    rt_add_task((TASK){.t_states = z80_t_states_all + 72, .task = pcm_run});
+    rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
 }
 
 void pcm_config()
@@ -2697,7 +2699,7 @@ void pcm_config()
 				  SND_PCM_FORMAT_U8,
 				  SND_PCM_ACCESS_RW_INTERLEAVED,
 				  1,
-				  48000,
+				  PCM_SAMPLE,
 				  1,
 				  100000);
 }
@@ -3474,7 +3476,7 @@ int main(int argc, char **argv)
         window_show(argc, argv);
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
-        rt_add_task((TASK){.t_states = z80_t_states_all + 72, pcm_run});
+        rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
