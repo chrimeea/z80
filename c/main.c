@@ -167,8 +167,8 @@ TASK rt_timeline[RT_MAX], rt_pending;
 bool rt_is_pending = false;
 int rt_size = 0;
 snd_pcm_t *pcm_handle;
-int pcm_sample = 48000;
-int pcm_states = 3500000 / 48000 + 1;
+//int pcm_sample = 48000;
+//int pcm_states = 3500000 / 48000 + 1;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -2672,17 +2672,29 @@ void ula_run()
 
 // ===SOUND==============================================
 
-/*void pcm_frame()
+void pcm_frame()
 {
 	unsigned char frame = sound_ear * 128;
-	snd_pcm_writei(pcm_handle, &frame, 1);
+	snd_pcm_sframes_t avail = snd_pcm_avail_update(pcm_handle);
+	if (avail >= 1)
+	{
+		int err = snd_pcm_writei(pcm_handle, &frame, 1);
+		/*if (err < 0)
+		{
+			printf("%d %s\n", err, snd_strerror(err));
+			exit(1);
+		}*/
+	} else if (avail < 0) {
+		snd_pcm_prepare(pcm_handle);
+		//printf("%s\n", snd_strerror(avail));
+	}
 }
 
 void pcm_run()
 {
 	pcm_frame();
     rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
-}*/
+}
 
 // ===TAPE===============================================
 
@@ -3455,50 +3467,14 @@ int main(int argc, char **argv)
                 return 1;
             }
         }
-        /*int err;
-        char *device = "default";
-    if ((err = snd_pcm_open(&pcm_handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-        printf("Playback open error: %s\n", snd_strerror(err));
-        exit(EXIT_FAILURE);
-    }
-    if ((err = snd_pcm_set_params(pcm_handle,
+        /*snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK,  SND_PCM_NONBLOCK);
+		snd_pcm_set_params(pcm_handle,
                       SND_PCM_FORMAT_U8,
                       SND_PCM_ACCESS_RW_INTERLEAVED,
                       1,
                       48000,
                       1,
-                      500000)) < 0) {
-        printf("Playback open error: %s\n", snd_strerror(err));
-        exit(EXIT_FAILURE);
-    }
-        unsigned char b[16*1024];
-        snd_pcm_sframes_t frames;
-        for (int j = 0; j < sizeof(b); j++)
-			b[j] = random() & 0xff;
-        for (int i = 0; i < 16; i++) {
-        frames = snd_pcm_writei(pcm_handle, b, sizeof(b));
-        if (frames < 0)
-            frames = snd_pcm_recover(pcm_handle, frames, 0);
-        if (frames < 0) {
-            printf("snd_pcm_writei failed: %s\n", snd_strerror(frames));
-            break;
-        }
-        if (frames > 0 && frames < (long)sizeof(b))
-            printf("Short write (expected %li, wrote %li)\n", (long)sizeof(b), frames);
-		}
-		err = snd_pcm_drain(pcm_handle);
-		if (err < 0)
-			printf("snd_pcm_drain failed: %s\n", snd_strerror(err));
-		*/
-        /*snd_pcm_uframes_t size;
-        int dir, err;
-        snd_pcm_hw_params_t *params;
-        snd_pcm_hw_params_alloca(&params);
-        err = snd_pcm_hw_params_any(pcm_handle, params);
-        printf("%d\n", err);
-		err = snd_pcm_hw_params_get_period_size(params, &size, &dir);
-		printf("%s\n", snd_strerror(err));
-		printf("%ld\n", size);*/
+                      500000);*/
         window_show(argc, argv);
         rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
         rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
@@ -3524,6 +3500,3 @@ int main(int argc, char **argv)
 // TODO: use pixel shader with drawArrays
 // https://stackoverflow.com/questions/19102180/how-does-gldrawarrays-know-what-to-draw
 // TODO: replace glut with x calls to create window and read keyboard
-// TODO: sound
-// https://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
-// async_loop
