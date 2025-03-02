@@ -170,7 +170,7 @@ TASK rt_timeline[RT_MAX], rt_pending;
 bool rt_is_pending = false;
 int rt_size = 0;
 snd_pcm_t *pcm_handle;
-int pcm_states = Z80_FREQ / PCM_SAMPLE;
+int pcm_states = Z80_FREQ / PCM_SAMPLE - 1;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
