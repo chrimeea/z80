@@ -170,7 +170,7 @@ TASK rt_timeline[RT_MAX], rt_pending;
 bool rt_is_pending = false;
 int rt_size = 0;
 snd_pcm_t *pcm_handle;
-int pcm_states = Z80_FREQ / PCM_SAMPLE - 1;
+int pcm_states = Z80_FREQ / PCM_SAMPLE;
 // int debug = 100;
 
 void to_binary(unsigned char c, char *o)
@@ -2674,15 +2674,33 @@ void ula_run()
 
 // ===SOUND==============================================
 
+void xrun_recovery(snd_pcm_t *handle, int err)
+{
+    if (err == -EPIPE)
+    {
+        snd_pcm_prepare(handle);
+    } else if (err == -ESTRPIPE)
+    {
+        while ((err = snd_pcm_resume(handle)) == -EAGAIN)
+        {
+            time_sleep_in_seconds(1.0);
+		}
+        if (err < 0)
+        {
+            snd_pcm_prepare(handle);
+        }
+    }
+}
+
 void pcm_frame()
 {
 	unsigned char frame = sound_ear * 128;
-	snd_pcm_sframes_t avail = snd_pcm_avail_update(pcm_handle);
-	if (avail >= 1)
+	//snd_pcm_sframes_t avail = snd_pcm_avail_update(pcm_handle);
+	int err = snd_pcm_writei(pcm_handle, &frame, 1);
+	if (err < 0)
 	{
-		snd_pcm_writei(pcm_handle, &frame, 1);
-	} else if (avail < 0) {
-		snd_pcm_prepare(pcm_handle);
+		xrun_recovery(pcm_handle, err);
+		//snd_pcm_prepare(pcm_handle);
 	}
 }
 
@@ -3480,6 +3498,9 @@ int main(int argc, char **argv)
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
+        struct sched_param p;
+        p.sched_priority=1;
+        pthread_setschedparam(rt_id, SCHED_FIFO, &p);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
