@@ -2695,12 +2695,10 @@ void xrun_recovery(snd_pcm_t *handle, int err)
 void pcm_frame()
 {
 	unsigned char frame = sound_ear * 128;
-	//snd_pcm_sframes_t avail = snd_pcm_avail_update(pcm_handle);
 	int err = snd_pcm_writei(pcm_handle, &frame, 1);
 	if (err < 0)
 	{
 		xrun_recovery(pcm_handle, err);
-		//snd_pcm_prepare(pcm_handle);
 	}
 }
 
