@@ -3433,6 +3433,7 @@ int main(int argc, char **argv)
     pthread_t rt_id, tape_load_id, tape_save_id;
     int fd, index;
     char *buffer;
+    struct sched_param p = {.sched_priority = 1};
     if (system_little_endian())
     {
         z80_reset();
@@ -3496,8 +3497,6 @@ int main(int argc, char **argv)
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
-        struct sched_param p;
-        p.sched_priority=1;
         pthread_setschedparam(rt_id, SCHED_FIFO, &p);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
