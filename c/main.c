@@ -2674,37 +2674,25 @@ void ula_run()
 
 // ===SOUND==============================================
 
-void xrun_recovery(snd_pcm_t *handle, int err)
+void pcm_run()
 {
+	unsigned char frame = sound_ear * 128;
+	int err = snd_pcm_writei(pcm_handle, &frame, 1);
     if (err == -EPIPE)
     {
-        snd_pcm_prepare(handle);
-    } else if (err == -ESTRPIPE)
+        snd_pcm_prepare(pcm_handle);
+    }
+    else if (err == -ESTRPIPE)
     {
-        while ((err = snd_pcm_resume(handle)) == -EAGAIN)
+        while ((err = snd_pcm_resume(pcm_handle)) == -EAGAIN)
         {
             time_sleep_in_seconds(1.0);
 		}
         if (err < 0)
         {
-            snd_pcm_prepare(handle);
+            snd_pcm_prepare(pcm_handle);
         }
     }
-}
-
-void pcm_frame()
-{
-	unsigned char frame = sound_ear * 128;
-	int err = snd_pcm_writei(pcm_handle, &frame, 1);
-	if (err < 0)
-	{
-		xrun_recovery(pcm_handle, err);
-	}
-}
-
-void pcm_run()
-{
-	pcm_frame();
     rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
 }
 
