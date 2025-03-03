@@ -3510,7 +3510,6 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// TODO: simulation speed is not constant ?
 // TODO: ula task each 4 states and horizontal retrace
 // TODO: uart
 // TODO: use pixel shader with drawArrays
