@@ -218,10 +218,9 @@ void time_sleep_in_seconds(long double s)
     }
 }
 
-void time_sync(unsigned long long *t_states_all, int t_states)
+void time_sync()
 {
-    *t_states_all += t_states;
-    time_sleep_in_seconds(time_start + *t_states_all * state_duration - time_in_seconds());
+    time_sleep_in_seconds(time_start + z80_t_states_all * state_duration - time_in_seconds());
 }
 
 // ===REGISTER===========================================
@@ -2573,8 +2572,8 @@ void *rt_run(void *args)
 	time_start = time_in_seconds();
     while (running)
     {
-        unsigned long long t_states = (rt_size == 0 ? z80_t_states_all : rt_timeline[0].t_states);
-        time_sync(&z80_t_states_all, t_states - z80_t_states_all);
+		z80_t_states_all = (rt_size == 0 ? z80_t_states_all : rt_timeline[0].t_states);
+        time_sync();
         if (rt_is_pending)
         {
             rt_add_task(rt_pending);
