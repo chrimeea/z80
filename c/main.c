@@ -108,7 +108,7 @@ typedef struct
 
 typedef struct TTASK
 {
-    unsigned long t_states;
+    unsigned long long t_states;
     void (*task)();
     struct TTASK *next;
 } TASK;
@@ -139,8 +139,8 @@ RGB ula_bright_colors[] = {(RGB){0.0f, 0.0f, 0.0f}, (RGB){0.0f, 0.0f, 1.0f},
                            (RGB){0.0f, 1.0f, 0.0f}, (RGB){0.0f, 1.0f, 1.0f},
                            (RGB){1.0f, 1.0f, 0.0f}, (RGB){1.0f, 1.0f, 1.0f}};
 const unsigned int memory_size = MAX16;
-long double time_start, state_duration = 1.0L / Z80_FREQ;
-unsigned long z80_t_states_all = 0;
+long double time_start = 0.0L, state_duration = 1.0L / Z80_FREQ;
+unsigned long long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
 // int sound_console_fd;
@@ -160,7 +160,7 @@ bool running;
 bool z80_maskable_interrupt_flag, z80_nonmaskable_interrupt_flag;
 bool z80_iff1, z80_iff2, z80_can_execute, z80_halt;
 int z80_imode;
-unsigned long tape_save_t_states, tape_save_duration, tape_index, tape_break_index;
+unsigned long long tape_save_t_states, tape_save_duration, tape_index, tape_break_index;
 int tape_load_state, tape_save_state, tape_save_counter;
 int tape_save_index, tape_save_buffer_size;
 char *tape_save_buffer = NULL;
@@ -218,7 +218,7 @@ void time_sleep_in_seconds(long double s)
     }
 }
 
-void time_sync(unsigned long *t_states_all, int t_states)
+void time_sync(unsigned long long *t_states_all, int t_states)
 {
     *t_states_all += t_states;
     time_sleep_in_seconds(time_start + *t_states_all * state_duration - time_in_seconds());
@@ -662,9 +662,6 @@ void z80_reset()
     z80_reg_pc.byte_value = 0;
     z80_reg_r.byte_value = 0;
     z80_data_bus.byte_value = 0xFF;
-    running = true;
-    time_start = time_in_seconds();
-    z80_t_states_all = 0;
     sound_mic = false;
     sound_ear_on_off(false);
 }
@@ -2529,7 +2526,7 @@ bool rt_add_pending_task(TASK task)
     }
 }
 
-unsigned long rt_next_t_states()
+unsigned long long rt_next_t_states()
 {
     if (rt_size == 0)
     {
@@ -2572,9 +2569,11 @@ bool rt_add_task(TASK task)
 
 void *rt_run(void *args)
 {
+	running = true;
+	time_start = time_in_seconds();
     while (running)
     {
-        unsigned long t_states = (rt_size == 0 ? 1 : rt_timeline[0].t_states);
+        unsigned long long t_states = (rt_size == 0 ? z80_t_states_all : rt_timeline[0].t_states);
         time_sync(&z80_t_states_all, t_states - z80_t_states_all);
         if (rt_is_pending)
         {
@@ -2696,16 +2695,20 @@ void pcm_run()
     rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, .task = pcm_run});
 }
 
-void pcm_config()
+int pcm_config()
 {
-	snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-	snd_pcm_set_params(pcm_handle,
+	int i = snd_pcm_open(&pcm_handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
+	if (i == 0)
+	{
+		i = snd_pcm_set_params(pcm_handle,
 				  SND_PCM_FORMAT_U8,
 				  SND_PCM_ACCESS_RW_INTERLEAVED,
 				  1,
 				  PCM_SAMPLE,
 				  1,
 				  100000);
+	}
+	return i;
 }
 // ===TAPE===============================================
 
@@ -3195,7 +3198,7 @@ void write_tzx_block_10(int fd, char *data, unsigned short size)
     write(fd, data, size);
 }
 
-void tape_record(int counter, unsigned long duration)
+void tape_record(int counter, unsigned long long duration)
 {
     int i;
     if (duration == 2168 && tape_save_state == 0)
@@ -3276,7 +3279,7 @@ void tape_record(int counter, unsigned long duration)
 
 void tape_listen()
 {
-    unsigned long duration;
+    unsigned long long duration;
     if (tape_save_state != -1)
     {
         if (tape_save_mic != sound_mic)
@@ -3419,12 +3422,13 @@ void window_show(int argc, char **argv)
 int main(int argc, char **argv)
 {
     pthread_t rt_id, tape_load_id, tape_save_id;
-    int fd, index;
+    int fd, index, pcm_ok;
     char *buffer;
-    struct sched_param p = {.sched_priority = 1};
+    //pthread_attr_t a;
+    //struct sched_param p = {.sched_priority = 10};
     if (system_little_endian())
     {
-        z80_reset();
+		z80_reset();
         if (argc >= 2)
         {
             if (file_has_extension(argv[1], ".rom"))
@@ -3457,7 +3461,7 @@ int main(int argc, char **argv)
                             tape_load_tzx(fd, index);
                             tape_index++;
                             buffer = malloc(strlen(argv[1]) + (floor(log10(tape_index)) + 1) + 40);
-                            sprintf(buffer, "{ head -c 10 \"%1$s\"; tail -c +%2$ld \"%1$s\"; } > load", argv[1], tape_index);
+                            sprintf(buffer, "{ head -c 10 \"%1$s\"; tail -c +%2$lld \"%1$s\"; } > load", argv[1], tape_index);
                             system(buffer);
                             free(buffer);
                         }
@@ -3477,20 +3481,31 @@ int main(int argc, char **argv)
                 return 1;
             }
         }
-        pcm_config();
+        pcm_ok = pcm_config();
         window_show(argc, argv);
-        rt_add_task((TASK){.t_states = z80_t_states_all, z80_run});
-        rt_add_task((TASK){.t_states = z80_t_states_all, ula_run});
-        rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
+        rt_add_task((TASK){.t_states = 0, ula_run});
+        rt_add_task((TASK){.t_states = 0, z80_run});
+        if (pcm_ok == 0)
+        {
+			rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
+		}
+		/*pthread_attr_init(&a);
+		pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
+		pthread_attr_setschedpolicy(&a, SCHED_FIFO);
+		pthread_attr_setschedparam(&a, &p);
+        pthread_create(&rt_id, &a, rt_run, NULL);
+        pthread_attr_destroy(&a);*/
         pthread_create(&rt_id, NULL, rt_run, NULL);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
-        pthread_setschedparam(rt_id, SCHED_FIFO, &p);
         glutDisplayFunc(draw_screen);
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
         glutMainLoop();
         running = false;
-        snd_pcm_close(pcm_handle);
+        if (pcm_ok == 0)
+        {
+			snd_pcm_close(pcm_handle);
+		}
         pthread_join(rt_id, NULL);
         pthread_join(tape_load_id, NULL);
         pthread_join(tape_save_id, NULL);
