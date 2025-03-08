@@ -143,7 +143,6 @@ long double time_start = 0.0L, state_duration = 1.0L / Z80_FREQ;
 unsigned long long z80_t_states_all = 0;
 unsigned int ula_draw_counter = 0, ula_line = 0, ula_state;
 int ula_border_color;
-// int sound_console_fd;
 bool sound_ear = false, sound_mic = false, sound_input = false;
 REG16 ula_addr_bitmap, ula_addr_attrib;
 REG16 z80_reg_bc, z80_reg_de, z80_reg_hl, z80_reg_af, z80_reg_pc, z80_reg_sp, z80_reg_ix, z80_reg_iy;
