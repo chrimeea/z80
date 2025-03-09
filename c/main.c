@@ -4,9 +4,9 @@
 // mkfifo save
 // cat file.tzx > load
 // cat save > file.tzx
-// ./a.out file.rom
+// ./a.out file.rom [-o]
 // ./a.out file.sna
-// ./a.out file.tzx -p0
+// ./a.out file.tzx [-p0]
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -359,10 +359,26 @@ void file_load_sna(const char *filename)
     fclose(f);
 }
 
-void file_save_binary(const char *filename)
+void file_save_sna(const char *filename)
 {
     FILE *f = fopen(filename, "w");
-    fwrite(memory, 1, memory_size, f);
+    fwrite(&z80_reg_i, 1, 1, f);
+    fwrite(&z80_reg_hl_2, 2, 1, f);
+    fwrite(&z80_reg_de_2, 2, 1, f);
+    fwrite(&z80_reg_bc_2, 2, 1, f);
+    fwrite(&z80_reg_af_2, 2, 1, f);
+    fwrite(&z80_reg_hl, 2, 1, f);
+    fwrite(&z80_reg_de, 2, 1, f);
+    fwrite(&z80_reg_bc, 2, 1, f);
+    fwrite(&z80_reg_iy, 2, 1, f);
+    fwrite(&z80_reg_ix, 2, 1, f);
+    fwrite(&z80_iff2, 1, 1, f);
+    fwrite(&z80_reg_r, 1, 1, f);
+    fwrite(&z80_reg_af, 2, 1, f);
+    fwrite(&z80_reg_sp, 2, 1, f);
+    fwrite(&z80_imode, 1, 1, f);
+    fwrite(&ula_border_color, 1, 1, f);
+    fwrite(memory + 0x4000, 1, 49152, f);
     fclose(f);
 }
 
@@ -3507,6 +3523,11 @@ int main(int argc, char **argv)
         pthread_join(rt_id, NULL);
         pthread_join(tape_load_id, NULL);
         pthread_join(tape_save_id, NULL);
+		if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'o')
+        {
+			z80_push16(z80_reg_pc);
+			file_save_sna("out.sna");
+		}
     }
     return 0;
 }
