@@ -3461,6 +3461,7 @@ int main(int argc, char **argv)
                 fd = open(argv[1], O_RDONLY);
                 if (fd != -1)
                 {
+					running = true;
                     if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'p')
                     {
                         index = atoi(&argv[2][2]);
@@ -3483,7 +3484,6 @@ int main(int argc, char **argv)
                     }
                     else
                     {
-						running = true;
                         tape_load_tzx(fd, 0);
                     }
                     tape_close();
