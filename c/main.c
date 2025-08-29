@@ -21,6 +21,7 @@
 #include <GL/freeglut.h>
 #include <errno.h>
 #include <alsa/asoundlib.h>
+#include <sys/resource.h>
 
 #define MAX0 0x01
 #define MAX1 0x02
@@ -3438,8 +3439,8 @@ int main(int argc, char **argv)
     pthread_t rt_id, tape_load_id, tape_save_id;
     int fd, index, pcm_ok;
     char *buffer;
-    //pthread_attr_t a;
-    //struct sched_param p = {.sched_priority = 10};
+    pthread_attr_t a;
+    struct sched_param p = {.sched_priority = 10};
     if (system_little_endian())
     {
 		z80_reset();
@@ -3504,13 +3505,15 @@ int main(int argc, char **argv)
         {
 			rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
 		}
-		/*pthread_attr_init(&a);
+		pthread_attr_init(&a);
 		pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
 		pthread_attr_setschedpolicy(&a, SCHED_FIFO);
 		pthread_attr_setschedparam(&a, &p);
-        pthread_create(&rt_id, &a, rt_run, NULL);
-        pthread_attr_destroy(&a);*/
-        pthread_create(&rt_id, NULL, rt_run, NULL);
+        if (pthread_create(&rt_id, &a, rt_run, NULL) != 0)
+        {
+			pthread_create(&rt_id, NULL, rt_run, NULL);
+		}
+        pthread_attr_destroy(&a);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
         glutDisplayFunc(draw_screen);
