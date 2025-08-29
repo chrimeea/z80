@@ -3482,6 +3482,7 @@ int main(int argc, char **argv)
                     }
                     else
                     {
+						running = true;
                         tape_load_tzx(fd, 0);
                     }
                     tape_close();
