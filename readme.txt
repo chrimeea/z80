@@ -8,4 +8,4 @@ gcc main.c -std=gnu99 -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -lasound -Wal
 ./a.out file.rom
 
 To compile the C version you need the following packages:
-sudo apt install freeglut3-dev glew-utils libglew-dev libgl-dev libglut-dev
+sudo apt install freeglut3-dev glew-utils libglew-dev libgl-dev libglut-dev libasound2-dev
