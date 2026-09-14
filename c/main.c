@@ -1,4 +1,4 @@
-// gcc main.c -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -lasound -Wall
+// gcc main.c -std=gnu99 -Ofast -lGLEW -lGLU -lGL -lglut -pthread -lm -lasound -Wall
 // SHIFT = SS; ALT = CS; ESC = SS + CS
 // mkfifo load
 // mkfifo save
@@ -3443,7 +3443,7 @@ int main(int argc, char **argv)
     struct sched_param p = {.sched_priority = 10};
     if (system_little_endian())
     {
-		z80_reset();
+	z80_reset();
         if (argc >= 2)
         {
             if (file_has_extension(argv[1], ".rom"))
@@ -3461,7 +3461,7 @@ int main(int argc, char **argv)
                 fd = open(argv[1], O_RDONLY);
                 if (fd != -1)
                 {
-					running = true;
+		    running = true;
                     if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'p')
                     {
                         index = atoi(&argv[2][2]);
@@ -3503,16 +3503,16 @@ int main(int argc, char **argv)
         rt_add_task((TASK){.t_states = 0, z80_run});
         if (pcm_ok == 0)
         {
-			rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
-		}
-		pthread_attr_init(&a);
-		pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
-		pthread_attr_setschedpolicy(&a, SCHED_FIFO);
-		pthread_attr_setschedparam(&a, &p);
+	    rt_add_task((TASK){.t_states = z80_t_states_all + pcm_states, pcm_run});
+	}
+	pthread_attr_init(&a);
+	pthread_attr_setinheritsched(&a, PTHREAD_EXPLICIT_SCHED);
+	pthread_attr_setschedpolicy(&a, SCHED_FIFO);
+	pthread_attr_setschedparam(&a, &p);
         if (pthread_create(&rt_id, &a, rt_run, NULL) != 0)
         {
-			pthread_create(&rt_id, NULL, rt_run, NULL);
-		}
+	    pthread_create(&rt_id, NULL, rt_run, NULL);
+	}
         pthread_attr_destroy(&a);
         pthread_create(&tape_load_id, NULL, tape_run_load, NULL);
         pthread_create(&tape_save_id, NULL, tape_run_save, NULL);
@@ -3522,16 +3522,16 @@ int main(int argc, char **argv)
         running = false;
         if (pcm_ok == 0)
         {
-			snd_pcm_close(pcm_handle);
-		}
+	     snd_pcm_close(pcm_handle);
+	}
         pthread_join(rt_id, NULL);
         pthread_join(tape_load_id, NULL);
         pthread_join(tape_save_id, NULL);
-		if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'o')
-        {
-			z80_push16(z80_reg_pc);
-			file_save_sna("out.sna");
-		}
+	if (argc == 3 && argv[2][0] == '-' && argv[2][1] == 'o')
+	{
+	    z80_push16(z80_reg_pc);
+	    file_save_sna("out.sna");
+	}
     }
     return 0;
 }
